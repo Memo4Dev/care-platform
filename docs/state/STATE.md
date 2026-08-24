@@ -1,5 +1,6 @@
 # Project State
-Phase: PRE-IMPLEMENTATION
+
+Phase: IN IMPLEMENTATION
 Milestone: M0 — Repository Bootstrap
-Active task: None
+Active task: M0-002 Configure quality tooling
 Push/Merge pending: No
