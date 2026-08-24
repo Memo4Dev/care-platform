@@ -5,6 +5,7 @@ Use agents by responsibility, not by arbitrary file count.
 ## Orchestrator
 
 Responsibilities:
+
 - select milestone/task
 - load only relevant architecture files
 - delegate implementation
@@ -51,9 +52,29 @@ Acceptance Gate
 Commit
 ```
 
+## CI-aware acceptance rule
+
+For tasks/milestones that include CI workflow changes or depend on CI readiness:
+
+1. local quality gates must be green,
+2. independent review must be complete,
+3. commit must be created,
+4. stop for human push approval,
+5. after human-approved push, remote GitHub Actions must be green before final acceptance.
+
+If remote CI is red after push:
+
+- automatically reopen the relevant task,
+- run fix/review/test loop,
+- create a fix commit,
+- stop again for push approval.
+
+Do not mark such milestone fully complete until remote CI is green.
+
 ## Context budget rule
 
 Agent loads:
+
 1. overview
 2. target context
 3. direct dependencies
@@ -64,6 +85,7 @@ Do not load all 70+ files by default.
 ## Example Inventory task
 
 Load:
+
 - 00-overview
 - 15-inventory
 - 31-inventory-persistence
@@ -76,6 +98,7 @@ Load:
 ## Review agent rule
 
 Reviewer receives:
+
 - task goal
 - changed files
 - architecture files relevant to change
