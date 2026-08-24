@@ -16,6 +16,7 @@
 - M0-002 establishes the initial runnable quality baseline for the current scaffold using Prettier, ESLint, TypeScript, and Vitest, while keeping broader monorepo orchestration expansion for later tasks
 - M0-003 provides local-only Docker Compose services for PostgreSQL and Redis, with persistent volumes and health checks, without introducing application containers
 - M0-004 adds a baseline GitHub Actions workflow that installs dependencies and runs format, lint, typecheck, test, and build for the currently bootstrapped workspace
-- M0-004 reopened after remote GitHub Actions failure; CI bootstrap order was fixed to configure pnpm before setup-node pnpm caching, and action majors were updated to supported versions
+- M0-004 reopened after remote GitHub Actions failure; CI bootstrap order was fixed to configure pnpm before setup-node pnpm caching, action majors were updated to supported versions, and push triggers were added for `feature/**`
 - Milestones including CI are not fully accepted until remote GitHub Actions are green after human-approved push; if red, reopen the relevant task and rerun fix/review/test loop
+- M0 remote GitHub Actions is green after push; milestone acceptance is now finalized
 - M0-005 establishes the minimal real NestJS + Fastify modular-monolith API shell with `AppModule`, module baseline, and shell-safe `GET /health` endpoint without DB/Redis coupling
