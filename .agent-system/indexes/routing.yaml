@@ -55,7 +55,6 @@ rules:
   - subscription
   - plan
   - entitlement
-  - platform admin
   - tenant provisioning
   primary: platform-saas
   review:
@@ -101,8 +100,187 @@ rules:
   - backend
   - reviewer
   - qa
+- keywords:
+  - ui
+  - ux
+  - design system
+  - admin page
+  - admin screen
+  - platform admin
+  - component
+  - layout
+  - styling
+  - tailwind
+  primary: frontend-admin
+  review:
+  - platform-saas
+  - reviewer
+  - qa
 fallback:
   primary: backend
   review:
   - reviewer
   - qa
+
+# Conditional design-documentation loading for UI tasks.
+# Semantics: when a task touches UI, agents ALWAYS read docs/design/DESIGN.md,
+# then load the union of topic files whose keywords match the task. Never load
+# the whole docs/design directory. App skill comes from the primary agent.
+design_routing:
+  source_of_truth: docs/design/DESIGN.md
+  always_load:
+  - docs/design/DESIGN.md
+  applies_to_agents:
+  - frontend-admin
+  - storefront
+  app_skills:
+    frontend-admin: nextjs-admin
+    storefront: nextjs-storefront
+  base_skills:
+  - frontend-design
+  - frontend-design-system
+  - vercel-react-best-practices
+  - accessibility
+  rule: Always load source_of_truth; then load the union of matching topic files
+    below plus base_skills and the app skill of the primary agent; do not modify
+    docs/design/
+  topics:
+  - id: tokens-colors
+    keywords:
+    - color
+    - palette
+    - oklch
+    - theme variable
+    - status colors
+    - dark mode
+    load:
+    - docs/design/tokens/colors.md
+    skills: []
+  - id: tokens-typography
+    keywords:
+    - typography
+    - font
+    - mono
+    - text size
+    - tracking
+    - heading scale
+    load:
+    - docs/design/tokens/typography.md
+    skills: []
+  - id: tokens-spacing
+    keywords:
+    - spacing
+    - padding
+    - gap
+    - container width
+    - radius
+    - shadow
+    - layout scale
+    load:
+    - docs/design/tokens/spacing.md
+    skills: []
+  - id: tokens-motion
+    keywords:
+    - motion
+    - animation
+    - transition
+    - easing
+    - reduced motion
+    - skeleton
+    - spinner
+    load:
+    - docs/design/tokens/motion.md
+    skills: []
+  - id: components-buttons
+    keywords:
+    - button
+    - primary action
+    - destructive action
+    - ghost button
+    - focus ring
+    - cta
+    load:
+    - docs/design/components/buttons.md
+    skills:
+    - vercel-composition-patterns
+  - id: components-forms
+    keywords:
+    - form field
+    - input
+    - checkbox
+    - radio
+    - switch
+    - label
+    - helper text
+    load:
+    - docs/design/components/forms.md
+    skills:
+    - vercel-composition-patterns
+  - id: components-navigation
+    keywords:
+    - navigation
+    - rail
+    - top bar
+    - breadcrumb
+    - tabs
+    - menu
+    load:
+    - docs/design/components/navigation.md
+    skills: []
+  - id: components-tables
+    keywords:
+    - table
+    - column
+    - row
+    - cell
+    - numeric alignment
+    - pagination
+    load:
+    - docs/design/components/tables.md
+    skills:
+    - vercel-composition-patterns
+  - id: patterns-dashboard
+    keywords:
+    - dashboard
+    - metric card
+    - kpi
+    - chart
+    - exception list
+    - activity feed
+    load:
+    - docs/design/patterns/dashboard.md
+    skills:
+    - web-design-guidelines
+  - id: patterns-data-table
+    keywords:
+    - data table
+    - search filters
+    - sorting
+    - bulk action
+    - export
+    - filter preservation
+    load:
+    - docs/design/patterns/data-table.md
+    skills:
+    - web-design-guidelines
+  - id: patterns-forms
+    keywords:
+    - record form
+    - form sections
+    - inline validation
+    - unsaved changes
+    - save action
+    load:
+    - docs/design/patterns/forms.md
+    skills: []
+  - id: patterns-responsive
+    keywords:
+    - responsive
+    - breakpoint
+    - narrow viewport
+    - mobile layout
+    - horizontal scroll
+    load:
+    - docs/design/patterns/responsive.md
+    skills:
+    - web-design-guidelines

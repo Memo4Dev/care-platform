@@ -102,3 +102,24 @@ cross_cutting:
   - 106-task-template.md
 rule: Load globals + target context + direct dependencies + only relevant cross-cutting
   docs.
+design_system:
+  root: docs/design
+  source_of_truth: DESIGN.md
+  rule: UI tasks always load DESIGN.md first; then load only the token/component/pattern
+    files relevant to the current task via routing.yaml design_routing; docs/design/
+    content is approved and must not be modified by agents
+  tokens:
+  - tokens/colors.md
+  - tokens/typography.md
+  - tokens/spacing.md
+  - tokens/motion.md
+  components:
+  - components/buttons.md
+  - components/forms.md
+  - components/navigation.md
+  - components/tables.md
+  patterns:
+  - patterns/dashboard.md
+  - patterns/data-table.md
+  - patterns/forms.md
+  - patterns/responsive.md

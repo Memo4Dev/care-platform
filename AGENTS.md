@@ -15,6 +15,14 @@ Do not load all architecture files by default.
 Do not invent or silently change a business/domain rule.
 If a required decision is absent or conflicts with architecture, propose an ADR and stop that decision for human review.
 
+## Design system compliance (mandatory for UI work)
+1. `docs/design/DESIGN.md` is the single source of truth for UI. Every UI implementation task reads it before writing any UI code.
+2. After reading it, load only the token/component/pattern files relevant to the current task via `design_routing` in `.agent-system/indexes/routing.yaml`. Never load the whole `docs/design/` directory.
+3. Never modify approved design decisions under `docs/design/`. If a UI requirement conflicts with them, stop and escalate for human review.
+4. Consume semantic tokens; never hardcode raw colors, sizes, or motion values in components.
+5. Pair every status color with a written label or icon; keep light/dark semantics identical.
+6. UI changes follow the component and pattern specs in `docs/design/` and are reviewed against accessibility plus web design guidelines before gates pass.
+
 ## Cross-context
 Never directly mutate another bounded context's persistence.
 Use module contracts, commands, events, Outbox/Inbox and anti-corruption adapters.

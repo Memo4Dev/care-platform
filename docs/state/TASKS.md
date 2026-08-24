@@ -13,6 +13,7 @@ None
 - Architecture design
 - Technology decision
 - Agent orchestration design
+- Design-system orchestration integration: docs/design/DESIGN.md established as UI source of truth and committed; discoverability added to PROJECT_INDEX.md/project-index.yaml; architecture-index.yaml design_system section (source/tokens/components/patterns); routing.yaml frontend-admin UI rule + conditional design_routing topics (always DESIGN.md, then task-relevant token/component/pattern files only); frontend-admin/storefront manifests read DESIGN.md before any UI work; AGENTS.md mandatory design-system compliance rules; "platform admin" keyword moved to the UI rule with platform-saas as reviewer so admin UI tasks enter the design flow; 327-check validation of all paths/agent IDs/skill IDs green; independent reviewer PASS WITH NOTES
 - M0-001 Bootstrap monorepo
 - M0-002 Configure quality tooling
 - M0-003 Configure Docker local services
