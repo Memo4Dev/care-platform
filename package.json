@@ -7,11 +7,11 @@
   },
   "scripts": {
     "build": "tsc -p apps/api/tsconfig.json",
-    "lint": "eslint apps/api/src --ext .ts && eslint eslint.config.mjs vitest.config.ts --ext .mjs,.ts && prettier --check README.md package.json pnpm-workspace.yaml turbo.json tsconfig.json tsconfig.base.json apps/**/*.json apps/**/*.ts apps/**/*.md packages/**/*.json packages/**/*.md docs/state/**/*.md eslint.config.mjs vitest.config.ts",
+    "lint": "eslint apps/api/src --ext .ts && eslint eslint.config.mjs vitest.config.ts --ext .mjs,.ts && prettier --check README.md package.json pnpm-workspace.yaml turbo.json tsconfig.json tsconfig.base.json docker-compose.local.yml apps/**/*.json apps/**/*.ts apps/**/*.md packages/**/*.json packages/**/*.md docs/state/**/*.md eslint.config.mjs vitest.config.ts",
     "typecheck": "tsc -p apps/api/tsconfig.json --noEmit",
     "test": "vitest run --config vitest.config.ts",
-    "format": "prettier --write README.md package.json pnpm-workspace.yaml turbo.json tsconfig.json tsconfig.base.json apps/**/*.json apps/**/*.ts apps/**/*.md packages/**/*.json packages/**/*.md docs/state/**/*.md eslint.config.mjs vitest.config.ts",
-    "format:check": "prettier --check README.md package.json pnpm-workspace.yaml turbo.json tsconfig.json tsconfig.base.json apps/**/*.json apps/**/*.ts apps/**/*.md packages/**/*.json packages/**/*.md docs/state/**/*.md eslint.config.mjs vitest.config.ts"
+    "format": "prettier --write README.md package.json pnpm-workspace.yaml turbo.json tsconfig.json tsconfig.base.json docker-compose.local.yml apps/**/*.json apps/**/*.ts apps/**/*.md packages/**/*.json packages/**/*.md docs/state/**/*.md eslint.config.mjs vitest.config.ts",
+    "format:check": "prettier --check README.md package.json pnpm-workspace.yaml turbo.json tsconfig.json tsconfig.base.json docker-compose.local.yml apps/**/*.json apps/**/*.ts apps/**/*.md packages/**/*.json packages/**/*.md docs/state/**/*.md eslint.config.mjs vitest.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
