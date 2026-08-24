@@ -13,10 +13,10 @@ Implemented:
 - `M0-001` explicit placeholders for later apps and packages
 - `M0-002` baseline formatting, lint, typecheck, and unit-test wiring for the current workspace
 - `M0-003` local Docker services baseline for PostgreSQL and Redis
+- `M0-004` GitHub Actions CI baseline for format, lint, typecheck, test, and build
 
 Still deferred to later M0 tasks:
 
-- CI baseline (`M0-004`)
 - richer API modular-monolith shell (`M0-005`)
 
 ## Notes
@@ -24,6 +24,7 @@ Still deferred to later M0 tasks:
 - Turborepo remains the monorepo orchestrator baseline for the repository.
 - The current quality scripts target the bootstrapped API shell directly so they remain runnable before broader workspace scaffolding is added.
 - Local Docker services intentionally cover only PostgreSQL and Redis at this stage.
+- CI currently runs the baseline gates for the currently bootstrapped workspace on pushes and pull requests.
 
 ## Local infrastructure
 
