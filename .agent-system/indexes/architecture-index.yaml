@@ -1,0 +1,104 @@
+version: 1
+root: docs/architecture
+global_always:
+- 00-overview.md
+- 01-context-map.md
+- 108-tech-stack.md
+contexts:
+  platform:
+  - 08-platform-management.md
+  - 09-subscription-billing.md
+  - 09a-plans-entitlements.md
+  - 09b-tenant-provisioning.md
+  - 30a-platform-persistence.md
+  - 53a-platform-admin-api.md
+  organization:
+  - 10-organization.md
+  - 30-persistence-overview.md
+  identity:
+  - 11-identity-access.md
+  - 70-security-architecture.md
+  - 71-multi-tenant-isolation.md
+  - 72-authorization-matrix.md
+  catalog:
+  - 12-catalog.md
+  - 30-persistence-overview.md
+  pricing:
+  - 13-pricing.md
+  - 30-persistence-overview.md
+  customers:
+  - 14-customers.md
+  inventory:
+  - 15-inventory.md
+  - 31-inventory-persistence.md
+  - 34-reliability.md
+  purchasing:
+  - 16-purchasing.md
+  - 31-inventory-persistence.md
+  - 40-workflows.md
+  cart:
+  - 17-cart.md
+  orders:
+  - 18-orders.md
+  - 40-workflows.md
+  sales:
+  - 19-sales.md
+  - 32-financial-persistence.md
+  - 40-workflows.md
+  fulfillment:
+  - 20-fulfillment.md
+  - 40-workflows.md
+  payments:
+  - 21-payments-accounts.md
+  - 32-financial-persistence.md
+  cash:
+  - 22-cash-management.md
+  - 32-financial-persistence.md
+  returns:
+  - 23-returns.md
+  - 40-workflows.md
+  delivery:
+  - 24-delivery.md
+  - 40-workflows.md
+  storefront:
+  - 25-storefront.md
+  - 55-storefront-api.md
+  offline:
+  - 26-offline-sync.md
+  - 33-offline-persistence.md
+  - 56-offline-sync-api.md
+  audit:
+  - 27-audit-activity.md
+cross_cutting:
+  api:
+  - 50-api-overview.md
+  - 51-api-conventions.md
+  - 58-event-contracts.md
+  - 60-module-contracts.md
+  - 61-dto-contracts.md
+  - 62-error-codes.md
+  - 63-openapi-boundaries.md
+  security:
+  - 70-security-architecture.md
+  - 71-multi-tenant-isolation.md
+  - 72-authorization-matrix.md
+  - 73-threat-model.md
+  - 74-security-test-checklist.md
+  infrastructure:
+  - 80-infrastructure-architecture.md
+  - 83-observability.md
+  - 84-cicd.md
+  - 85-backup-dr.md
+  testing:
+  - 91-testing-architecture.md
+  - 92-quality-gates.md
+  - 95-test-scenario-catalog.md
+  - 97-definition-of-done.md
+  implementation:
+  - 98-implementation-roadmap.md
+  - 99-module-dependency-graph.md
+  - 102-milestones.md
+  - 105-agent-orchestration-plan.md
+  - 106-task-template.md
+rule: Load globals + target context + direct dependencies + only relevant cross-cutting
+  docs.

@@ -1,0 +1,53 @@
+project: multi-tenant-commerce-platform
+greenfield: true
+package_manager: pnpm
+monorepo: turborepo
+apps:
+  api:
+  - NestJS
+  - Fastify
+  - TypeScript
+  admin:
+  - Next.js
+  - React
+  - TypeScript
+  - Tailwind
+  platform-admin:
+  - Next.js
+  - React
+  - TypeScript
+  - Tailwind
+  storefront:
+  - Next.js
+  - React
+  - TypeScript
+  - Tailwind
+  pos:
+  - Tauri 2
+  - Rust
+  - React
+  - TypeScript
+  mobile:
+  - Flutter
+  - DEFERRED
+services:
+  database: PostgreSQL
+  orm: Drizzle
+  cache_queue: Redis + BullMQ
+  auth: Supabase Auth
+  object_storage: Cloudflare R2
+human_checkpoints:
+- business-decision
+- destructive-migration
+- breaking-public-api
+- security-tradeoff
+- production-deploy
+- scope-expansion
+- git-push
+- git-merge
+quality: all required gates green
+state_files:
+- docs/state/STATE.md
+- docs/state/TASKS.md
+- docs/state/DECISIONS.md
+- docs/state/MIGRATION_STATUS.md

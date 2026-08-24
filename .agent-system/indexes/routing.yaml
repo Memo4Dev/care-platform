@@ -1,0 +1,108 @@
+rules:
+- keywords:
+  - inventory
+  - stock
+  - fifo
+  - reservation
+  - allocation
+  - transfer
+  primary: inventory
+  review:
+  - database
+  - security
+  - qa
+- keywords:
+  - supplier
+  - purchase
+  - goods receipt
+  primary: purchasing
+  review:
+  - inventory
+  - database
+  - qa
+- keywords:
+  - payment
+  - refund
+  - wallet
+  - credit
+  - cash
+  primary: payments-finance
+  review:
+  - security
+  - database
+  - qa
+- keywords:
+  - offline
+  - sync
+  - device sequence
+  - conflict
+  primary: offline-sync
+  review:
+  - security
+  - inventory
+  - qa
+- keywords:
+  - storefront
+  - seo
+  - theme
+  - custom domain
+  primary: storefront
+  review:
+  - frontend-admin
+  - security
+  - qa
+- keywords:
+  - subscription
+  - plan
+  - entitlement
+  - platform admin
+  - tenant provisioning
+  primary: platform-saas
+  review:
+  - security
+  - database
+  - qa
+- keywords:
+  - auth
+  - rbac
+  - permission
+  - branch access
+  primary: identity-auth
+  review:
+  - security
+  - qa
+- keywords:
+  - migration
+  - import
+  - excel
+  - csv
+  - mongodb
+  primary: import-migration
+  review:
+  - database
+  - domain
+  - qa
+- keywords:
+  - docker
+  - github actions
+  - observability
+  - vps
+  primary: devops-observability
+  review:
+  - security
+  - qa
+- keywords:
+  - api
+  - openapi
+  - dto
+  - event contract
+  primary: api-contract
+  review:
+  - backend
+  - reviewer
+  - qa
+fallback:
+  primary: backend
+  review:
+  - reviewer
+  - qa

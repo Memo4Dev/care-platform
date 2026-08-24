@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "skills": [
+    {"id":"frontend-design","repo":"https://github.com/anthropics/skills","agents":["frontend-admin","storefront","sales-pos"]},
+    {"id":"vercel-react-best-practices","repo":"https://github.com/vercel-labs/agent-skills","agents":["frontend-admin","storefront"]},
+    {"id":"web-design-guidelines","repo":"https://github.com/vercel-labs/agent-skills","agents":["frontend-admin","storefront","reviewer"]},
+    {"id":"vercel-composition-patterns","repo":"https://github.com/vercel-labs/agent-skills","agents":["frontend-admin","storefront"]},
+    {"id":"supabase-postgres-best-practices","repo":"https://github.com/supabase/agent-skills","agents":["database","inventory","payments-finance"]},
+    {"id":"domain-modeling","repo":"https://github.com/mattpocock/skills","agents":["architect","domain","inventory","purchasing"]},
+    {"id":"tdd","repo":"https://github.com/mattpocock/skills","agents":["domain","backend","qa","inventory","payments-finance"]},
+    {"id":"code-review","repo":"https://github.com/mattpocock/skills","agents":["reviewer","security"]},
+    {"id":"diagnosing-bugs","repo":"https://github.com/mattpocock/skills","agents":["backend","qa","offline-sync","devops-observability"]}
+  ]
+}

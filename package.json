@@ -1,0 +1,22 @@
+{
+  "name": "commerce-platform",
+  "private": true,
+  "packageManager": "pnpm@latest",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:integration": "turbo run test:integration",
+    "test:e2e": "turbo run test:e2e",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "turbo": "latest",
+    "typescript": "latest",
+    "eslint": "latest",
+    "prettier": "latest"
+  }
+}

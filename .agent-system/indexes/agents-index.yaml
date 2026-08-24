@@ -1,0 +1,161 @@
+version: 1
+default: orchestrator
+agents:
+  orchestrator:
+    manifest: .agent-system/agents/orchestrator.md
+    mode: primary
+    skills:
+    - architecture-routing
+    - task-planning
+    - git-worktree
+    - quality-gates
+    - state-management
+  architect:
+    manifest: .agent-system/agents/architect.md
+    mode: subagent
+    skills:
+    - architecture-routing
+    - ddd-boundaries
+    - adr-writing
+    - module-contracts
+  domain:
+    manifest: .agent-system/agents/domain.md
+    mode: subagent
+    skills:
+    - ddd-aggregate
+    - ddd-boundaries
+    - domain-testing
+  backend:
+    manifest: .agent-system/agents/backend.md
+    mode: subagent
+    skills:
+    - nestjs-module
+    - api-contract
+    - tenant-isolation
+    - quality-gates
+  database:
+    manifest: .agent-system/agents/database.md
+    mode: subagent
+    skills:
+    - postgres-design
+    - drizzle-migration
+    - tenant-isolation
+    - data-reconciliation
+  api-contract:
+    manifest: .agent-system/agents/api-contract.md
+    mode: subagent
+    skills:
+    - api-contract
+    - event-contracts
+    - backward-compatibility
+  identity-auth:
+    manifest: .agent-system/agents/identity-auth.md
+    mode: subagent
+    skills:
+    - supabase-auth
+    - tenant-isolation
+    - authorization-review
+  platform-saas:
+    manifest: .agent-system/agents/platform-saas.md
+    mode: subagent
+    skills:
+    - saas-entitlements
+    - tenant-provisioning
+    - api-contract
+  inventory:
+    manifest: .agent-system/agents/inventory.md
+    mode: subagent
+    skills:
+    - inventory-fifo
+    - postgres-locking
+    - domain-testing
+    - tenant-isolation
+  purchasing:
+    manifest: .agent-system/agents/purchasing.md
+    mode: subagent
+    skills:
+    - purchasing-flow
+    - inventory-contract
+    - data-reconciliation
+  sales-pos:
+    manifest: .agent-system/agents/sales-pos.md
+    mode: subagent
+    skills:
+    - pos-sale-flow
+    - tauri-pos
+    - api-contract
+    - cash-integration
+  payments-finance:
+    manifest: .agent-system/agents/payments-finance.md
+    mode: subagent
+    skills:
+    - payment-adapters
+    - financial-ledgers
+    - cash-management
+    - idempotency
+  offline-sync:
+    manifest: .agent-system/agents/offline-sync.md
+    mode: subagent
+    skills:
+    - offline-sync
+    - tauri-pos
+    - sqlcipher-localdb
+    - idempotency
+  storefront:
+    manifest: .agent-system/agents/storefront.md
+    mode: subagent
+    skills:
+    - nextjs-storefront
+    - seo-isr
+    - api-contract
+    - frontend-design-system
+  frontend-admin:
+    manifest: .agent-system/agents/frontend-admin.md
+    mode: subagent
+    skills:
+    - nextjs-admin
+    - frontend-design-system
+    - accessibility
+    - api-client
+  import-migration:
+    manifest: .agent-system/agents/import-migration.md
+    mode: subagent
+    skills:
+    - import-pipeline
+    - data-reconciliation
+    - drizzle-migration
+  security:
+    manifest: .agent-system/agents/security.md
+    mode: subagent
+    skills:
+    - security-review
+    - tenant-isolation
+    - threat-model
+  qa:
+    manifest: .agent-system/agents/qa.md
+    mode: subagent
+    skills:
+    - quality-gates
+    - vitest-testing
+    - testcontainers
+    - playwright-e2e
+  reviewer:
+    manifest: .agent-system/agents/reviewer.md
+    mode: subagent
+    skills:
+    - code-review
+    - architecture-routing
+    - quality-gates
+  devops-observability:
+    manifest: .agent-system/agents/devops-observability.md
+    mode: subagent
+    skills:
+    - docker-vps
+    - github-actions
+    - observability
+    - backup-dr
+  mobile:
+    manifest: .agent-system/agents/mobile.md
+    mode: subagent
+    skills:
+    - mobile-contract-client
