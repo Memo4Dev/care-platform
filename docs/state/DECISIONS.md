@@ -16,3 +16,4 @@
 - M0-002 establishes the initial runnable quality baseline for the current scaffold using Prettier, ESLint, TypeScript, and Vitest, while keeping broader monorepo orchestration expansion for later tasks
 - M0-003 provides local-only Docker Compose services for PostgreSQL and Redis, with persistent volumes and health checks, without introducing application containers
 - M0-004 adds a baseline GitHub Actions workflow that installs dependencies and runs format, lint, typecheck, test, and build for the currently bootstrapped workspace
+- M0-005 establishes the minimal real NestJS + Fastify modular-monolith API shell with `AppModule`, module baseline, and shell-safe `GET /health` endpoint without DB/Redis coupling

@@ -2,7 +2,11 @@
   "extends": "../../packages/config/typescript/nestjs.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "noEmit": false,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "verbatimModuleSyntax": false
   },
   "include": ["src/**/*.ts"]
 }

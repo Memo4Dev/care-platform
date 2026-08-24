@@ -14,3 +14,4 @@ target
 src-tauri/target
 playwright-report
 test-results
+.corepack/
