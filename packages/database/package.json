@@ -15,7 +15,7 @@
     "generate": "drizzle-kit generate --config drizzle.config.ts",
     "lint": "eslint src --ext .ts",
     "migrate": "drizzle-kit migrate --config drizzle.config.ts",
-    "test": "vitest run --config ../../vitest.config.ts packages/database/src",
+    "test": "vitest run --root ../.. --config vitest.config.ts packages/database/src",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

@@ -2,7 +2,7 @@
 
 Phase: M1 IN PROGRESS — SaaS Foundation
 Milestone: M1 (started)
-Active task: M1-001 implemented locally, all gates green, awaiting independent review + commit
+Active task: M1-002 implemented locally (packages/contracts: error catalog + PlatformError + envelope/pagination/correlation primitives + shared zod schemas), all gates green, no commits made per task instructions; M1-001 previously awaited independent review + commit
 Push/Merge pending: No
 
 ## Environment constraints
