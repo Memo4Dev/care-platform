@@ -16,6 +16,7 @@ subagent
 - `docs/design/DESIGN.md` is the UI source of truth: read it before any UI implementation task.
 - After reading it, load only task-relevant token/component/pattern files via `design_routing` in `.agent-system/indexes/routing.yaml`; never load the whole `docs/design/` directory.
 - Never modify approved design decisions under `docs/design/`.
+- Your UI work is accepted only after the Design Compliance Review Gate (`docs/design/review-checklist.md`) passes; expect reviewer enforcement per `design_review_gate` in routing.yaml.
 
 ## Mandatory workflow
 1. Read `AGENTS.md`.

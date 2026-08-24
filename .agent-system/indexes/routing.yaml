@@ -103,14 +103,18 @@ rules:
 - keywords:
   - ui
   - ux
+  - frontend
   - design system
   - admin page
   - admin screen
   - platform admin
+  - page
   - component
   - layout
   - styling
   - tailwind
+  - responsive
+  - dashboard
   primary: frontend-admin
   review:
   - platform-saas
@@ -284,3 +288,45 @@ design_routing:
     - docs/design/patterns/responsive.md
     skills:
     - web-design-guidelines
+
+# Mandatory Design Compliance Review Gate for UI/frontend tasks.
+# Any task matching trigger_keywords cannot be accepted until the reviewer
+# passes docs/design/review-checklist.md against DESIGN.md plus only the
+# task-relevant token/component/pattern files from design_routing topics.
+design_review_gate:
+  checklist: docs/design/review-checklist.md
+  trigger_keywords:
+  - frontend
+  - ui
+  - ux
+  - page
+  - component
+  - layout
+  - responsive
+  - styling
+  - dashboard
+  enforced_by:
+  - reviewer
+  triggered_for_agents:
+  - frontend-admin
+  - storefront
+  - sales-pos
+  required_for_acceptance:
+  - functional tests pass
+  - design compliance review passes
+  - accessibility checks pass where relevant
+  compare_against:
+    always:
+    - docs/design/DESIGN.md
+    task_relevant: design_routing topics for this task
+  reject_on:
+  - invented colors or raw color values
+  - invented spacing scales
+  - unnecessary new components
+  - inconsistent typography
+  - arbitrary shadows/radii
+  - duplicate patterns
+  - inaccessible interactions
+  - responsive regressions
+  gap_policy: mark Design Gap; never silently invent a permanent new pattern;
+    request a human design decision when the gap is material

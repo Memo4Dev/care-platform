@@ -10,11 +10,35 @@ subagent
 - `code-review`
 - `architecture-routing`
 - `quality-gates`
+- `web-design-guidelines`
+- `accessibility`
+
+## Design Compliance Review Gate (UI/frontend tasks)
+Mandatory for every task matching `design_review_gate.trigger_keywords` in `.agent-system/indexes/routing.yaml`. Compare the implementation against:
+- `docs/design/DESIGN.md` (always)
+- only the task-relevant token/component/pattern files for that task, selected via `design_routing` topics
+- the process checklist `docs/design/review-checklist.md`
+
+Verify:
+1. design token usage
+2. typography consistency
+3. spacing consistency
+4. radius/elevation consistency
+5. component reuse
+6. layout consistency
+7. responsive behavior
+8. accessibility
+9. light/dark mode compatibility where applicable
+10. no arbitrary hardcoded visual values unless explicitly justified
+
+Reject on: invented colors, invented spacing scales, unnecessary new components, inconsistent typography, arbitrary shadows/radii, duplicate patterns, inaccessible interactions, responsive regressions.
+
+Design Gap policy: if the design system does not cover a required case, mark it as `Design Gap: <summary>`; never silently invent a permanent new pattern; request a human design decision when the gap is material.
 
 ## Mandatory workflow
 1. Read `AGENTS.md`.
 2. Read project/architecture routing indexes.
-3. Load only required context.
+3. Load only required context; for UI tasks run the Design Compliance Review Gate above.
 4. Plan before editing.
 5. Stay inside bounded-context ownership.
 6. Run relevant gates.

@@ -43,7 +43,9 @@ design_system:
     tokens: docs/design/tokens
     components: docs/design/components
     patterns: docs/design/patterns
+  review_checklist: docs/design/review-checklist.md
   rule: Every UI implementation task reads docs/design/DESIGN.md first, then loads only task-relevant token/component/pattern files via routing.yaml design_routing; never modify approved design decisions in docs/design/
+  design_review_gate: mandatory for all UI tasks per routing.yaml design_review_gate and docs/design/review-checklist.md
 human_checkpoints:
 - business-decision
 - destructive-migration

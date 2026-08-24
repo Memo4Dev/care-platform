@@ -105,9 +105,11 @@ rule: Load globals + target context + direct dependencies + only relevant cross-
 design_system:
   root: docs/design
   source_of_truth: DESIGN.md
+  review_checklist: review-checklist.md
   rule: UI tasks always load DESIGN.md first; then load only the token/component/pattern
     files relevant to the current task via routing.yaml design_routing; docs/design/
-    content is approved and must not be modified by agents
+    content is approved and must not be modified by agents, except review-checklist.md
+    which is a process document owned through the normal orchestration change flow
   tokens:
   - tokens/colors.md
   - tokens/typography.md

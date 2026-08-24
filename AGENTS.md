@@ -18,10 +18,11 @@ If a required decision is absent or conflicts with architecture, propose an ADR 
 ## Design system compliance (mandatory for UI work)
 1. `docs/design/DESIGN.md` is the single source of truth for UI. Every UI implementation task reads it before writing any UI code.
 2. After reading it, load only the token/component/pattern files relevant to the current task via `design_routing` in `.agent-system/indexes/routing.yaml`. Never load the whole `docs/design/` directory.
-3. Never modify approved design decisions under `docs/design/`. If a UI requirement conflicts with them, stop and escalate for human review.
+3. Never modify approved design decisions under `docs/design/`. If a UI requirement conflicts with them, stop and escalate for human review. Exception: `docs/design/review-checklist.md` is a process document owned through the normal orchestration change flow, not an approved design decision.
 4. Consume semantic tokens; never hardcode raw colors, sizes, or motion values in components.
 5. Pair every status color with a written label or icon; keep light/dark semantics identical.
 6. UI changes follow the component and pattern specs in `docs/design/` and are reviewed against accessibility plus web design guidelines before gates pass.
+7. Every UI/frontend task matching `design_review_gate.trigger_keywords` must pass the Design Compliance Review Gate (`docs/design/review-checklist.md`, enforced by reviewer): functional tests pass + design compliance review passes + accessibility checks pass where relevant. A UI task cannot be accepted otherwise. If the design system does not cover a case, mark a `Design Gap`; never silently invent a permanent new pattern.
 
 ## Cross-context
 Never directly mutate another bounded context's persistence.
@@ -33,7 +34,7 @@ Branch-scoped actions enforce branch access.
 Do not trust tenant/branch IDs from request bodies without authorization.
 
 ## Work loop
-Task intake → route → plan → implement → test → independent review → security review if triggered → fix loop → all relevant gates green → update state → commit → STOP before push/merge.
+Task intake → route → plan → implement → test → independent review (including Design Compliance Review Gate for UI tasks) → security review if triggered → fix loop → all relevant gates green → update state → commit → STOP before push/merge.
 
 ## Human checkpoints
 Stop only for:

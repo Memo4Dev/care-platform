@@ -16,6 +16,7 @@
 - Components: `docs/design/components/` (buttons, forms, navigation, tables)
 - Patterns: `docs/design/patterns/` (dashboard, data-table, forms, responsive)
 - Load only the files relevant to the current UI task via `design_routing` in `.agent-system/indexes/routing.yaml`.
+- Design Compliance Review Gate: `docs/design/review-checklist.md` — mandatory before any UI task is accepted (see `design_review_gate` in routing.yaml).
 - Approved content: never modify design decisions under `docs/design/`.
 
 ## Agents

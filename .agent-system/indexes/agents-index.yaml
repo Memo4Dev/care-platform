@@ -146,6 +146,8 @@ agents:
     - code-review
     - architecture-routing
     - quality-gates
+    - web-design-guidelines
+    - accessibility
   devops-observability:
     manifest: .agent-system/agents/devops-observability.md
     mode: subagent
