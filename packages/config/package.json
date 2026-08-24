@@ -1,5 +1,11 @@
 {
   "name": "@commerce-platform/config",
   "private": true,
-  "version": "0.0.0"
+  "version": "0.0.0",
+  "scripts": {
+    "build": "tsc -p ../../tsconfig.json --noEmit",
+    "lint": "eslint typescript --ext .json,.ts --no-error-on-unmatched-pattern",
+    "typecheck": "tsc -p ../../tsconfig.json --noEmit",
+    "test": "node -e \"console.log('No tests for @commerce-platform/config')\""
+  }
 }

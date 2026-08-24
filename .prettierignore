@@ -1,0 +1,9 @@
+.corepack/
+node_modules/
+.pnpm-store/
+.turbo/
+dist/
+coverage/
+.next/
+playwright-report/
+test-results/
