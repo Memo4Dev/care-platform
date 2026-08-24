@@ -4,6 +4,10 @@
   "version": "0.0.0",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "build:watch": "tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "start": "node dist/main.js",
+    "start:watch": "node --watch dist/main.js",
+    "dev": "pnpm build && concurrently -k -n TSC,API -c cyan,green \"pnpm build:watch\" \"pnpm start:watch\"",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --config ../../vitest.config.ts apps/api/src/main.spec.ts apps/api/src/health.integration.spec.ts"
