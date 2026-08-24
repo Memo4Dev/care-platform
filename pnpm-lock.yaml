@@ -38,6 +38,12 @@ importers:
 
   apps/api:
     dependencies:
+      '@commerce-platform/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@commerce-platform/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@nestjs/common':
         specifier: ^11.1.6
         version: 11.2.1(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -47,12 +53,19 @@ importers:
       '@nestjs/platform-fastify':
         specifier: ^11.1.6
         version: 11.2.1(@nestjs/common@11.2.1(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.2.1(@nestjs/common@11.2.1(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@types/pg@8.23.1)(pg@8.23.0)
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
+    devDependencies:
+      '@commerce-platform/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
 
   packages/config: {}
 

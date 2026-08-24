@@ -2,11 +2,17 @@
   "name": "@commerce-platform/testing",
   "private": true,
   "version": "0.0.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
     "lint": "eslint src --ext .ts",
-    "test": "vitest run --config ../../vitest.config.ts packages/testing/src --passWithNoTests",
-    "test:integration": "vitest run --config ../../vitest.integration.config.ts packages/testing/src",
+    "test": "vitest run --root ../.. --config vitest.config.ts packages/testing/src --passWithNoTests",
+    "test:integration": "vitest run --root ../.. --config vitest.integration.config.ts packages/testing/src",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

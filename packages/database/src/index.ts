@@ -5,6 +5,8 @@ export {
   type DatabaseConfig,
 } from './client';
 export { resolveMigrationsFolder, runMigrations } from './migrator';
+export * from './schema/integration';
+export * from './schema/organization';
 export {
   idColumn,
   idColumnDbGenerated,

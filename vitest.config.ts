@@ -16,6 +16,7 @@ export default defineConfig({
     alias: workspaceSourceAlias,
   },
   test: {
+    setupFiles: ['./vitest.setup.ts'],
     include: ['apps/**/*.spec.ts', 'packages/**/*.spec.ts'],
     exclude: [
       '**/node_modules/**',

@@ -10,13 +10,19 @@
     "dev": "pnpm build && concurrently -k -n TSC,API -c cyan,green \"pnpm build:watch\" \"pnpm start:watch\"",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --config ../../vitest.config.ts apps/api/src/main.spec.ts apps/api/src/health.integration.spec.ts"
+    "test": "vitest run --root ../.. --config vitest.config.ts apps/api/src"
   },
   "dependencies": {
+    "@commerce-platform/contracts": "workspace:*",
+    "@commerce-platform/database": "workspace:*",
     "@nestjs/common": "^11.1.6",
     "@nestjs/core": "^11.1.6",
     "@nestjs/platform-fastify": "^11.1.6",
+    "drizzle-orm": "^0.45.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@commerce-platform/testing": "workspace:*"
   }
 }
