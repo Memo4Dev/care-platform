@@ -12,3 +12,16 @@ M1-003: First business migration generated and committed: `packages/database/dri
 - Creates enums `organization.organization_status` (ACTIVE|SUSPENDED) and `organization.organization_policy_type` (RETURN|REFUND|PURCHASE|ORDER_APPROVAL|OFFLINE|CREDIT|DELIVERY|INVENTORY).
 - Creates tables: organization.organizations, organization.branches (UNIQUE(organization_id, code), tenant-scope UNIQUE(id, organization_id)), organization.warehouses (composite tenant FK to branches(id, organization_id)), organization.organization_policies (append-only, UNIQUE(organization_id, version), latest-lookup index), integration.outbox (occurred_at index).
 - Non-destructive, additive-only; applied automatically by the test harness via runMigrations. No production rollout performed.
+
+M1-004 review remediation: additive `0003_identity_organization_roles.sql` adds organization-scoped role grants with composite user/role tenant FKs and indexes.
+
+- Drizzle metadata journals/snapshots for applied `0002` and `0003` were repaired without changing their SQL; `pnpm --filter @commerce-platform/database generate` reports no schema changes.
+
+M1-004 final security remediation: additive `0004_lush_hannibal_king.sql` creates `identity.initial_owner_assignments`, keyed by `organization_id` with composite same-organization user and role FKs. The table is the durable single-initial-Owner claim and does not constrain normal organization-role grants.
+
+M1-004: Additive Identity & Access migration generated locally: `packages/database/drizzle/0002_dark_shard.sql`.
+
+- Creates logical schema `identity`, enum `identity.user_status` (ACTIVE|SUSPENDED), and tables identity.users, identity.roles, identity.permissions, identity.role_permissions, identity.user_branch_roles and identity.branch_access.
+- Adds global user email uniqueness plus `lower(email)` unique-index enforcement for case-insensitive raw writers, nullable globally unique Supabase identity links, mutable root versions, FK indexes, and composite tenant FKs tying grants/access to same-organization users, branches and roles.
+- Idempotently seeds the static global capability catalog with `ON CONFLICT (code) DO NOTHING`.
+- Non-destructive, additive-only; applied automatically by the test harness via runMigrations. No production rollout performed.

@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 
 import { AppShellModule } from './modules/app-shell/app-shell.module';
+import { IdentityModule } from './modules/identity/identity.module';
 import { OrganizationModule } from './modules/organization/organization.module';
 
 @Module({
-  imports: [AppShellModule, OrganizationModule],
+  imports: [AppShellModule, OrganizationModule, IdentityModule],
 })
 export class AppModule {}
