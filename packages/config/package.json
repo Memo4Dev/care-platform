@@ -3,9 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "build": "tsc -p ../../tsconfig.json --noEmit",
+    "build": "node -e \"console.log('Nothing to build for @commerce-platform/config (ships tsconfig JSON only)')\"",
     "lint": "eslint typescript --ext .json,.ts --no-error-on-unmatched-pattern",
-    "typecheck": "tsc -p ../../tsconfig.json --noEmit",
+    "typecheck": "node -e \"console.log('Nothing to typecheck for @commerce-platform/config (ships tsconfig JSON only)')\"",
     "test": "node -e \"console.log('No tests for @commerce-platform/config')\""
   }
 }

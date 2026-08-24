@@ -18,3 +18,4 @@ None
 - M0-003 Configure Docker local services
 - M0-004 Configure CI baseline
 - M0-005 Scaffold API modular-monolith shell
+- M1-001 Persistence foundation (packages/database Drizzle + packages/testing harness, native-PG/testcontainers dual path, CI postgres service)

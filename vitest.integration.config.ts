@@ -9,23 +9,19 @@ const workspaceSourceAlias = {
   ),
 };
 
-// Fast/unit-only run (`pnpm test`). Integration specs (*.integration.spec.ts)
-// are excluded here and run via `pnpm test:integration` instead.
+// Integration run (`pnpm test:integration`): every *.integration.spec.ts
+// across apps/packages against real PostgreSQL (see packages/testing).
 export default defineConfig({
   resolve: {
     alias: workspaceSourceAlias,
   },
   test: {
-    include: ['apps/**/*.spec.ts', 'packages/**/*.spec.ts'],
-    exclude: [
-      '**/node_modules/**',
-      '**/dist/**',
-      '**/.turbo/**',
-      '**/coverage/**',
-      'apps/**/*.integration.spec.ts',
-      'packages/**/*.integration.spec.ts',
-    ],
+    include: ['apps/**/*.integration.spec.ts', 'packages/**/*.integration.spec.ts'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.turbo/**', '**/coverage/**'],
     environment: 'node',
     globals: true,
+    // Provisioning databases and (in CI) containers takes longer than unit work.
+    testTimeout: 120_000,
+    hookTimeout: 120_000,
   },
 });
