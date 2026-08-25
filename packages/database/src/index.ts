@@ -7,6 +7,7 @@ export {
 export { resolveMigrationsFolder, runMigrations } from './migrator';
 export * from './schema/integration';
 export * from './schema/identity';
+export * from './schema/entitlements';
 export * from './schema/organization';
 export {
   idColumn,

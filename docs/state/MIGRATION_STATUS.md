@@ -13,6 +13,13 @@ M1-003: First business migration generated and committed: `packages/database/dri
 - Creates tables: organization.organizations, organization.branches (UNIQUE(organization_id, code), tenant-scope UNIQUE(id, organization_id)), organization.warehouses (composite tenant FK to branches(id, organization_id)), organization.organization_policies (append-only, UNIQUE(organization_id, version), latest-lookup index), integration.outbox (occurred_at index).
 - Non-destructive, additive-only; applied automatically by the test harness via runMigrations. No production rollout performed.
 
+M1-005: Additive Drizzle migration `0005_supreme_wild_child.sql` creates logical schema `entitlements`, plan status enum, and plans/plan_entitlements/tenant_overrides tables.
+
+- `plans` has unique code and mutable CAS version; `plan_entitlements` uses a composite primary key and plan FK; `tenant_overrides` is organization-scoped, validates effective windows, indexes entitlement resolution, and has a composite same-tenant grantor FK to identity users.
+- Non-destructive, additive-only; applied automatically by the native-PG test harness. No production rollout performed.
+
+M1-005 review remediation: no additional database migration. `event_scope` is an additive field inside the existing JSONB integration outbox envelope, so schema storage remains backward-compatible; producers and consumers validate the payload invariant in application code.
+
 M1-004 review remediation: additive `0003_identity_organization_roles.sql` adds organization-scoped role grants with composite user/role tenant FKs and indexes.
 
 - Drizzle metadata journals/snapshots for applied `0002` and `0003` were repaired without changing their SQL; `pnpm --filter @commerce-platform/database generate` reports no schema changes.

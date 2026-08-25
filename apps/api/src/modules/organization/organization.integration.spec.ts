@@ -273,11 +273,10 @@ describe('Organization context persistence', () => {
                 (SELECT value_json FROM organization.organization_policies
                  WHERE organization_id = $1 AND policy_type = 'OFFLINE') AS value
          FROM integration.outbox
-         WHERE aggregate_id = $1 AND payload->>'type' = 'OrganizationPolicyChanged'
-           AND payload->'value'->>'enabled' = 'true'`,
+           WHERE aggregate_id = $1 AND payload->>'eventType' = 'organization.organization-policy-changed'`,
         [organizationId],
       );
-      expect(rows[0].count).toBe('0');
+      expect(rows[0].count).toBe('1');
       expect(rows[0].value).toEqual({ enabled: false });
     });
   });
@@ -314,21 +313,23 @@ describe('Organization context persistence', () => {
       );
 
       expect(rows.map((row) => row.event_type)).toEqual([
-        'OrganizationCreated',
-        'BranchCreated',
-        'OrganizationPolicyChanged',
+        'organization.organization-created',
+        'organization.branch-created',
+        'organization.organization-policy-changed',
       ]);
       expect(rows.every((row) => row.aggregate_type === 'Organization')).toBe(true);
       expect(JSON.parse(JSON.stringify(rows[0].payload))).toMatchObject({
-        type: 'OrganizationCreated',
+        eventScope: 'TENANT',
         organizationId,
-        name: 'Outbox Org',
-        status: 'ACTIVE',
+        payload: { organizationId, status: 'ACTIVE' },
       });
+      expect(rows[0].payload.payload).not.toHaveProperty('name');
+      expect(rows[1].payload.payload).not.toHaveProperty('name');
+      expect(rows[2].payload.payload).not.toHaveProperty('value');
       expect(JSON.parse(JSON.stringify(rows[2].payload))).toMatchObject({
-        type: 'OrganizationPolicyChanged',
-        policyType: 'RETURN',
-        policyVersion: 1,
+        eventScope: 'TENANT',
+        organizationId,
+        payload: { policyType: 'RETURN', policyVersion: 1 },
       });
     });
 

@@ -1,36 +1,28 @@
 import {
   integrationEventEnvelope,
+  type EventScope,
   type IntegrationEventEnvelope,
 } from '../../../common/events/integration-envelope';
 
-export const SYSTEM_ACTOR_ID = 'SYSTEM' as const;
-
-export function identityEventEnvelope(input: {
-  event: object;
+export function entitlementEventEnvelope(input: {
+  event: Record<string, unknown>;
   aggregateType: string;
   aggregateId: string;
   aggregateVersion: number;
+  eventScope: EventScope;
   actorId: string;
   correlationId: string;
   causationId: string;
 }): IntegrationEventEnvelope {
-  const event = input.event as Record<string, unknown>;
-  // Events are ID-first integration contracts (ADR-0002): profile and role
-  // labels are intentionally never copied into the outbox payload.
-  const payload = Object.fromEntries(
-    Object.entries(event).filter(([key]) =>
-      ['organizationId', 'userId', 'roleId', 'branchId', 'permissionCodes'].includes(key),
-    ),
-  );
-  const { type, occurredAt } = event;
+  const { type, occurredAt, ...payload } = input.event;
   return integrationEventEnvelope({
-    eventType: `identity.${String(type)
+    eventType: `entitlements.${String(type)
       .replace(/([a-z])([A-Z])/g, '$1-$2')
       .toLowerCase()}`,
     eventVersion: 1,
     occurredAt: occurredAt instanceof Date ? occurredAt.toISOString() : (occurredAt as string),
-    eventScope: 'TENANT',
-    organizationId: event.organizationId as string,
+    eventScope: input.eventScope,
+    organizationId: input.eventScope === 'TENANT' ? (input.event.organizationId as string) : null,
     aggregateType: input.aggregateType,
     aggregateId: input.aggregateId,
     aggregateVersion: input.aggregateVersion,

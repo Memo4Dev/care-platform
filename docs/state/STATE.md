@@ -2,7 +2,7 @@
 
 Phase: M1 IN PROGRESS — SaaS Foundation
 Milestone: M1 (started)
-Active task: M1-004 security remediation completed locally: bootstrap retry idempotency is solely the durable initial-Owner claim (later Owner grants/revocations do not recreate a bootstrap grant); every identity-administration transaction takes the organization-scoped PostgreSQL transaction advisory lock before authorization and mutation, serializing capability changes with privileged writes; native-PG coverage and all local gates green; no commits made per task instructions
+Active task: M1-005 Plans & Entitlements completed locally after security remediation: generic Organization outbox envelopes are minimized and ID-first (no names/policy values), typed entitlement contract inputs and native-PG security coverage are green; no commits made per task instructions
 Orchestration: design system integrated (docs/design/DESIGN.md is UI source of truth; indexed in project/architecture indexes; conditional design_routing in routing.yaml; frontend-admin/storefront manifests load it first; AGENTS.md design compliance rules). Design Compliance Review Gate now mandatory for UI tasks (review-checklist.md + machine-readable design_review_gate in routing.yaml, enforced by reviewer, qa blocks acceptance). Both independent reviews PASS WITH NOTES; findings fixed. ui-ux-pro-max skill absent from all registries — pending human decision.
 Push/Merge pending: No
 

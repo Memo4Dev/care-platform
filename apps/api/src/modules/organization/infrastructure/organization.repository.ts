@@ -12,8 +12,9 @@ import {
 import { and, asc, eq } from 'drizzle-orm';
 
 import { Organization, type OrganizationChangeSet } from '../domain/organization';
-import { ORGANIZATION_AGGREGATE_TYPE, type OrganizationDomainEvent } from '../domain/events';
+import { ORGANIZATION_AGGREGATE_TYPE } from '../domain/events';
 import type { DbExecutor } from './db-executor';
+import { organizationEventEnvelope } from './event-envelope';
 
 /**
  * Repository for the Organization aggregate (Layer 2 of
@@ -141,8 +142,13 @@ export class OrganizationRepository {
           id: newId(),
           aggregateType: ORGANIZATION_AGGREGATE_TYPE,
           aggregateId: changes.organizationId,
-          eventType: event.type,
-          payload: serializeEvent(event),
+          eventType: `organization.${event.type.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}`,
+          payload: organizationEventEnvelope({
+            event,
+            aggregateId: changes.organizationId,
+            aggregateVersion: changes.nextVersion,
+            correlationId: options.correlationId ?? 'SYSTEM',
+          }),
           correlationId: options.correlationId ?? null,
           occurredAt: event.occurredAt,
         })),
@@ -432,9 +438,4 @@ export function mapPersistenceError(error: unknown, context: PersistenceErrorCon
       cause: error,
     },
   );
-}
-
-/** Normalize an event into plain JSON (Dates become ISO strings). */
-function serializeEvent(event: OrganizationDomainEvent): Record<string, unknown> {
-  return JSON.parse(JSON.stringify(event)) as Record<string, unknown>;
 }
