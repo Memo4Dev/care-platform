@@ -13,4 +13,12 @@ export interface IdentityProvisioningContracts {
     correlationId: string;
     causationId: string;
   }): Promise<IdentityUserCommandResult>;
+  /** Grant the bootstrap Owner access to the deterministic default branch. */
+  grantInitialOwnerBranchAccess(input: {
+    organizationId: string;
+    userId: string;
+    branchId: string;
+    correlationId: string;
+    causationId: string;
+  }): Promise<void>;
 }

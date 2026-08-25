@@ -138,6 +138,18 @@ export class UserRepository {
     return { ...existing, created: false };
   }
 
+  async findInitialOwnerAssignment(
+    executor: DbExecutor,
+    organizationId: string,
+  ): Promise<{ userId: string; roleId: string } | null> {
+    const [assignment] = await executor
+      .select({ userId: initialOwnerAssignments.userId, roleId: initialOwnerAssignments.roleId })
+      .from(initialOwnerAssignments)
+      .where(eq(initialOwnerAssignments.organizationId, organizationId))
+      .limit(1);
+    return assignment ?? null;
+  }
+
   async assignOrganizationRole(
     executor: DbExecutor,
     input: {

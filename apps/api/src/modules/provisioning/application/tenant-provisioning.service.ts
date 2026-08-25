@@ -175,6 +175,13 @@ export class TenantProvisioningService {
         correlationId: scope.correlationId,
         causationId: scope.causationId,
       });
+      await this.identity.grantInitialOwnerBranchAccess({
+        organizationId: scope.organizationId,
+        userId: stableId(scope.tenantId, 'owner'),
+        branchId: stableId(scope.tenantId, 'branch'),
+        correlationId: scope.correlationId,
+        causationId: scope.causationId,
+      });
       return;
     }
     await this.entitlements.canUseFeature(scope.organizationId, 'storefront.enabled');

@@ -1,8 +1,8 @@
 # Project State
 
-Phase: M1 IN PROGRESS — SaaS Foundation
-Milestone: M1 (started)
-Active task: None. M1-009 Outbox→BullMQ worker delivery architecture is complete; no commit was requested.
+Phase: M1 READY FOR PUSH — SaaS Foundation
+Milestone: M1 (local exit suite complete; CI Redis gate pending)
+Active task: None. M1-010 final native PostgreSQL integration/isolation suite is complete; WRITE/no commit was requested.
 Orchestration: design system integrated (docs/design/DESIGN.md is UI source of truth; indexed in project/architecture indexes; conditional design_routing in routing.yaml; frontend-admin/storefront manifests load it first; AGENTS.md design compliance rules). Design Compliance Review Gate now mandatory for UI tasks (review-checklist.md + machine-readable design_review_gate in routing.yaml, enforced by reviewer, qa blocks acceptance). Both independent reviews PASS WITH NOTES; findings fixed. ui-ux-pro-max skill absent from all registries — pending human decision.
 Push/Merge pending: No
 
@@ -40,3 +40,10 @@ Push/Merge pending: No
 - M1-009 delivery architecture: one codebase now has `api`, `relay`, and `worker` runtime roles. PostgreSQL Outbox relay claims use `SKIP LOCKED` plus a durable lease, BullMQ uses EventId job IDs, and only a lease owner marks publication. Workers use per-EventId/consumer Inbox lease IDs and acknowledge only after checkpointed provisioning handoff. Native PG relay/Inbox coverage (93 passed) is included; Redis integration is explicitly gated by `REDIS_INTEGRATION=true` and could not run locally because Redis/Docker are intentionally unavailable. CI provides Redis and runs that coverage.
 - M1-009 final delivery blockers: `GET /metrics` now fails closed before its database refresh unless `METRICS_BEARER_TOKEN` exactly matches the Prometheus bearer credential; deployment documentation requires a Prometheus-only network boundary. CI creates the authenticated `ci` Redis ACL principal, disables `default`, validates its authenticated `PING`, and runs the Redis-gated relay→worker retry/dedupe integration test with that principal. Local final gates passed: format, lint, strict typecheck, build, 193 unit tests, and 96 native PostgreSQL integration tests; the two Redis integration tests remain intentionally skipped locally because native Redis/Docker are unavailable. No commit was requested.
 - M1-009 final tenant-auth blocker: `TenantBearerGuard` resolves an organization principal only after an active user is linked to a Platform Tenant with `ACTIVE` status and `COMPLETED` provisioning. Missing or incomplete links return `TENANT_PROVISIONING_INCOMPLETE`; suspended or closed tenants return `TENANT_SUSPENDED`. Native Fastify `app.inject` coverage verifies unlinked, pending, suspended, and closed denial paths. Final local gates passed: format, lint, strict typecheck, build, 193 unit tests, and 97 native PostgreSQL integration tests; Redis-gated tests remain intentionally skipped locally. No commit was requested.
+
+## M1-010 final integration/isolation report
+
+- Native PostgreSQL final suite passes trusted-registration → Platform registration API → provisioning → activation → Owner bearer login → default branch/warehouse readiness, authenticated plan-limit rejection, concurrent different-key `branches.max=1` serialization, foreign-branch IDOR masking, composite tenant-FK injection denial, and suspended-tenant access denial.
+- Provisioning now grants the initial Owner explicit access to the deterministic default branch through the narrow Identity provisioning contract after Organization creates that branch. This completes the M1 owner-login readiness path without cross-context persistence writes.
+- Final local gates passed: Prettier format check, ESLint, strict TypeScript typecheck, build, 193 unit tests, and 103 native PostgreSQL integration tests. Redis-gated integration tests remain skipped locally by design; CI must run them with `REDIS_INTEGRATION=true` and authenticated Redis before M1 is accepted after push.
+- Independent scenario/gap mapping: `docs/state/M1-010-TEST-GAP-REPORT.md`. TEN-001 is deferred to M5 because Sales does not exist in M1; it has not been falsely substituted with another resource.

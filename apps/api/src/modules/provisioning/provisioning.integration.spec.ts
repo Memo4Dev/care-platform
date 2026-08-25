@@ -40,6 +40,7 @@ describe('Tenant Provisioning (SUB-004)', () => {
   let executionIssuer: TrustedProvisioningExecutionIssuer;
   let executionVerifier: ProvisioningExecutionVerifier;
   let executionContext: INestApplicationContext;
+  let identity: IdentityProvisioningService;
   let failStorefrontOnce = true;
   let ready = false;
   beforeAll(async () => {
@@ -56,7 +57,7 @@ describe('Tenant Provisioning (SUB-004)', () => {
     executionIssuer = executionContext.get(PROVISIONING_EXECUTION_ISSUER);
     executionVerifier = executionContext.get(PROVISIONING_EXECUTION_VERIFIER);
     platform = new PlatformProvisioningService(testdb.db, tenants, executionVerifier);
-    const identity = new IdentityProvisioningService(
+    identity = new IdentityProvisioningService(
       testdb.db,
       new UserRepository(),
       new RoleRepository(),
@@ -200,6 +201,12 @@ describe('Tenant Provisioning (SUB-004)', () => {
       [organization.organization.id],
     );
     expect(owner.rows).toEqual([{ supabase_user_id: 'supabase-owner-subject' }]);
+    const ownerBranchAccess = await testdb.client.query<{ count: string }>(
+      `SELECT count(*) FROM identity.branch_access
+       WHERE organization_id = $1 AND user_id = (SELECT id FROM identity.users WHERE organization_id = $1)`,
+      [organization.organization.id],
+    );
+    expect(ownerBranchAccess.rows[0]).toEqual({ count: '1' });
     const [persistedTenant] = await testdb.db
       .select()
       .from(platformTenants)
@@ -264,6 +271,31 @@ describe('Tenant Provisioning (SUB-004)', () => {
     await expect(
       service.start({
         registrationReference: 'legacy',
+        correlationId: newId(),
+        causationId: newId(),
+      }),
+    ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+  });
+
+  it('does not let the trusted bootstrap contract grant a branch to a non-initial Owner', async () => {
+    const organization = await new OrganizationService(
+      testdb.db,
+      new OrganizationRepository(),
+    ).createOrganization({
+      name: `Bootstrap access scope ${newId()}`,
+    });
+    await identity.provisionInitialOwner({
+      organizationId: organization.organization.id,
+      email: `owner-${newId()}@example.test`,
+      name: 'Initial Owner',
+      correlationId: newId(),
+      causationId: newId(),
+    });
+    await expect(
+      identity.grantInitialOwnerBranchAccess({
+        organizationId: organization.organization.id,
+        userId: newId(),
+        branchId: newId(),
         correlationId: newId(),
         causationId: newId(),
       }),

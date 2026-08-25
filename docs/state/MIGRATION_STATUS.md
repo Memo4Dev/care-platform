@@ -23,6 +23,8 @@ M1-008: Additive migration `0015_tenant_provisioning.sql` creates logical schema
 - Records are uniquely keyed by both Platform Tenant and Organization, retain current step/checkpoints/last error/completion time, use optimistic versions, enforce the same-tenant composite Platform Tenant/Organization FK, and index status for retry/worker selection.
 - Non-destructive, additive-only; applied automatically by the native-PG test harness. No production rollout performed.
 
+M1-010: No database migration. The initial Owner's default-branch access is an existing `identity.branch_access` aggregate write through the provisioning-only Identity module contract, and plan-limit concurrency uses transaction-scoped PostgreSQL advisory locks; no schema or persistence ownership changes were made.
+
 M1-008 hardening: additive migrations `0016_platform_registration_snapshot.sql` and `0017_provisioning_terminal_immutability.sql` retain the verified registration reference, requested organization and verified owner identity snapshot on `platform.tenants`, mark all pre-existing/default registration rows `LEGACY` rather than VERIFIED, prevent reuse of a non-legacy verified reference, and make completed provisioning records physically immutable.
 
 - `0017` installs PostgreSQL triggers that reject registration-snapshot mutation and UPDATE/DELETE of a completed process row with SQLSTATE `55000`; it does not restrict retries of a non-terminal failed process. Both migrations are additive-only and are applied by the native-PG test harness; no production rollout performed.

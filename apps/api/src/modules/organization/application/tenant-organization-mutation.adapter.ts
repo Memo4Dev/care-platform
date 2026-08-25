@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { PlatformError } from '@commerce-platform/contracts';
 import { idempotencyOutcomes, newId, type DatabaseClient } from '@commerce-platform/database';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { DATABASE } from '../../database/database.tokens';
@@ -67,6 +67,12 @@ export class TenantOrganizationMutationAdapter {
   ): Promise<TenantMutationHttpOutcome> {
     const requestHash = hash(input.body);
     return this.db.transaction(async (tx) => {
+      // Serialize constrained organization mutations before the usage check and
+      // aggregate write. Different idempotency keys must not both observe the
+      // same unused plan slot.
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${input.organizationId}, 2))`,
+      );
       // INSERT ON CONFLICT waits for a concurrent owner to commit or roll back.
       // Thus a racing retry observes either the completed durable response or a
       // cleanly absent claim, never partially committed domain state.

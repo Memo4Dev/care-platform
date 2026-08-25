@@ -73,6 +73,37 @@ export class IdentityProvisioningService implements IdentityProvisioningContract
     });
   }
 
+  /**
+   * The default branch is created after the initial Owner. Grant its explicit
+   * branch scope through the provisioning-only contract so a completed tenant
+   * can satisfy the M1 owner-login readiness flow without exposing SYSTEM
+   * identity administration to another context.
+   */
+  async grantInitialOwnerBranchAccess(input: {
+    organizationId: string;
+    userId: string;
+    branchId: string;
+    correlationId: string;
+    causationId: string;
+  }): Promise<void> {
+    const context = provisioningContext(input);
+    await this.db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${input.organizationId}, 1))`,
+      );
+      const assignment = await this.users.findInitialOwnerAssignment(tx, input.organizationId);
+      if (assignment?.userId !== input.userId)
+        throw PlatformError.permissionDenied(
+          'Only the durable initial Owner may receive bootstrap access.',
+        );
+      const user = await this.users.findUser(tx, input.organizationId, input.userId);
+      if (!user) throw PlatformError.validationFailed('Initial Owner was not found.');
+      if (user.hasBranchAccess(input.branchId)) return;
+      user.grantBranchAccess(input.branchId);
+      await this.users.save(tx, user, context);
+    });
+  }
+
   private async resolveInitialUser(
     tx: Parameters<UserRepository['findUser']>[0],
     command: {
