@@ -57,7 +57,11 @@ describe('Plans & Entitlements persistence', () => {
   }
   function entitlementService(planId: string): EntitlementService {
     const subscriptions: SubscriptionStatusContract = {
-      getActiveSubscription: async (organizationId) => ({ organizationId, planId }),
+      getActiveSubscription: async (organizationId) => ({
+        organizationId,
+        planId,
+        status: 'ACTIVE',
+      }),
     };
     return new EntitlementService(testdb.db, subscriptions, planRepository, overrideRepository);
   }
@@ -121,7 +125,13 @@ describe('Plans & Entitlements persistence', () => {
     const planId = await activePlan([{ code: 'storefront.enabled', value: true }]);
     const service = new EntitlementService(
       testdb.db,
-      { getActiveSubscription: async () => ({ organizationId: other.organization.id, planId }) },
+      {
+        getActiveSubscription: async () => ({
+          organizationId: other.organization.id,
+          planId,
+          status: 'ACTIVE',
+        }),
+      },
       planRepository,
       overrideRepository,
     );

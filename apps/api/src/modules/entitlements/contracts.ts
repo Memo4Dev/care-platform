@@ -26,12 +26,9 @@ export interface EntitlementServiceContract {
   ): Promise<LimitUsage>;
 }
 /** Subscription & Billing port. M1-006 owns the adapter; entitlement code never reads its tables. */
-export const SUBSCRIPTION_STATUS = Symbol('SUBSCRIPTION_STATUS');
-export interface ActiveSubscription {
-  organizationId: string;
-  planId: string;
-}
-export interface SubscriptionStatusContract {
-  getActiveSubscription(organizationId: string): Promise<ActiveSubscription | null>;
-}
+export {
+  SUBSCRIPTION_STATUS,
+  type ActiveSubscription,
+  type SubscriptionStatusContract,
+} from '../../common/contracts/subscription-status';
 import type { FeatureEntitlementCode, LimitEntitlementCode } from './domain/registry';

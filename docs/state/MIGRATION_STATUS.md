@@ -32,3 +32,14 @@ M1-004: Additive Identity & Access migration generated locally: `packages/databa
 - Adds global user email uniqueness plus `lower(email)` unique-index enforcement for case-insensitive raw writers, nullable globally unique Supabase identity links, mutable root versions, FK indexes, and composite tenant FKs tying grants/access to same-organization users, branches and roles.
 - Idempotently seeds the static global capability catalog with `ON CONFLICT (code) DO NOTHING`.
 - Non-destructive, additive-only; applied automatically by the test harness via runMigrations. No production rollout performed.
+
+M1-006: Additive Drizzle migrations `0006_tearful_husk.sql` and `0007_fancy_cyclops.sql` create logical schema `subscription`, lifecycle/billing enums, and subscription persistence.
+
+- `subscription.subscriptions` has organization and plan FKs, CAS version, period validity check, period-expiry lookup indexes, and a partial unique index enforcing one TRIAL/ACTIVE/PAST_DUE/SUSPENDED commercial subscription per organization.
+- `subscription.subscription_periods` is append-only at the repository level, with plan/subscription FKs, valid-period check, immutable effective-time uniqueness and lookup index.
+- Non-destructive, additive-only; applied automatically by the native-PG test harness. No production rollout performed.
+
+M1-006 blocker remediation: additive migration `0008_subscription_periods_append_only.sql` creates `subscription.reject_subscription_period_mutation()` and a `BEFORE UPDATE OR DELETE` trigger on `subscription.subscription_periods`.
+
+- The trigger raises SQLSTATE `55000` for direct history mutation. INSERT remains allowed for the aggregate's new historical facts.
+- Non-destructive, additive-only; applied automatically by the native-PG test harness. No production rollout performed.

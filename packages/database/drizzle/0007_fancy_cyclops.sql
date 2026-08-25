@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "subscriptions_one_commercial_per_organization_unique" ON "subscription"."subscriptions" USING btree ("organization_id") WHERE "subscription"."subscriptions"."status" in ('TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED');
