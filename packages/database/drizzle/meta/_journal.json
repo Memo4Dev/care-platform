@@ -64,6 +64,48 @@
       "when": 1787629066502,
       "tag": "0008_subscription_periods_append_only",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787630205158,
+      "tag": "0009_nifty_aqueduct",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787630224460,
+      "tag": "0010_purple_lockheed",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787630571411,
+      "tag": "0011_good_dagger",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1787630792756,
+      "tag": "0012_lowly_oracle",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1787631798760,
+      "tag": "0013_platform-authorization",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1787633990172,
+      "tag": "0014_support-session-terminal-audit",
+      "breakpoints": true
     }
   ]
 }

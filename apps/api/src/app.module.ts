@@ -5,6 +5,7 @@ import { IdentityModule } from './modules/identity/identity.module';
 import { OrganizationModule } from './modules/organization/organization.module';
 import { EntitlementsModule } from './modules/entitlements/entitlements.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { PlatformModule } from './modules/platform/platform.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { SubscriptionsModule } from './modules/subscriptions/subscriptions.modul
     IdentityModule,
     SubscriptionsModule,
     EntitlementsModule,
+    PlatformModule,
   ],
 })
 export class AppModule {}

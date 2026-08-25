@@ -43,3 +43,10 @@ M1-006 blocker remediation: additive migration `0008_subscription_periods_append
 
 - The trigger raises SQLSTATE `55000` for direct history mutation. INSERT remains allowed for the aggregate's new historical facts.
 - Non-destructive, additive-only; applied automatically by the native-PG test harness. No production rollout performed.
+
+M1-007: Additive Drizzle migrations `0009_nifty_aqueduct.sql` through `0013_platform-authorization.sql` create logical schema `platform`.
+
+- Creates platform tenant/provisioning/support-session enums, `platform.tenants`, and `platform.support_sessions`; tenant Organization and optional Subscription references are restrictive, Organization mapping is unique, and mutable roots use CAS versions. `0012` safely converts the initially generated subscription-version reference to the Subscription aggregate's integer version.
+- Support sessions carry reason, requested/started/ended actor and timestamp audit fields, mandatory expiry, lifecycle status, lookup indexes, and a composite `(tenant_id, organization_id)` FK that rejects cross-tenant support-session injection.
+- `0013` adds Supabase-linked platform principals, roles, capabilities and assignments; adds platform-principal support audit references; and replaces the direct Subscription FK with a composite `(subscription_id, organization_id)` tenant-scope FK.
+- Non-destructive, additive-only; applied automatically by the native-PG test harness. No production rollout performed.
