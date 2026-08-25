@@ -33,6 +33,8 @@ agents:
     - api-contract
     - tenant-isolation
     - quality-gates
+    - http-boundary-testing
+    - idempotency
   database:
     manifest: .agent-system/agents/database.md
     mode: subagent
@@ -139,6 +141,7 @@ agents:
     - vitest-testing
     - testcontainers
     - playwright-e2e
+    - http-boundary-testing
   reviewer:
     manifest: .agent-system/agents/reviewer.md
     mode: subagent

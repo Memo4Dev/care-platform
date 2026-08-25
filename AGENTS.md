@@ -10,6 +10,11 @@ Before editing:
 
 Do not load all architecture files by default.
 
+## Session Reconciliation
+At the start of every session (new or resumed), reconcile repository
+state before planning or editing. See the orchestrator manifest for
+the full reconciliation procedure and source-of-truth priority.
+
 ## Architecture governance
 `docs/architecture/` is authoritative for bounded contexts, ownership, domain rules, persistence, APIs, security, testing and rollout.
 Do not invent or silently change a business/domain rule.
@@ -33,6 +38,39 @@ Every tenant read/write is `organizationId` scoped.
 Branch-scoped actions enforce branch access.
 Do not trust tenant/branch IDs from request bodies without authorization.
 
+## Host mutation safety
+Agents must not install host-level system services/tools merely to satisfy tests.
+Do not automatically execute `brew install`, `brew services start`, host PostgreSQL installation, or system-wide daemon changes without explicit user approval.
+
+Preferred hierarchy:
+1. existing project dependency (`pnpm add`)
+2. existing project infrastructure (Docker Compose)
+3. Testcontainers
+4. GitHub Actions service containers
+5. staging infrastructure
+6. host mutation only with explicit user approval
+
+Package dependencies (`pnpm add bullmq`) are different from host-level
+installations and may be performed when task-scoped and appropriate.
+
+## MCP / external tool safety
+Supabase MCP or other external tool integrations may be used by relevant agents.
+Rules:
+- use only when task-relevant
+- do not load for unrelated agents
+- no destructive operations without explicit approval
+- no production configuration changes without approval
+- no secret exposure
+- no architecture changes merely because capabilities exist
+
+External tool availability does not change accepted architecture decisions.
+
+## Secrets / runtime configuration
+Secrets must never be hardcoded or printed.
+Explicitly classify: CI ephemeral, STAGING, PRODUCTION.
+CI may use ephemeral test-only credentials.
+Never reuse CI credentials for staging/production.
+
 ## Work loop
 Task intake → route → plan → implement → test → independent review (including Design Compliance Review Gate for UI tasks) → security review if triggered → fix loop → all relevant gates green → update state → commit → STOP before push/merge.
 
@@ -55,6 +93,8 @@ Use Conventional Commits.
 ## Quality
 All required format/lint/typecheck/unit/integration/contract/security tests must be green.
 Do not weaken tests to obtain green.
+Tests must declare environment requirements (LOCAL/CI).
+Skipped-required tests are CI obligations, not acceptance.
 
 ## State
 After each completed loop update:

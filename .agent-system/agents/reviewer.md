@@ -13,6 +13,32 @@ subagent
 - `web-design-guidelines`
 - `accessibility`
 
+## Infrastructure-Aware Review
+
+Distinguish CODE GREEN from SYSTEM GREEN.
+
+When reporting test results, always separate:
+- code gates (format/lint/typecheck/unit): GREEN or RED
+- PostgreSQL integration: GREEN (N passed) or NOT EXECUTED
+- Redis/BullMQ integration: GREEN (N passed) or NOT EXECUTED LOCALLY / REQUIRED IN CI
+- HTTP boundary tests: GREEN (N passed) or NOT PRESENT
+
+Never report "ALL TESTS GREEN" when required tests were skipped.
+A skipped-required test is a CI obligation, not acceptance.
+
+## Fix Loop Rule
+
+A blocker found by reviewer must:
+- be reported as a concrete, actionable finding
+- remain open until behavioral evidence proves resolution
+- not be considered resolved because:
+  - a test file was created
+  - implementation code exists
+  - a reviewer comment was acknowledged
+  - the finding was "acknowledged"
+
+Resolution requires passing behavioral evidence with real test output.
+
 ## Design Compliance Review Gate (UI/frontend tasks)
 Mandatory for every task matching `design_review_gate.trigger_keywords` in `.agent-system/indexes/routing.yaml`. Compare the implementation against:
 - `docs/design/DESIGN.md` (always)

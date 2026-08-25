@@ -54,3 +54,8 @@ skills:
   observability: .agents/skills/observability/SKILL.md
   backup-dr: .agents/skills/backup-dr/SKILL.md
   mobile-contract-client: .agents/skills/mobile-contract-client/SKILL.md
+  http-boundary-testing: .agents/skills/http-boundary-testing/SKILL.md
+  frontend-design: .agents/skills/frontend-design/SKILL.md
+  vercel-react-best-practices: .agents/skills/vercel-react-best-practices/SKILL.md
+  vercel-composition-patterns: .agents/skills/vercel-composition-patterns/SKILL.md
+  web-design-guidelines: .agents/skills/web-design-guidelines/SKILL.md

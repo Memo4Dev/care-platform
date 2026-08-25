@@ -100,6 +100,56 @@ rules:
   - backend
   - reviewer
   - qa
+  skills:
+  - api-contract
+  - http-boundary-testing
+- keywords:
+  - endpoint
+  - http route
+  - controller
+  - app.inject
+  - nestjs controller
+  primary: backend
+  review:
+  - reviewer
+  - security
+  - qa
+  skills:
+  - http-boundary-testing
+  - api-contract
+  - nestjs-module
+- keywords:
+  - mutation
+  - idempotency
+  - idempotent
+  - post endpoint
+  - put endpoint
+  - patch endpoint
+  primary: backend
+  review:
+  - reviewer
+  - security
+  skills:
+  - idempotency
+  - http-boundary-testing
+- keywords:
+  - outbox
+  - inbox
+  - event delivery
+  - bullmq
+  - worker
+  - relay
+  - saga
+  - process manager
+  primary: backend
+  review:
+  - reviewer
+  - security
+  - qa
+  skills:
+  - idempotency
+  - event-contracts
+  - observability
 - keywords:
   - ui
   - ux
