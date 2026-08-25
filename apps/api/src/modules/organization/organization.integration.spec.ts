@@ -6,6 +6,7 @@ import { createTestDatabase, type TestDatabase } from '@commerce-platform/testin
 
 import { OrganizationContractProvider } from './application/organization-contracts.provider';
 import { OrganizationService } from './application/organization.service';
+import { TenantOrganizationMutationAdapter } from './application/tenant-organization-mutation.adapter';
 import {
   mapPersistenceError,
   OrganizationRepository,
@@ -43,6 +44,8 @@ describe('Organization context persistence', () => {
       );
 
       expect(rows).toEqual([
+        { table_schema: 'integration', table_name: 'idempotency_outcomes' },
+        { table_schema: 'integration', table_name: 'inbox' },
         { table_schema: 'integration', table_name: 'outbox' },
         { table_schema: 'organization', table_name: 'branches' },
         { table_schema: 'organization', table_name: 'organization_policies' },
@@ -347,6 +350,88 @@ describe('Organization context persistence', () => {
         [organizationId],
       );
       expect(rows[0].count).toBe('1'); // only the original OrganizationCreated
+    });
+  });
+
+  describe('tenant command idempotency adapter', () => {
+    it('claims, completes and replays branch mutations with state and outbox in one local transaction', async () => {
+      const organization = await service.createOrganization({ name: 'HTTP command adapter org' });
+      const input = {
+        organizationId: organization.organization.id,
+        idempotencyScope: `ORGANIZATION_USER:test:${organization.organization.id}:branches`,
+        idempotencyKey: newId(),
+        body: { code: 'HTTP-BRANCH', name: 'HTTP Branch', priority: 4 },
+      };
+      const firstAdapter = new TenantOrganizationMutationAdapter(testdb.db, service);
+      const secondAdapter = new TenantOrganizationMutationAdapter(testdb.db, service);
+
+      const first = await firstAdapter.createBranch(input);
+      const replay = await secondAdapter.createBranch(input);
+
+      expect(replay).toEqual(first);
+      const { rows } = await testdb.client.query<{ status: string; response_json: unknown }>(
+        `SELECT status, response_json FROM integration.idempotency_outcomes
+         WHERE scope = $1 AND idempotency_key = $2`,
+        [input.idempotencyScope, input.idempotencyKey],
+      );
+      expect(rows).toEqual([{ status: 'COMPLETED', response_json: first }]);
+
+      await expect(
+        secondAdapter.createBranch({ ...input, body: { ...input.body, name: 'Changed' } }),
+      ).rejects.toMatchObject({ code: ERROR_CODES.IDEMPOTENCY_CONFLICT });
+      const outbox = await testdb.client.query<{ count: string }>(
+        `SELECT count(*) AS count FROM integration.outbox
+         WHERE aggregate_id = $1 AND event_type = 'organization.branch-created'`,
+        [organization.organization.id],
+      );
+      expect(outbox.rows[0].count).toBe('1');
+    });
+
+    it('rolls back the claim with failed business state and serializes concurrent/new adapter instances', async () => {
+      const organization = await service.createOrganization({ name: 'Adapter concurrency org' });
+      const scope = `ORGANIZATION_USER:test:${organization.organization.id}:warehouses`;
+      const key = newId();
+      const firstAdapter = new TenantOrganizationMutationAdapter(testdb.db, service);
+      const secondAdapter = new TenantOrganizationMutationAdapter(testdb.db, service);
+
+      await expect(
+        firstAdapter.createWarehouse({
+          organizationId: organization.organization.id,
+          idempotencyScope: scope,
+          idempotencyKey: key,
+          body: { branchId: newId(), code: 'ROLLBACK', name: 'Rejected warehouse' },
+        }),
+      ).rejects.toMatchObject({ code: ERROR_CODES.RESOURCE_NOT_FOUND });
+      expect(
+        await testdb.client.query(
+          'SELECT 1 FROM integration.idempotency_outcomes WHERE scope = $1 AND idempotency_key = $2',
+          [scope, key],
+        ),
+      ).toMatchObject({ rowCount: 0 });
+
+      const branchId = newId();
+      await service.createBranch({
+        organizationId: organization.organization.id,
+        branchId,
+        code: 'CONCURRENT-BRANCH',
+        name: 'Concurrent branch',
+      });
+      const command = {
+        organizationId: organization.organization.id,
+        idempotencyScope: scope,
+        idempotencyKey: key,
+        body: { branchId, code: 'CONCURRENT', name: 'Concurrent warehouse' },
+      };
+      const [first, replay] = await Promise.all([
+        firstAdapter.createWarehouse(command),
+        secondAdapter.createWarehouse(command),
+      ]);
+      expect(replay).toEqual(first);
+      const count = await testdb.client.query<{ count: string }>(
+        'SELECT count(*) AS count FROM organization.warehouses WHERE organization_id = $1 AND code = $2',
+        [organization.organization.id, 'CONCURRENT'],
+      );
+      expect(count.rows[0].count).toBe('1');
     });
   });
 

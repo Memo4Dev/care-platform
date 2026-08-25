@@ -34,7 +34,9 @@ export class TenantOverrideRepository {
           effectiveFrom: row.effectiveFrom,
           effectiveTo: row.effectiveTo,
           reason: row.reason,
-          grantedBy: row.grantedBy,
+          actorType: row.actorType as 'PLATFORM_USER' | 'SYSTEM_SERVICE',
+          actorId: row.actorId,
+          correlationId: row.correlationId,
         })
       : null;
   }
@@ -78,7 +80,9 @@ export class TenantOverrideRepository {
         effectiveFrom: override.effectiveFrom,
         effectiveTo: override.effectiveTo,
         reason: override.reason,
-        grantedBy: override.grantedBy,
+        actorType: override.actorType,
+        actorId: override.actorId,
+        correlationId: override.correlationId,
       });
     if (override.isRevoked)
       await executor

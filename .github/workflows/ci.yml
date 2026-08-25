@@ -26,6 +26,15 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout
@@ -47,6 +56,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Configure Redis test ACL
+        run: >-
+          redis-cli ACL SETUSER ci on '>ci-redis-password' '~*' '&*' '+@all'
+          && redis-cli ACL SETUSER default off
+          && redis-cli --user ci --pass ci-redis-password ping
+
       - name: Format check
         run: pnpm format:check
 
@@ -60,11 +75,21 @@ jobs:
         run: pnpm test
         env:
           TEST_DATABASE_URL: postgres://care_platform_app:ci-password@localhost:5432/care_platform_test
+          REDIS_INTEGRATION: 'true'
+          REDIS_HOST: localhost
+          REDIS_PORT: '6379'
+          REDIS_USERNAME: ci
+          REDIS_PASSWORD: ci-redis-password
 
       - name: Integration tests
         run: pnpm test:integration
         env:
           TEST_DATABASE_URL: postgres://care_platform_app:ci-password@localhost:5432/care_platform_test
+          REDIS_INTEGRATION: 'true'
+          REDIS_HOST: localhost
+          REDIS_PORT: '6379'
+          REDIS_USERNAME: ci
+          REDIS_PASSWORD: ci-redis-password
 
       - name: Build
         run: pnpm build

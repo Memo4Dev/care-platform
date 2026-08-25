@@ -18,7 +18,7 @@ describe('Plans & Entitlements persistence', () => {
   let plans: PlanService;
   let planRepository: PlanRepository;
   let overrideRepository: TenantOverrideRepository;
-  const audit = () => ({ actorId: newId(), correlationId: newId(), causationId: newId() });
+  const audit = () => ({ actorId: 'SYSTEM:test', correlationId: newId(), causationId: newId() });
   beforeAll(async () => {
     testdb = await createTestDatabase();
     organizations = new OrganizationService(testdb.db, new OrganizationRepository());
@@ -109,7 +109,7 @@ describe('Plans & Entitlements persistence', () => {
       effectiveFrom: new Date('2025-01-01T00:00:00Z'),
       effectiveTo: new Date('2025-02-01T00:00:00Z'),
       reason: 'Expired promotional access',
-      grantedBy: userId,
+      actorType: 'SYSTEM_SERVICE',
       ...audit(),
     });
     const service = entitlementService(
@@ -158,7 +158,7 @@ describe('Plans & Entitlements persistence', () => {
       value: true,
       effectiveFrom: new Date(Date.now() - 60_000),
       reason: 'Temporary access',
-      grantedBy: userId,
+      actorType: 'SYSTEM_SERVICE',
       ...audit(),
     });
     const service = entitlementService(
@@ -252,12 +252,12 @@ describe('Plans & Entitlements persistence', () => {
         value: true,
         effectiveFrom: new Date(),
         reason: 'Invalid feature value',
-        grantedBy: userId,
+        actorType: 'SYSTEM_SERVICE',
         ...audit(),
       }),
     ).rejects.toMatchObject({ code: ERROR_CODES.VALIDATION_FAILED });
   });
-  it('given a raw override insert with another tenant actor when inserted then the composite tenant FK rejects it', async () => {
+  it('given a raw override insert with an organization-user actor when inserted then actor policy rejects it', async () => {
     const orgA = await organizations.createOrganization({ name: 'Override A' });
     const orgB = await organizations.createOrganization({ name: 'Override B' });
     const userB = newId();
@@ -270,7 +270,7 @@ describe('Plans & Entitlements persistence', () => {
     let error: { code?: string; constraint?: string } | null = null;
     try {
       await testdb.client.query(
-        `INSERT INTO entitlements.tenant_overrides (id, organization_id, entitlement_code, value_json, effective_from, reason, granted_by) VALUES ($1, $2, $3, $4::jsonb, now(), $5, $6)`,
+        `INSERT INTO entitlements.tenant_overrides (id, organization_id, entitlement_code, value_json, effective_from, reason, granted_by, actor_type, actor_id, correlation_id) VALUES ($1, $2, $3, $4::jsonb, now(), $5, $6, $7, $8, $9)`,
         [
           newId(),
           orgA.organization.id,
@@ -278,12 +278,14 @@ describe('Plans & Entitlements persistence', () => {
           JSON.stringify(true),
           'attack',
           userB,
+          'ORGANIZATION_USER',
+          userB,
+          'test-correlation',
         ],
       );
     } catch (caught) {
       error = caught as { code?: string; constraint?: string };
     }
-    expect(error?.code).toBe('23503');
-    expect(error?.constraint).toBe('tenant_overrides_granted_by_tenant_fk');
+    expect(error?.code).toBe('23514');
   });
 });

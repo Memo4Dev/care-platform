@@ -27,7 +27,26 @@ export function assertIntegrationEventEnvelope(
   if (
     !event ||
     typeof event !== 'object' ||
-    (event.eventScope !== 'TENANT' && event.eventScope !== 'GLOBAL')
+    (event.eventScope !== 'TENANT' && event.eventScope !== 'GLOBAL') ||
+    !nonEmpty(event.eventId) ||
+    !nonEmpty(event.eventType) ||
+    typeof event.eventVersion !== 'number' ||
+    !Number.isInteger(event.eventVersion) ||
+    event.eventVersion < 1 ||
+    !nonEmpty(event.occurredAt) ||
+    !nonEmpty(event.aggregateType) ||
+    !nonEmpty(event.aggregateId) ||
+    typeof event.aggregateVersion !== 'number' ||
+    !Number.isInteger(event.aggregateVersion) ||
+    event.aggregateVersion < 1 ||
+    !nonEmpty(event.correlationId) ||
+    !nonEmpty(event.causationId) ||
+    !event.actor ||
+    typeof event.actor !== 'object' ||
+    !nonEmpty(event.actor.id) ||
+    !event.payload ||
+    typeof event.payload !== 'object' ||
+    Array.isArray(event.payload)
   ) {
     throw PlatformError.validationFailed('Integration event must declare eventScope.', {
       details: { field: 'eventScope' },
@@ -47,13 +66,19 @@ export function assertIntegrationEventEnvelope(
     });
   }
 }
+function nonEmpty(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
 
 export function integrationEventEnvelope(
-  input: Omit<IntegrationEventEnvelope, 'eventId' | 'occurredAt'> & { occurredAt: Date | string },
+  input: Omit<IntegrationEventEnvelope, 'eventId' | 'occurredAt'> & {
+    occurredAt: Date | string;
+    eventId?: string;
+  },
 ): IntegrationEventEnvelope {
   const envelope: IntegrationEventEnvelope = {
     ...input,
-    eventId: newId(),
+    eventId: input.eventId ?? newId(),
     occurredAt:
       input.occurredAt instanceof Date ? input.occurredAt.toISOString() : input.occurredAt,
   };

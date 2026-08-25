@@ -19,6 +19,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.23.0",
     "uuid": "^14.0.2"

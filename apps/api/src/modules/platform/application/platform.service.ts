@@ -8,6 +8,7 @@ import {
   PlatformTenantRepository,
   type PlatformAuditContext,
 } from '../infrastructure/platform-tenant.repository';
+import type { DbExecutor } from '../infrastructure/db-executor';
 import {
   PLATFORM_AUTHORIZATION,
   type PlatformAuthorizationProvider,
@@ -37,20 +38,40 @@ export class PlatformService {
       subscriptionVersion?: number | null;
     } & CommandAudit,
   ) {
+    return this.db.transaction((tx) => this.registerInTransaction(tx, c));
+  }
+  async registerInTransaction(
+    tx: DbExecutor,
+    c: {
+      tenantId?: string;
+      registrationReference: string;
+      subscriptionId?: string | null;
+      subscriptionVersion?: number | null;
+    } & CommandAudit,
+    tenant?: PlatformTenant,
+    registration?: Awaited<ReturnType<PlatformRegistrationResolver['resolveTrustedRegistration']>>,
+  ) {
     await this.authorization.requireCapability(c, 'tenant.suspend');
-    const registration = await this.registrations.resolveTrustedRegistration(
-      c.registrationReference,
-    );
-    const tenant = PlatformTenant.register({
-      id: c.tenantId ?? newId(),
-      organizationId: registration.organizationId,
-      subscriptionId: c.subscriptionId,
-      subscriptionVersion: c.subscriptionVersion,
-    });
-    return this.db.transaction(async (tx) => ({
-      tenant: snapshot(tenant),
-      eventsPersisted: await this.repository.save(tx, tenant, audit(c), registration),
-    }));
+    const resolvedRegistration =
+      registration ??
+      (await this.registrations.resolveTrustedRegistration(c.registrationReference));
+    const resolvedTenant =
+      tenant ??
+      PlatformTenant.register({
+        id: c.tenantId ?? newId(),
+        organizationId: resolvedRegistration.organizationId,
+        subscriptionId: c.subscriptionId,
+        subscriptionVersion: c.subscriptionVersion,
+      });
+    return {
+      tenant: snapshot(resolvedTenant),
+      eventsPersisted: await this.repository.save(
+        tx,
+        resolvedTenant,
+        audit(c),
+        resolvedRegistration,
+      ),
+    };
   }
   async activate(c: { tenantId: string } & CommandAudit) {
     return this.execute(c, 'tenant.suspend', (t) => t.activate());
@@ -123,16 +144,22 @@ export class PlatformService {
     permission: PlatformCapability,
     action: (tenant: PlatformTenant) => void,
   ) {
+    return this.db.transaction((tx) => this.executeInTransaction(tx, c, permission, action));
+  }
+  async executeInTransaction(
+    tx: DbExecutor,
+    c: { tenantId: string } & CommandAudit,
+    permission: PlatformCapability,
+    action: (tenant: PlatformTenant) => void,
+  ) {
     await this.authorization.requireCapability(c, permission);
-    return this.db.transaction(async (tx) => {
-      const tenant = await this.repository.find(tx, c.tenantId);
-      if (!tenant) throw PlatformError.notFound(`Platform tenant ${c.tenantId} was not found.`);
-      action(tenant);
-      return {
-        tenant: snapshot(tenant),
-        eventsPersisted: await this.repository.save(tx, tenant, audit(c)),
-      };
-    });
+    const tenant = await this.repository.find(tx, c.tenantId);
+    if (!tenant) throw PlatformError.notFound(`Platform tenant ${c.tenantId} was not found.`);
+    action(tenant);
+    return {
+      tenant: snapshot(tenant),
+      eventsPersisted: await this.repository.save(tx, tenant, audit(c)),
+    };
   }
 }
 function audit(c: PlatformPrincipalContext): PlatformAuditContext {

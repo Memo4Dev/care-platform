@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 
 import type { AuthorizationDecision, AuthorizeCommand, IdentityContracts } from '../contracts';
 import { AuthorizationService } from './authorization.service';
@@ -13,7 +13,9 @@ import { AuthorizationService } from './authorization.service';
  */
 @Injectable()
 export class IdentityContractProvider implements IdentityContracts {
-  constructor(private readonly authorizationService: AuthorizationService) {}
+  constructor(
+    @Inject(AuthorizationService) private readonly authorizationService: AuthorizationService,
+  ) {}
 
   authorize(command: AuthorizeCommand): Promise<AuthorizationDecision> {
     return this.authorizationService.authorize(command);

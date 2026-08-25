@@ -8,12 +8,13 @@ import {
   SubscriptionRepository,
   type AuditContext,
 } from '../infrastructure/subscription.repository';
+import type { DbExecutor } from '../infrastructure/db-executor';
 
 @Injectable()
 export class SubscriptionService {
   constructor(
     @Inject(DATABASE) private readonly db: DatabaseClient,
-    private readonly repository: SubscriptionRepository,
+    @Inject(SubscriptionRepository) private readonly repository: SubscriptionRepository,
   ) {}
   async startTrial(
     c: {
@@ -89,16 +90,21 @@ export class SubscriptionService {
     c: { organizationId: string; subscriptionId: string } & AuditContext,
     action: (s: Subscription) => void,
   ) {
-    return this.db.transaction(async (tx) => {
-      const s = await this.repository.find(tx, c.organizationId, c.subscriptionId);
-      if (!s) throw PlatformError.notFound(`Subscription ${c.subscriptionId} was not found.`);
-      action(s);
-      const result = {
-        subscription: snapshot(s),
-        eventsPersisted: await this.repository.save(tx, s, c),
-      };
-      return result;
-    });
+    return this.db.transaction((tx) => this.executeInTransaction(tx, c, action));
+  }
+  async executeInTransaction(
+    tx: DbExecutor,
+    c: { organizationId: string; subscriptionId: string } & AuditContext,
+    action: (s: Subscription) => void,
+  ) {
+    const s = await this.repository.find(tx, c.organizationId, c.subscriptionId);
+    if (!s) throw PlatformError.notFound(`Subscription ${c.subscriptionId} was not found.`);
+    action(s);
+    const result = {
+      subscription: snapshot(s),
+      eventsPersisted: await this.repository.save(tx, s, c),
+    };
+    return result;
   }
 }
 function snapshot(s: Subscription) {

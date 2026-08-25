@@ -127,6 +127,34 @@
       "when": 1787637000000,
       "tag": "0017_provisioning_terminal_immutability",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1787638000000,
+      "tag": "0018_tenant_override_actor_attribution",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787639000000,
+      "tag": "0019_http_idempotency_outcomes",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787640000000,
+      "tag": "0020_provisioning_retry_saga",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1787641000000,
+      "tag": "0021_outbox_bullmq_delivery",
+      "breakpoints": true
     }
   ]
 }

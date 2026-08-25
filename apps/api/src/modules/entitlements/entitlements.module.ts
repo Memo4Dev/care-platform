@@ -16,6 +16,6 @@ import { TenantOverrideRepository } from './infrastructure/tenant-override.repos
     EntitlementService,
     { provide: ENTITLEMENT_SERVICE, useExisting: EntitlementService },
   ],
-  exports: [ENTITLEMENT_SERVICE],
+  exports: [ENTITLEMENT_SERVICE, PlanService, PlanRepository, TenantOverrideRepository],
 })
 export class EntitlementsModule {}

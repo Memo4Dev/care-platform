@@ -15,7 +15,9 @@ export class TenantEntitlementOverride {
     readonly effectiveFrom: Date,
     readonly effectiveTo: Date | null,
     readonly reason: string,
-    readonly grantedBy: string,
+    readonly actorType: 'PLATFORM_USER' | 'SYSTEM_SERVICE',
+    readonly actorId: string,
+    readonly correlationId: string,
     private pendingInsert: boolean,
     private pendingRevoke: boolean,
     private readonly clock: () => Date,
@@ -29,14 +31,17 @@ export class TenantEntitlementOverride {
       effectiveFrom: Date;
       effectiveTo?: Date | null;
       reason: string;
-      grantedBy: string;
+      actorType: 'PLATFORM_USER' | 'SYSTEM_SERVICE';
+      actorId: string;
+      correlationId: string;
     },
     options: OverrideOptions = {},
   ): TenantEntitlementOverride {
     nonEmpty(input.organizationId, 'organizationId');
     nonEmpty(input.code, 'code');
     nonEmpty(input.reason, 'reason');
-    nonEmpty(input.grantedBy, 'grantedBy');
+    nonEmpty(input.actorId, 'actorId');
+    nonEmpty(input.correlationId, 'correlationId');
     assertEntitlementValue(input.code, input.value);
     const effectiveTo = input.effectiveTo ?? null;
     if (effectiveTo && effectiveTo <= input.effectiveFrom)
@@ -51,7 +56,9 @@ export class TenantEntitlementOverride {
       input.effectiveFrom,
       effectiveTo,
       input.reason,
-      input.grantedBy,
+      input.actorType,
+      input.actorId,
+      input.correlationId,
       true,
       false,
       options.clock ?? (() => new Date()),
@@ -74,7 +81,9 @@ export class TenantEntitlementOverride {
       state.effectiveFrom,
       state.effectiveTo,
       state.reason,
-      state.grantedBy,
+      state.actorType,
+      state.actorId,
+      state.correlationId,
       false,
       false,
       options.clock ?? (() => new Date()),
@@ -116,7 +125,9 @@ export interface OverrideSnapshot {
   effectiveFrom: Date;
   effectiveTo: Date | null;
   reason: string;
-  grantedBy: string;
+  actorType: 'PLATFORM_USER' | 'SYSTEM_SERVICE';
+  actorId: string;
+  correlationId: string;
   isRevoked: boolean;
 }
 export interface OverrideOptions {

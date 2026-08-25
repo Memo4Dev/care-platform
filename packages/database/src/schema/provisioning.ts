@@ -49,3 +49,28 @@ export const tenantProvisioning = provisioningSchema.table(
     ),
   ],
 );
+
+/** Durable command acceptance record for the asynchronous provisioning retry saga. */
+export const provisioningRetryRequests = provisioningSchema.table(
+  'retry_requests',
+  {
+    id: idColumn(),
+    tenantId: uuid('tenant_id').notNull(),
+    provisioningId: uuid('provisioning_id'),
+    registrationReference: text('registration_reference').notNull(),
+    idempotencyScope: text('idempotency_scope').notNull(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    requestHash: text('request_hash').notNull(),
+    eventId: uuid('event_id').notNull(),
+    status: text('status').notNull().default('REQUESTED'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('provisioning_retry_requests_scope_key_unique').on(
+      table.idempotencyScope,
+      table.idempotencyKey,
+    ),
+    unique('provisioning_retry_requests_event_unique').on(table.eventId),
+    index('provisioning_retry_requests_tenant_status_idx').on(table.tenantId, table.status),
+  ],
+);

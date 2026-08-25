@@ -11,6 +11,7 @@ import { DATABASE } from '../../database/database.tokens';
 import { Organization } from '../domain/organization';
 import { isPolicyType } from '../domain/policy';
 import { OrganizationRepository } from '../infrastructure/organization.repository';
+import type { DbExecutor } from '../infrastructure/db-executor';
 
 /**
  * Application service of the Organization context: one method per domain
@@ -28,7 +29,7 @@ import { OrganizationRepository } from '../infrastructure/organization.repositor
 export class OrganizationService {
   constructor(
     @Inject(DATABASE) private readonly db: DatabaseClient,
-    private readonly repository: OrganizationRepository,
+    @Inject(OrganizationRepository) private readonly repository: OrganizationRepository,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -86,6 +87,27 @@ export class OrganizationService {
     });
   }
 
+  /** Used only by the local HTTP command adapter's encompassing transaction. */
+  async createBranchInTransaction(
+    tx: DbExecutor,
+    command: {
+      organizationId: string;
+      branchId?: string;
+      code: string;
+      name: string;
+      priority?: number;
+    },
+  ): Promise<OrganizationCommandResult> {
+    return this.executeInTransaction(tx, command.organizationId, (organization) => {
+      organization.createBranch({
+        id: command.branchId ?? newId(),
+        code: command.code,
+        name: command.name,
+        priority: command.priority,
+      });
+    });
+  }
+
   async changeBranchPriority(command: {
     organizationId: string;
     branchId: string;
@@ -111,6 +133,27 @@ export class OrganizationService {
     name: string;
   }): Promise<OrganizationCommandResult> {
     return this.execute(command.organizationId, (organization) => {
+      organization.createWarehouse({
+        id: command.warehouseId ?? newId(),
+        branchId: command.branchId,
+        code: command.code,
+        name: command.name,
+      });
+    });
+  }
+
+  /** Used only by the local HTTP command adapter's encompassing transaction. */
+  async createWarehouseInTransaction(
+    tx: DbExecutor,
+    command: {
+      organizationId: string;
+      warehouseId?: string;
+      branchId: string;
+      code: string;
+      name: string;
+    },
+  ): Promise<OrganizationCommandResult> {
+    return this.executeInTransaction(tx, command.organizationId, (organization) => {
       organization.createWarehouse({
         id: command.warehouseId ?? newId(),
         branchId: command.branchId,
@@ -164,19 +207,23 @@ export class OrganizationService {
     organizationId: string,
     command: (organization: Organization) => void,
   ): Promise<OrganizationCommandResult> {
-    return this.db.transaction(async (tx) => {
-      const organization = await this.repository.findOrganization(tx, organizationId);
-      if (!organization) {
-        throw PlatformError.notFound(`Organization ${organizationId} was not found.`, {
-          details: { organizationId },
-        });
-      }
+    return this.db.transaction((tx) => this.executeInTransaction(tx, organizationId, command));
+  }
 
-      command(organization);
-
-      const eventsPersisted = await this.repository.save(tx, organization);
-      return toResult(organization, eventsPersisted);
-    });
+  async executeInTransaction(
+    tx: DbExecutor,
+    organizationId: string,
+    command: (organization: Organization) => void,
+  ): Promise<OrganizationCommandResult> {
+    const organization = await this.repository.findOrganization(tx, organizationId);
+    if (!organization) {
+      throw PlatformError.notFound(`Organization ${organizationId} was not found.`, {
+        details: { organizationId },
+      });
+    }
+    command(organization);
+    const eventsPersisted = await this.repository.save(tx, organization);
+    return toResult(organization, eventsPersisted);
   }
 }
 

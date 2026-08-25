@@ -1,7 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
   check,
-  foreignKey,
   index,
   jsonb,
   pgSchema,
@@ -12,7 +11,6 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import { users } from './identity';
 import { organizations } from './organization';
 import { idColumn, optimisticVersion, timestamps } from './shared';
 
@@ -69,17 +67,19 @@ export const tenantOverrides = entitlementsSchema.table(
     effectiveFrom: timestamp('effective_from', { withTimezone: true }).notNull(),
     effectiveTo: timestamp('effective_to', { withTimezone: true }),
     reason: text('reason').notNull(),
-    grantedBy: uuid('granted_by').notNull(),
+    /** Audited actor: Platform operators or the server-only provisioning actor. */
+    actorType: text('actor_type').notNull(),
+    actorId: text('actor_id').notNull(),
+    correlationId: text('correlation_id').notNull(),
+    /** Retained only for pre-M1-009 rows; new writes must leave it null. */
+    legacyGrantedBy: uuid('granted_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    // A same-tenant actor is mandatory; a raw cross-tenant actor injection is
-    // rejected by this composite FK, not merely application convention.
-    foreignKey({
-      name: 'tenant_overrides_granted_by_tenant_fk',
-      columns: [table.grantedBy, table.organizationId],
-      foreignColumns: [users.id, users.organizationId],
-    }).onDelete('restrict'),
+    // Platform actors are global, not tenant users. PostgreSQL enforces this
+    // conditional relationship with the migration trigger; this lookup index
+    // keeps principal deletion checks and audit queries efficient.
+    index('tenant_overrides_actor_idx').on(table.actorType, table.actorId),
     check(
       'tenant_overrides_effective_window_valid',
       sql`(${table.effectiveTo} is null or ${table.effectiveTo} > ${table.effectiveFrom})`,
@@ -89,6 +89,6 @@ export const tenantOverrides = entitlementsSchema.table(
       table.code,
       table.effectiveFrom,
     ),
-    index('tenant_overrides_granted_by_idx').on(table.grantedBy),
+    index('tenant_overrides_granted_by_idx').on(table.legacyGrantedBy),
   ],
 );

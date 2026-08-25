@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
 import { OrganizationContractProvider } from './application/organization-contracts.provider';
 import { OrganizationService } from './application/organization.service';
+import { TenantOrganizationMutationAdapter } from './application/tenant-organization-mutation.adapter';
 import { OrganizationProvisioningService } from './application/organization-provisioning.service';
 import { ORGANIZATION_CONTRACTS, ORGANIZATION_PROVISIONING } from './contracts';
 import { OrganizationRepository } from './infrastructure/organization.repository';
@@ -20,6 +21,7 @@ import { OrganizationRepository } from './infrastructure/organization.repository
   providers: [
     OrganizationRepository,
     OrganizationService,
+    TenantOrganizationMutationAdapter,
     OrganizationProvisioningService,
     OrganizationContractProvider,
     {
@@ -28,6 +30,12 @@ import { OrganizationRepository } from './infrastructure/organization.repository
     },
     { provide: ORGANIZATION_PROVISIONING, useExisting: OrganizationProvisioningService },
   ],
-  exports: [ORGANIZATION_CONTRACTS, ORGANIZATION_PROVISIONING],
+  exports: [
+    ORGANIZATION_CONTRACTS,
+    ORGANIZATION_PROVISIONING,
+    OrganizationService,
+    OrganizationRepository,
+    TenantOrganizationMutationAdapter,
+  ],
 })
 export class OrganizationModule {}

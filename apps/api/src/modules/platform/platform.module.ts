@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
 import { ProvisioningExecutionModule } from '../../common/provisioning-execution/provisioning-execution.module';
 import { PlatformService } from './application/platform.service';
+import { PlatformAdminMutationAdapter } from './application/platform-admin-mutation.adapter';
 import {
   DatabasePlatformAuthorizationProvider,
   PLATFORM_AUTHORIZATION,
@@ -24,6 +25,7 @@ import {
   providers: [
     PlatformTenantRepository,
     PlatformService,
+    PlatformAdminMutationAdapter,
     PlatformProvisioningService,
     { provide: PLATFORM_AUTHORIZATION, useClass: DatabasePlatformAuthorizationProvider },
     { provide: PLATFORM_PRINCIPAL_RESOLVER, useClass: DatabasePlatformPrincipalResolver },
@@ -33,8 +35,10 @@ import {
   ],
   exports: [
     PlatformService,
+    PlatformAdminMutationAdapter,
     PLATFORM_PROVISIONING,
     PLATFORM_PRINCIPAL_RESOLVER,
+    PLATFORM_AUTHORIZATION,
     PROVISIONING_SYSTEM_PRINCIPAL,
   ],
 })

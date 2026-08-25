@@ -7,6 +7,7 @@ import { EntitlementsModule } from './modules/entitlements/entitlements.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { PlatformModule } from './modules/platform/platform.module';
 import { ProvisioningModule } from './modules/provisioning/provisioning.module';
+import { ApiModule } from './modules/api/api.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ProvisioningModule } from './modules/provisioning/provisioning.module';
     EntitlementsModule,
     PlatformModule,
     ProvisioningModule,
+    ApiModule,
   ],
 })
 export class AppModule {}

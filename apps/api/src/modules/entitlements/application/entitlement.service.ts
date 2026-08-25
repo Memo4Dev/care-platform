@@ -19,8 +19,8 @@ export class EntitlementService implements EntitlementServiceContract {
   constructor(
     @Inject(DATABASE) private readonly db: DatabaseClient,
     @Inject(SUBSCRIPTION_STATUS) private readonly subscriptions: SubscriptionStatusContract,
-    private readonly plans: PlanRepository,
-    private readonly overrides: TenantOverrideRepository,
+    @Inject(PlanRepository) private readonly plans: PlanRepository,
+    @Inject(TenantOverrideRepository) private readonly overrides: TenantOverrideRepository,
   ) {}
   async canUseFeature(
     organizationId: string,

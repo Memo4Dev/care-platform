@@ -6,9 +6,24 @@ export interface AuthenticatedPrincipal {
   readonly subjectId: string;
   readonly [opaquePrincipal]: never;
 }
+const trustedPrincipals = new WeakSet<object>();
+export function trustPrincipal<T extends AuthenticatedPrincipal>(principal: T): T {
+  trustedPrincipals.add(principal);
+  return Object.freeze(principal);
+}
+export function assertTrustedPrincipal(value: unknown): asserts value is AuthenticatedPrincipal {
+  if (!value || typeof value !== 'object' || !trustedPrincipals.has(value)) {
+    throw new Error('Trusted authenticated principal required.');
+  }
+}
 export interface PlatformUserPrincipal extends AuthenticatedPrincipal {
   readonly type: 'PLATFORM_USER';
   readonly platformUserId: string;
+}
+export interface OrganizationUserPrincipal extends AuthenticatedPrincipal {
+  readonly type: 'ORGANIZATION_USER';
+  readonly organizationUserId: string;
+  readonly organizationId: string;
 }
 export interface SystemServicePrincipal extends AuthenticatedPrincipal {
   readonly type: 'SYSTEM_SERVICE';

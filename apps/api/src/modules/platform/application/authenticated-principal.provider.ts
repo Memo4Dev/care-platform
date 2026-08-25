@@ -1,23 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { DatabaseClient } from '@commerce-platform/database';
 import { platformPrincipals } from '@commerce-platform/database';
 import { PlatformError } from '@commerce-platform/contracts';
 import type {
-  AuthenticatedPrincipal,
   PlatformUserPrincipal,
   SystemServicePrincipal,
 } from '../../../common/auth/authenticated-principal';
+import { trustPrincipal } from '../../../common/auth/authenticated-principal';
 import { DATABASE } from '../../database/database.tokens';
-const registry = new WeakSet<object>();
-function trust<T extends AuthenticatedPrincipal>(principal: T): T {
-  registry.add(principal);
-  return Object.freeze(principal);
-}
-export function assertTrustedPrincipal(value: unknown): asserts value is AuthenticatedPrincipal {
-  if (!value || typeof value !== 'object' || !registry.has(value))
-    throw PlatformError.permissionDenied('Trusted authenticated principal required.');
-}
+export { assertTrustedPrincipal } from '../../../common/auth/authenticated-principal';
 export interface PlatformPrincipalResolver {
   resolveVerifiedSupabaseSubject(subject: string): Promise<PlatformUserPrincipal>;
 }
@@ -29,10 +21,15 @@ export class DatabasePlatformPrincipalResolver implements PlatformPrincipalResol
     const [principal] = await this.db
       .select({ id: platformPrincipals.id })
       .from(platformPrincipals)
-      .where(eq(platformPrincipals.supabaseUserId, subject))
+      .where(
+        and(
+          eq(platformPrincipals.supabaseUserId, subject),
+          eq(platformPrincipals.status, 'ACTIVE'),
+        ),
+      )
       .limit(1);
     if (!principal) throw PlatformError.permissionDenied('Platform principal is not active.');
-    return trust({
+    return trustPrincipal({
       type: 'PLATFORM_USER',
       subjectId: subject,
       platformUserId: principal.id,
@@ -45,7 +42,7 @@ export interface ProvisioningSystemPrincipalProvider {
 export const PROVISIONING_SYSTEM_PRINCIPAL = Symbol('PROVISIONING_SYSTEM_PRINCIPAL');
 @Injectable()
 export class FixedProvisioningSystemPrincipalProvider implements ProvisioningSystemPrincipalProvider {
-  private readonly principal = trust({
+  private readonly principal = trustPrincipal({
     type: 'SYSTEM_SERVICE',
     subjectId: 'SYSTEM:tenant-provisioning',
   } as SystemServicePrincipal);

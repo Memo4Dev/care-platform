@@ -35,4 +35,14 @@ describe('GET /health', () => {
     expect(body.service).toBe('api-shell');
     expect(Number.isNaN(Date.parse(body.timestamp))).toBe(false);
   });
+
+  it('does not allow an unauthenticated request to trigger a metrics database scrape', async () => {
+    app = await createApp();
+    await app.init();
+
+    const response = await app.inject({ method: 'GET', url: '/metrics' });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toMatchObject({ error: { code: 'AUTHENTICATION_REQUIRED' } });
+  });
 });

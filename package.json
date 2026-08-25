@@ -8,7 +8,9 @@
   "scripts": {
     "build": "turbo run build",
     "build:api:watch": "tsc -p apps/api/tsconfig.json --watch --preserveWatchOutput",
-    "start:api": "node apps/api/dist/main.js",
+    "start:api": "RUNTIME_ROLE=api node apps/api/dist/main.js",
+    "start:relay": "RUNTIME_ROLE=relay node apps/api/dist/main.js",
+    "start:worker": "RUNTIME_ROLE=worker node apps/api/dist/main.js",
     "start:api:watch": "node --watch apps/api/dist/main.js",
     "dev:api": "pnpm build && concurrently -k -n TSC,API -c cyan,green \"pnpm build:api:watch\" \"pnpm start:api:watch\"",
     "lint": "eslint apps/api/src --ext .ts && eslint eslint.config.mjs vitest.config.ts vitest.integration.config.ts packages/contracts/src packages/database/src packages/testing/src --ext .ts,.mjs && prettier --check README.md package.json pnpm-workspace.yaml turbo.json tsconfig.json tsconfig.base.json docker-compose.local.yml apps/**/*.json apps/**/*.ts apps/**/*.md packages/**/*.json packages/**/*.md packages/**/*.ts docs/state/**/*.md eslint.config.mjs vitest.config.ts vitest.integration.config.ts",

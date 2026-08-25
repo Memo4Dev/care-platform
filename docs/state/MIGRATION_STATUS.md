@@ -27,6 +27,18 @@ M1-008 hardening: additive migrations `0016_platform_registration_snapshot.sql` 
 
 - `0017` installs PostgreSQL triggers that reject registration-snapshot mutation and UPDATE/DELETE of a completed process row with SQLSTATE `55000`; it does not restrict retries of a non-terminal failed process. Both migrations are additive-only and are applied by the native-PG test harness; no production rollout performed.
 
+M1-009: Additive migration `0018_tenant_override_actor_attribution.sql` adds `actor_type`, `actor_id` and `correlation_id` to `entitlements.tenant_overrides`.
+
+- The former tenant-user grantor remains nullable only for historical compatibility. A PostgreSQL trigger permits only an active persisted Platform principal or opaque `SYSTEM:*` server actor, rejects organization-user actors, and preserves auditable correlation metadata. No production rollout performed.
+
+M1-009 review remediation: additive migration `0019_http_idempotency_outcomes.sql` creates `integration.idempotency_outcomes`.
+
+- It uniquely records an authenticated mutation scope and Idempotency-Key, request hash, pending/completed state and serialized response for safe replay or stable conflicts. No production rollout performed.
+
+M1-009 durability remediation: additive migration `0020_provisioning_retry_saga.sql` creates `integration.inbox` and `provisioning.retry_requests`.
+
+- Retry acceptance records an idempotency-scoped workflow reference and event ID, with a partial unique index preventing concurrent active retry work per tenant. The Inbox retains per-EventId consumer completion state. Both are additive-only and applied by the native-PG test harness; no production rollout performed.
+
 M1-005 review remediation: no additional database migration. `event_scope` is an additive field inside the existing JSONB integration outbox envelope, so schema storage remains backward-compatible; producers and consumers validate the payload invariant in application code.
 
 M1-004 review remediation: additive `0003_identity_organization_roles.sql` adds organization-scoped role grants with composite user/role tenant FKs and indexes.
@@ -52,6 +64,13 @@ M1-006 blocker remediation: additive migration `0008_subscription_periods_append
 
 - The trigger raises SQLSTATE `55000` for direct history mutation. INSERT remains allowed for the aggregate's new historical facts.
 - Non-destructive, additive-only; applied automatically by the native-PG test harness. No production rollout performed.
+
+M1-009 Platform Admin atomic idempotency: no additional migration. The existing additive `integration.idempotency_outcomes` table (`0019`) is now used by all exposed Platform Admin mutation route classes; their aggregate and Outbox writes share its local transaction.
+
+M1-009 Outbox→BullMQ delivery: additive migration `0021_outbox_bullmq_delivery.sql` adds Outbox publication timestamp, relay lease, attempt/error state, supporting claim index, and an opaque Inbox lease ID.
+
+- The migration is non-destructive and supports crash-safe relay recovery: only the owning lease can mark a row published, and an expired Inbox claimant cannot acknowledge a later owner. It is applied by the native-PG test harness; no production rollout performed.
+- M1-009 relay review remediation: no additional migration. Existing lease columns now have expiry predicates on all acknowledgement/release writes; this is an application-query hardening change and native PostgreSQL tests prove stale leases cannot mutate durable delivery state.
 
 M1-007: Additive Drizzle migrations `0009_nifty_aqueduct.sql` through `0013_platform-authorization.sql` create logical schema `platform`.
 
