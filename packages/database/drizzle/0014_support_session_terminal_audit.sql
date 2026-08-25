@@ -1,1 +1,0 @@
-ALTER TABLE "platform"."support_sessions" ADD CONSTRAINT "support_sessions_terminal_audit_check" CHECK ("status" NOT IN ('ENDED', 'EXPIRED') OR ("ended_at" IS NOT NULL AND "ended_by_platform_user_id" IS NOT NULL AND "end_reason" IS NOT NULL));
