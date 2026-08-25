@@ -11,6 +11,7 @@ export * from './schema/entitlements';
 export * from './schema/organization';
 export * from './schema/subscriptions';
 export * from './schema/platform';
+export * from './schema/provisioning';
 export {
   idColumn,
   idColumnDbGenerated,

@@ -13,6 +13,11 @@ import {
   type PlatformAuthorizationProvider,
   type PlatformPrincipalContext,
 } from './platform-authorization.provider';
+import {
+  PLATFORM_REGISTRATION_RESOLVER,
+  UnavailablePlatformRegistrationResolver,
+  type PlatformRegistrationResolver,
+} from './platform-registration.contract';
 
 type CommandAudit = PlatformPrincipalContext;
 @Injectable()
@@ -21,20 +26,30 @@ export class PlatformService {
     @Inject(DATABASE) private readonly db: DatabaseClient,
     @Inject(PlatformTenantRepository) private readonly repository: PlatformTenantRepository,
     @Inject(PLATFORM_AUTHORIZATION) private readonly authorization: PlatformAuthorizationProvider,
+    @Inject(PLATFORM_REGISTRATION_RESOLVER)
+    private readonly registrations: PlatformRegistrationResolver = new UnavailablePlatformRegistrationResolver(),
   ) {}
   async register(
     c: {
       tenantId?: string;
-      organizationId: string;
+      registrationReference: string;
       subscriptionId?: string | null;
       subscriptionVersion?: number | null;
     } & CommandAudit,
   ) {
     await this.authorization.requireCapability(c, 'tenant.suspend');
-    const tenant = PlatformTenant.register({ ...c, id: c.tenantId ?? newId() });
+    const registration = await this.registrations.resolveTrustedRegistration(
+      c.registrationReference,
+    );
+    const tenant = PlatformTenant.register({
+      id: c.tenantId ?? newId(),
+      organizationId: registration.organizationId,
+      subscriptionId: c.subscriptionId,
+      subscriptionVersion: c.subscriptionVersion,
+    });
     return this.db.transaction(async (tx) => ({
       tenant: snapshot(tenant),
-      eventsPersisted: await this.repository.save(tx, tenant, audit(c)),
+      eventsPersisted: await this.repository.save(tx, tenant, audit(c), registration),
     }));
   }
   async activate(c: { tenantId: string } & CommandAudit) {

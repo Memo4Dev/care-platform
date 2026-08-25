@@ -12,6 +12,8 @@ import type { PolicyType, PolicyValue } from '@commerce-platform/database';
 
 /** Nest injection token binding the Organization context's contract provider. */
 export const ORGANIZATION_CONTRACTS = Symbol('ORGANIZATION_CONTRACTS');
+/** Narrow trusted bootstrap boundary; Tenant Provisioning never reaches Organization persistence. */
+export const ORGANIZATION_PROVISIONING = Symbol('ORGANIZATION_PROVISIONING');
 
 export { POLICY_TYPES as ORGANIZATION_POLICY_TYPES } from '@commerce-platform/database';
 export type { PolicyType as OrganizationPolicyType, PolicyValue as OrganizationPolicyValue };
@@ -81,4 +83,14 @@ export interface OrganizationContracts {
    * organization.
    */
   getBranchPriority(organizationId: string, branchId: string): Promise<number>;
+}
+
+export interface OrganizationProvisioningContracts {
+  provisionBusinessDefaults(input: {
+    organizationId: string;
+    branchId: string;
+    warehouseId: string;
+    correlationId: string;
+    causationId: string;
+  }): Promise<void>;
 }

@@ -1,11 +1,20 @@
+import type { DbExecutor } from '../infrastructure/db-executor';
+import type { ProvisioningExecutionScope } from '../../../common/provisioning-execution/provisioning-execution.module';
+
 export const PLATFORM_PROVISIONING = Symbol('PLATFORM_PROVISIONING');
-/** Reserved exclusively for the future idempotent Tenant Provisioning process manager. */
-import type { SystemServicePrincipal } from '../../../common/auth/authenticated-principal';
+/** Reserved exclusively for the Tenant Provisioning process manager. */
+export interface VerifiedTenantRegistrationSnapshot {
+  tenantId: string;
+  organizationId: string;
+  reference: string;
+  requestedOrganizationName: string;
+  owner: { supabaseSubject: string; email: string; displayName: string };
+  verifiedAt: Date;
+}
 export interface PlatformProvisioningContract {
-  markProvisioningCompleted(input: {
-    principal: SystemServicePrincipal;
-    tenantId: string;
-    correlationId: string;
-    causationId: string;
-  }): Promise<void>;
+  getVerifiedRegistration(reference: string): Promise<VerifiedTenantRegistrationSnapshot>;
+  markProvisioningCompleted(
+    executor: DbExecutor,
+    capability: ProvisioningExecutionScope,
+  ): Promise<void>;
 }

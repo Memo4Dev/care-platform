@@ -18,6 +18,15 @@ M1-005: Additive Drizzle migration `0005_supreme_wild_child.sql` creates logical
 - `plans` has unique code and mutable CAS version; `plan_entitlements` uses a composite primary key and plan FK; `tenant_overrides` is organization-scoped, validates effective windows, indexes entitlement resolution, and has a composite same-tenant grantor FK to identity users.
 - Non-destructive, additive-only; applied automatically by the native-PG test harness. No production rollout performed.
 
+M1-008: Additive migration `0015_tenant_provisioning.sql` creates logical schema `provisioning`, its exact checkpointed process-state enum, and `provisioning.tenant_provisioning`.
+
+- Records are uniquely keyed by both Platform Tenant and Organization, retain current step/checkpoints/last error/completion time, use optimistic versions, enforce the same-tenant composite Platform Tenant/Organization FK, and index status for retry/worker selection.
+- Non-destructive, additive-only; applied automatically by the native-PG test harness. No production rollout performed.
+
+M1-008 hardening: additive migrations `0016_platform_registration_snapshot.sql` and `0017_provisioning_terminal_immutability.sql` retain the verified registration reference, requested organization and verified owner identity snapshot on `platform.tenants`, mark all pre-existing/default registration rows `LEGACY` rather than VERIFIED, prevent reuse of a non-legacy verified reference, and make completed provisioning records physically immutable.
+
+- `0017` installs PostgreSQL triggers that reject registration-snapshot mutation and UPDATE/DELETE of a completed process row with SQLSTATE `55000`; it does not restrict retries of a non-terminal failed process. Both migrations are additive-only and are applied by the native-PG test harness; no production rollout performed.
+
 M1-005 review remediation: no additional database migration. `event_scope` is an additive field inside the existing JSONB integration outbox envelope, so schema storage remains backward-compatible; producers and consumers validate the payload invariant in application code.
 
 M1-004 review remediation: additive `0003_identity_organization_roles.sql` adds organization-scoped role grants with composite user/role tenant FKs and indexes.

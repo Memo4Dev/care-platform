@@ -16,24 +16,23 @@ import { ERROR_CODES } from '@commerce-platform/contracts';
 import { OrganizationService } from '../organization/application/organization.service';
 import { OrganizationRepository } from '../organization/infrastructure/organization.repository';
 import { DatabasePlatformAuthorizationProvider } from './application/platform-authorization.provider';
-import { PlatformProvisioningService } from './application/platform-provisioning.service';
 import { PlatformService } from './application/platform.service';
 import { PlatformTenantRepository } from './infrastructure/platform-tenant.repository';
-import {
-  DatabasePlatformPrincipalResolver,
-  FixedProvisioningSystemPrincipalProvider,
-} from './application/authenticated-principal.provider';
+import { DatabasePlatformPrincipalResolver } from './application/authenticated-principal.provider';
 
 describe('Platform Management persistence', () => {
   let testdb: TestDatabase;
   let ready = false;
   let organizations: OrganizationService;
   let service: PlatformService;
-  let provisioning: PlatformProvisioningService;
   let repository: PlatformTenantRepository;
   const resolved = new Map<
     string,
     import('../../common/auth/authenticated-principal').PlatformUserPrincipal
+  >();
+  const registrations = new Map<
+    string,
+    import('./application/platform-registration.contract').TrustedRegistrationSnapshot
   >();
   const command = (platformUserId: string) => ({
     principal: resolved.get(platformUserId)!,
@@ -48,8 +47,8 @@ describe('Platform Management persistence', () => {
       testdb.db,
       repository,
       new DatabasePlatformAuthorizationProvider(testdb.db),
+      { resolveTrustedRegistration: async (reference) => registrations.get(reference)! },
     );
-    provisioning = new PlatformProvisioningService(testdb.db, repository);
     ready = true;
   });
   afterAll(async () => {
@@ -90,13 +89,26 @@ describe('Platform Management persistence', () => {
   }
   async function registered(actor: string) {
     const organization = await organizations.createOrganization({ name: `Platform ${newId()}` });
-    const result = await service.register({
+    const reference = `registration-${newId()}`;
+    registrations.set(reference, {
+      reference,
       organizationId: organization.organization.id,
+      requestedOrganizationName: organization.organization.name,
+      owner: {
+        supabaseSubject: `owner-${newId()}`,
+        email: 'owner@example.test',
+        displayName: 'Owner',
+      },
+      verifiedAt: new Date(),
+    });
+    const result = await service.register({
+      registrationReference: reference,
       ...command(actor),
     });
-    await provisioning.markProvisioningCompleted({
-      principal: new FixedProvisioningSystemPrincipalProvider().getProvisioningPrincipal(),
-      tenantId: result.tenant.id,
+    const tenant = await repository.find(testdb.db, result.tenant.id);
+    tenant!.completeProvisioning();
+    await repository.save(testdb.db, tenant!, {
+      actorId: 'test-provisioning',
       correlationId: newId(),
       causationId: newId(),
     });
@@ -124,8 +136,20 @@ describe('Platform Management persistence', () => {
   it('does not accept completed provisioning from registration input', async () => {
     const owner = await principal(['tenant.suspend']);
     const organization = await organizations.createOrganization({ name: `Pending ${newId()}` });
-    const registeredTenant = await service.register({
+    const reference = `registration-${newId()}`;
+    registrations.set(reference, {
+      reference,
       organizationId: organization.organization.id,
+      requestedOrganizationName: organization.organization.name,
+      owner: {
+        supabaseSubject: `owner-${newId()}`,
+        email: 'owner@example.test',
+        displayName: 'Owner',
+      },
+      verifiedAt: new Date(),
+    });
+    const registeredTenant = await service.register({
+      registrationReference: reference,
       ...command(owner),
     });
     await expect(

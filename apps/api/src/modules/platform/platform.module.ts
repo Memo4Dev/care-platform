@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
+import { ProvisioningExecutionModule } from '../../common/provisioning-execution/provisioning-execution.module';
 import { PlatformService } from './application/platform.service';
 import {
   DatabasePlatformAuthorizationProvider,
@@ -14,8 +15,12 @@ import {
   PROVISIONING_SYSTEM_PRINCIPAL,
 } from './application/authenticated-principal.provider';
 import { PlatformTenantRepository } from './infrastructure/platform-tenant.repository';
+import {
+  PLATFORM_REGISTRATION_RESOLVER,
+  UnavailablePlatformRegistrationResolver,
+} from './application/platform-registration.contract';
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, ProvisioningExecutionModule],
   providers: [
     PlatformTenantRepository,
     PlatformService,
@@ -24,7 +29,13 @@ import { PlatformTenantRepository } from './infrastructure/platform-tenant.repos
     { provide: PLATFORM_PRINCIPAL_RESOLVER, useClass: DatabasePlatformPrincipalResolver },
     { provide: PROVISIONING_SYSTEM_PRINCIPAL, useClass: FixedProvisioningSystemPrincipalProvider },
     { provide: PLATFORM_PROVISIONING, useExisting: PlatformProvisioningService },
+    { provide: PLATFORM_REGISTRATION_RESOLVER, useClass: UnavailablePlatformRegistrationResolver },
   ],
-  exports: [PlatformService, PLATFORM_PROVISIONING, PLATFORM_PRINCIPAL_RESOLVER],
+  exports: [
+    PlatformService,
+    PLATFORM_PROVISIONING,
+    PLATFORM_PRINCIPAL_RESOLVER,
+    PROVISIONING_SYSTEM_PRINCIPAL,
+  ],
 })
 export class PlatformModule {}

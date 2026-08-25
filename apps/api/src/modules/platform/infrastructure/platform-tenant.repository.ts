@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { ERROR_CODES, PlatformError } from '@commerce-platform/contracts';
 import {
   integrationOutbox,
@@ -9,6 +9,8 @@ import {
 import { integrationEventEnvelope } from '../../../common/events/integration-envelope';
 import { PlatformTenant } from '../domain/platform-tenant';
 import { PLATFORM_TENANT_AGGREGATE_TYPE } from '../domain/events';
+import type { TrustedRegistrationSnapshot } from '../application/platform-registration.contract';
+import type { VerifiedTenantRegistrationSnapshot } from '../application/platform-provisioning.contract';
 import type { DbExecutor } from './db-executor';
 
 export interface PlatformAuditContext {
@@ -43,7 +45,50 @@ export class PlatformTenantRepository {
       .limit(1);
     return row ? this.find(executor, row.id, clock) : null;
   }
-  async save(executor: DbExecutor, tenant: PlatformTenant, audit: PlatformAuditContext) {
+  async findVerifiedRegistration(
+    executor: DbExecutor,
+    reference: string,
+  ): Promise<VerifiedTenantRegistrationSnapshot | null> {
+    const rows = await executor
+      .select({
+        tenantId: platformTenants.id,
+        organizationId: platformTenants.organizationId,
+        reference: platformTenants.registrationReference,
+        requestedOrganizationName: platformTenants.registrationRequestedOrganizationName,
+        supabaseSubject: platformTenants.registrationOwnerSupabaseSubject,
+        email: platformTenants.registrationOwnerEmail,
+        displayName: platformTenants.registrationOwnerDisplayName,
+        verifiedAt: platformTenants.registrationVerifiedAt,
+      })
+      .from(platformTenants)
+      .where(
+        and(
+          eq(platformTenants.registrationReference, reference),
+          eq(platformTenants.registrationStatus, 'VERIFIED'),
+          ne(platformTenants.registrationReference, 'legacy'),
+        ),
+      );
+    if (rows.length !== 1) return null;
+    const [row] = rows;
+    return {
+      tenantId: row.tenantId,
+      organizationId: row.organizationId,
+      reference: row.reference,
+      requestedOrganizationName: row.requestedOrganizationName,
+      owner: {
+        supabaseSubject: row.supabaseSubject,
+        email: row.email,
+        displayName: row.displayName,
+      },
+      verifiedAt: row.verifiedAt,
+    };
+  }
+  async save(
+    executor: DbExecutor,
+    tenant: PlatformTenant,
+    audit: PlatformAuditContext,
+    registration?: TrustedRegistrationSnapshot,
+  ) {
     if (!tenant.hasPendingChanges) return 0;
     const c = tenant.collectChanges();
     if (c.isNew)
@@ -55,6 +100,17 @@ export class PlatformTenantRepository {
         subscriptionId: c.subscriptionId,
         subscriptionVersion: c.subscriptionVersion,
         suspendedReason: c.suspendedReason,
+        ...(registration
+          ? {
+              registrationReference: registration.reference,
+              registrationStatus: 'VERIFIED',
+              registrationRequestedOrganizationName: registration.requestedOrganizationName,
+              registrationOwnerSupabaseSubject: registration.owner.supabaseSubject,
+              registrationOwnerEmail: registration.owner.email,
+              registrationOwnerDisplayName: registration.owner.displayName,
+              registrationVerifiedAt: registration.verifiedAt,
+            }
+          : {}),
         version: c.nextVersion,
       });
     else {
