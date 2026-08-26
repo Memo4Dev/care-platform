@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Care Platform API — Staging",
-    "description": "M1 + M2 (Catalog & Pricing) staging environment collection.\n\nBase URL: https://api.care-systems.site\n\nAll endpoints require Bearer JWT unless noted.\n\nMutation requests (POST/PUT/PATCH/DELETE) automatically get an Idempotency-Key header.\n\nM2 adds Tenant Admin endpoints for Catalog and Pricing management under /api/v1/admin/.",
+    "description": "M1 + M2 + M3 (Catalog, Pricing & Inventory) staging environment collection.\n\nBase URL: https://api.care-systems.site\n\nAll endpoints require Bearer JWT unless noted.\n\nMutation requests (POST/PUT/PATCH/DELETE) automatically get an Idempotency-Key header.\n\nM3 adds Tenant Admin endpoints for Inventory management under /api/v1/admin/inventory/.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -26,7 +26,13 @@
     { "key": "platformToken", "value": "PASTE_FRESH_JWT_HERE" },
     { "key": "tenantToken", "value": "PASTE_FRESH_TENANT_JWT_HERE" },
     { "key": "tenantId", "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8" },
-    { "key": "planId", "value": "01a0396d-fa03-7457-948e-a602bbaa8a8a" }
+    { "key": "planId", "value": "01a0396d-fa03-7457-948e-a602bbaa8a8a" },
+    { "key": "stockPositionId", "value": "Stock position ID" },
+    { "key": "reservationId", "value": "Reservation ID" },
+    { "key": "allocationId", "value": "Allocation ID" },
+    { "key": "transferId", "value": "Transfer ID" },
+    { "key": "warehouseId", "value": "Warehouse ID" },
+    { "key": "variantId", "value": "Variant ID" }
   ],
   "item": [
     {
@@ -557,6 +563,214 @@
               "raw": "{\n  \"variantId\": \"{{variantId}}\",\n  \"unitId\": \"{{unitId}}\",\n  \"priceType\": \"CASH\",\n  \"channel\": \"POS\"\n}",
               "options": { "raw": { "language": "json" } }
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tenant Admin — Inventory",
+      "item": [
+        {
+          "name": "GET /inventory/stock-positions (list)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/stock-positions?limit=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "stock-positions"], "query": [{ "key": "limit", "value": "50" }] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "GET /inventory/stock-positions/:id (detail)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/stock-positions/{{stockPositionId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "stock-positions", "{{stockPositionId}}"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "GET /inventory/stock-positions/:id/fifo-layers",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/stock-positions/{{stockPositionId}}/fifo-layers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "stock-positions", "{{stockPositionId}}", "fifo-layers"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "GET /inventory/stock-positions/:id/ledger",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/stock-positions/{{stockPositionId}}/ledger?limit=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "stock-positions", "{{stockPositionId}}", "ledger"], "query": [{ "key": "limit", "value": "50" }] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /inventory/reservations (create)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/reservations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "reservations"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"variantId\": \"{{variantId}}\",\n  \"quantity\": \"5\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /inventory/reservations/:id/consume",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/reservations/{{reservationId}}/consume", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "reservations", "{{reservationId}}", "consume"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /inventory/reservations/:id/release",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/reservations/{{reservationId}}/release", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "reservations", "{{reservationId}}", "release"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "GET /inventory/reservations (list)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/reservations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "reservations"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /inventory/allocations (create)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/allocations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "allocations"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"variantId\": \"{{variantId}}\",\n  \"quantity\": \"5\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /inventory/allocations/:id/consume",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/allocations/{{allocationId}}/consume", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "allocations", "{{allocationId}}", "consume"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /inventory/allocations/:id/release",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/allocations/{{allocationId}}/release", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "allocations", "{{allocationId}}", "release"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "GET /inventory/allocations (list)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/allocations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "allocations"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /inventory/stock/receive",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/stock/receive", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "stock", "receive"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"variantId\": \"{{variantId}}\",\n  \"quantity\": \"100\",\n  \"unitCost\": \"2500\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /inventory/stock/consume",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/stock/consume", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "stock", "consume"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"variantId\": \"{{variantId}}\",\n  \"quantity\": \"10\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /inventory/transfers (create)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/transfers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "transfers"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceWarehouseId\": \"{{warehouseId}}\",\n  \"destinationWarehouseId\": \"{{warehouseId}}\",\n  \"items\": [\n    {\n      \"variantId\": \"{{variantId}}\",\n      \"quantity\": \"5\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /inventory/transfers/:id/dispatch",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/transfers/{{transferId}}/dispatch", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "transfers", "{{transferId}}", "dispatch"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /inventory/transfers/:id/receive",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/transfers/{{transferId}}/receive", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "transfers", "{{transferId}}", "receive"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"transferItemId\": \"{{transferItemId}}\",\n      \"receivedQuantity\": \"5\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "GET /inventory/transfers (list)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/transfers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "transfers"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "GET /inventory/transfers/:id (detail)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/transfers/{{transferId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "transfers", "{{transferId}}"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /inventory/adjustments (create)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/adjustments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "adjustments"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stockPositionId\": \"{{stockPositionId}}\",\n  \"adjustmentType\": \"CORRECTION\",\n  \"quantityChange\": \"10\",\n  \"reason\": \"Cycle count correction\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "GET /inventory/adjustments (list)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/adjustments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "adjustments"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         }
       ]

@@ -41,6 +41,7 @@ These are templates, not hard-coded authorization.
 | refund.create | ✅ | ✅ | configurable | configurable | ❌ | ❌ |
 | refund.override | ✅ | configurable | ❌ | ❌ | ❌ | ❌ |
 | inventory.view | ✅ | ✅ | configurable | configurable | ✅ | ✅ |
+| inventory.create | ✅ | configurable | ❌ | ❌ | configurable | ❌ |
 | inventory.adjust | ✅ | configurable | ❌ | ❌ | configurable | ❌ |
 | inventory.transfer | ✅ | configurable | ❌ | ❌ | ✅ | ❌ |
 | purchase.create | ✅ | configurable | ❌ | ❌ | ❌ | ✅ |
