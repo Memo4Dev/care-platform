@@ -17,9 +17,10 @@ echo "[1/6] Copying deployment files to VPS..."
 for f in Dockerfile Dockerfile.migrate compose.staging.yaml .dockerignore .env.staging; do
   sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no "$f" "${VPS_HOST}:${VPS_PATH}/${f}"
 done
+sshpass -p "$SSH_PASS" ssh "$VPS_HOST" \
+  "mkdir -p ${VPS_PATH}/apps/api ${VPS_PATH}/packages/database"
 sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no \
   apps/api/tsconfig.json \
-  packages/database/drizzle.config.ts \
   "${VPS_HOST}:${VPS_PATH}/apps/api/tsconfig.json"
 sshpass -p "$SSH_PASS" scp -o StrictHostKeyChecking=no \
   packages/database/drizzle.config.ts \
@@ -30,7 +31,7 @@ echo "  ✅ Files copied"
 # 2. Update code
 echo "[2/6] Updating code on VPS..."
 sshpass -p "$SSH_PASS" ssh "$VPS_HOST" \
-  "cd ${VPS_PATH} && git pull origin feature/m1-saas-foundation --ff-only"
+  "cd ${VPS_PATH} && git fetch origin feat/m2-catalog-pricing && git checkout feat/m2-catalog-pricing && git pull origin feat/m2-catalog-pricing --ff-only"
 echo "  ✅ Code updated"
 
 # 3. Build images

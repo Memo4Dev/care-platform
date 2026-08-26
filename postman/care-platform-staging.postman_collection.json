@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Care Platform API — Staging",
-    "description": "M1 SaaS Foundation staging environment collection.\n\nBase URL: https://api.care-systems.site\n\nAll endpoints require Bearer JWT unless noted.\n\nMutation requests (POST/PUT/PATCH/DELETE) automatically get an Idempotency-Key header.",
+    "description": "M1 + M2 (Catalog & Pricing) staging environment collection.\n\nBase URL: https://api.care-systems.site\n\nAll endpoints require Bearer JWT unless noted.\n\nMutation requests (POST/PUT/PATCH/DELETE) automatically get an Idempotency-Key header.\n\nM2 adds Tenant Admin endpoints for Catalog and Pricing management under /api/v1/admin/.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -24,6 +24,7 @@
     { "key": "baseUrl", "value": "https://api.care-systems.site" },
     { "key": "metricsToken", "value": "w9MqY6C5sTatgG_DqPuGlt9uMSQEe6G-pfIodKWHKpI" },
     { "key": "platformToken", "value": "PASTE_FRESH_JWT_HERE" },
+    { "key": "tenantToken", "value": "PASTE_FRESH_TENANT_JWT_HERE" },
     { "key": "tenantId", "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8" },
     { "key": "planId", "value": "01a0396d-fa03-7457-948e-a602bbaa8a8a" }
   ],
@@ -202,6 +203,360 @@
             "method": "GET",
             "url": { "raw": "{{baseUrl}}/api/v1/platform/subscriptions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "subscriptions"] },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{platformToken}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tenant Admin — Catalog",
+      "item": [
+        {
+          "name": "GET /catalog/products",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/products", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "products"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /catalog/products",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/products", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "products"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sample Product\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "PATCH /catalog/products/:id",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/products/{{productId}}",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "products", "{{productId}}"]
+            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Product\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /catalog/products/:id/variants",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/products/{{productId}}/variants",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "products", "{{productId}}", "variants"]
+            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Default Variant\",\n  \"sku\": \"SKU-001\",\n  \"baseUnitId\": \"{{unitId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "GET /catalog/products/:id/variants",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/products/{{productId}}/variants",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "products", "{{productId}}", "variants"]
+            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "PATCH /catalog/variants/:id",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/variants/{{variantId}}",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "variants", "{{variantId}}"]
+            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Variant\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "GET /catalog/categories",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/categories", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "categories"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /catalog/categories",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/categories", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "categories"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Beverages\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "PATCH /catalog/categories/:id",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "categories", "{{categoryId}}"]
+            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Category\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "GET /catalog/units",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/units", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "units"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /catalog/units",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/units", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "units"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Each\",\n  \"symbol\": \"ea\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /catalog/unit-conversions",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/unit-conversions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "unit-conversions"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromUnitId\": \"{{unitId}}\",\n  \"toUnitId\": \"{{unitId2}}\",\n  \"factor\": \"12\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /catalog/barcodes",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/barcodes", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "barcodes"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variantId\": \"{{variantId}}\",\n  \"barcode\": \"1234567890123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /catalog/packaging-definitions",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/packaging-definitions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "packaging-definitions"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Case\",\n  \"unitId\": \"{{unitId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tenant Admin — Pricing",
+      "item": [
+        {
+          "name": "GET /pricing/price-books",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/price-books", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "price-books"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /pricing/price-books",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/price-books", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "price-books"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Default Price Book\",\n  \"isDefault\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "PATCH /pricing/price-books/:id",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/price-books/{{priceBookId}}",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "price-books", "{{priceBookId}}"]
+            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Price Book\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /pricing/price-books/:id/default",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/price-books/{{priceBookId}}/default",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "price-books", "{{priceBookId}}", "default"]
+            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "GET /pricing/price-entries",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/price-entries", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "price-entries"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /pricing/price-entries",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/price-entries", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "price-entries"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priceBookId\": \"{{priceBookId}}\",\n  \"variantId\": \"{{variantId}}\",\n  \"unitId\": \"{{unitId}}\",\n  \"priceType\": \"CASH\",\n  \"channel\": \"POS\",\n  \"amount\": \"1500\",\n  \"effectiveFrom\": \"2025-01-01\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "PATCH /pricing/price-entries/:id",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/price-entries/{{priceEntryId}}",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "price-entries", "{{priceEntryId}}"]
+            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"1750\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /pricing/promotions",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/promotions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "promotions"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Summer Sale\",\n  \"type\": \"PERCENTAGE\",\n  \"target\": \"PRODUCT\",\n  \"value\": \"10\",\n  \"startDate\": \"2025-06-01\",\n  \"endDate\": \"2025-08-31\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "GET /pricing/promotions",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/promotions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "promotions"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "PATCH /pricing/promotions/:id",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/promotions/{{promotionId}}",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "promotions", "{{promotionId}}"]
+            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /pricing/coupons",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/coupons", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "coupons"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"SUMMER10\",\n  \"type\": \"PERCENTAGE\",\n  \"value\": \"10\",\n  \"promotionId\": \"{{promotionId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "GET /pricing/coupons",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/coupons", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "coupons"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /pricing/coupons/:id/redeem",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/coupons/{{couponId}}/redeem",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "coupons", "{{couponId}}", "redeem"]
+            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /pricing/quote",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/quote", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "quote"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variantId\": \"{{variantId}}\",\n  \"unitId\": \"{{unitId}}\",\n  \"priceType\": \"CASH\",\n  \"channel\": \"POS\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
           }
         }
       ]

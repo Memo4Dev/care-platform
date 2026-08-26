@@ -8,6 +8,47 @@ Base path:
 
 POS API is optimized for low latency, branch scoping, device identity, and offline recovery.
 
+## POS Operator Authentication
+
+POS quick operator authentication uses Employee Card/Barcode + PIN.
+
+- Barcode/card alone is never sufficient.
+- Employee barcode/card identifiers are opaque; they do not encode
+  email, role, organizationId, or permissions.
+- Authentication proves identity; authorization (server-side RBAC,
+  branch scope, POS permissions) is resolved separately after
+  successful Card + PIN verification.
+
+```text
+POST /auth/operator
+```
+
+Input:
+
+```text
+deviceId
+barcode (opaque employee credential)
+pin
+```
+
+Output:
+
+```text
+operatorId
+branchId
+roles
+permissions
+token (short-lived session token)
+```
+
+Manager approval may use Manager Card + PIN without replacing or
+logging out the active cashier. Both actors are recorded:
+
+```text
+performedBy = active cashier
+approvedBy  = manager
+```
+
 ## Device bootstrap
 
 ```text
@@ -108,12 +149,23 @@ For CASH payments the client must have an open/eligible cash session according t
 
 ## Cash Session
 
+Cash Session is exclusively bound to: one POS Device, one Cash Drawer,
+one Employee, one active shift/session. Multiple employees must not hold
+simultaneous active Cash Sessions on the same drawer. Shift handoff
+requires closing the existing session before another operator opens a new
+one on that drawer.
+
 ```text
 GET  /cash/session
 POST /cash/session/open
 POST /cash/session/count
 POST /cash/session/close
 ```
+
+`POST /cash/session/close` performs cash count and reconciliation by
+default. Organization policy may disable mandatory reconciliation via
+`cashSession.requireReconciliationOnClose = false`, but session close
+remains fully audited in all cases.
 
 ## Customers
 

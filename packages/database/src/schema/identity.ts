@@ -71,6 +71,14 @@ export const PERMISSION_CODES = [
   'permissions.manage',
   'role-grants.manage',
   'branch-access.manage',
+  'catalog.view',
+  'catalog.create',
+  'catalog.edit',
+  'catalog.delete',
+  'pricing.view',
+  'pricing.create',
+  'pricing.edit',
+  'pricing.delete',
 ] as const;
 
 export type PermissionCode = (typeof PERMISSION_CODES)[number];
@@ -100,6 +108,14 @@ export const PERMISSION_DESCRIPTIONS: Record<PermissionCode, string> = {
   'permissions.manage': 'Change permissions assigned to organization roles.',
   'role-grants.manage': 'Assign and revoke organization and branch roles.',
   'branch-access.manage': 'Assign and revoke branch access.',
+  'catalog.view': 'View products, variants, categories, units, and barcodes.',
+  'catalog.create': 'Create products, variants, categories, units, conversions, and barcodes.',
+  'catalog.edit': 'Update product, variant, category, unit, and conversion metadata.',
+  'catalog.delete': 'Deactivate or discontinue catalog items.',
+  'pricing.view': 'View price books, entries, promotions, coupons, and snapshots.',
+  'pricing.create': 'Create price books, entries, promotions, and coupons.',
+  'pricing.edit': 'Update price book entries, promotion rules, and coupon terms.',
+  'pricing.delete': 'Deactivate price books, promotions, and coupons.',
 };
 
 /** Catalog rows seeded by migration; kept in sync with PERMISSION_CODES. */
