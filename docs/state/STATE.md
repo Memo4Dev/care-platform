@@ -10,18 +10,18 @@ Branch: feat/m3-inventory-core
 
 All 10 M3 tasks complete (M3-001 through M3-010):
 
-| Task   | Domain                                                 | Status |
-| ------ | ------------------------------------------------------ | ------ |
-| M3-001 | Inventory persistence (Drizzle schema + migration)     | DONE   |
-| M3-002 | Domain layer (8 aggregates, events, invariants)        | DONE   |
-| M3-003 | Application layer (service, repo, contracts, module)   | DONE   |
-| M3-004 | Permissions (inventory.create)                         | DONE   |
-| M3-005 | HTTP controller (21 endpoints) + Swagger + registration| DONE   |
-| M3-006 | Domain unit tests (136 tests)                          | DONE   |
-| M3-007 | Integration tests (36 tests, native PG)                | DONE   |
-| M3-008 | Concurrency tests (23 tests)                           | DONE   |
-| M3-009 | HTTP boundary tests (41+ tests)                        | DONE   |
-| M3-010 | Postman collection + Swagger tag updates               | DONE   |
+| Task   | Domain                                                  | Status |
+| ------ | ------------------------------------------------------- | ------ |
+| M3-001 | Inventory persistence (Drizzle schema + migration)      | DONE   |
+| M3-002 | Domain layer (8 aggregates, events, invariants)         | DONE   |
+| M3-003 | Application layer (service, repo, contracts, module)    | DONE   |
+| M3-004 | Permissions (inventory.create)                          | DONE   |
+| M3-005 | HTTP controller (21 endpoints) + Swagger + registration | DONE   |
+| M3-006 | Domain unit tests (136 tests)                           | DONE   |
+| M3-007 | Integration tests (36 tests, native PG)                 | DONE   |
+| M3-008 | Concurrency tests (23 tests)                            | DONE   |
+| M3-009 | HTTP boundary tests (41+ tests)                         | DONE   |
+| M3-010 | Postman collection + Swagger tag updates                | DONE   |
 
 **Test suite:** 136 domain unit tests passing; 36 integration + 23 concurrency + 41+ HTTP boundary tests created (require TEST_DATABASE_URL)
 **TypeScript:** zero type errors (apps/api + packages/database)
@@ -133,18 +133,18 @@ All 10 M1 tasks complete (M1-001 through M1-010):
 
 ### All M3 tasks
 
-| Task   | Domain                                                             | Status |
-| ------ | ------------------------------------------------------------------ | ------ |
-| M3-001 | Inventory persistence (Drizzle schema + migration)                 | DONE   |
-| M3-002 | Domain layer (aggregates, events, invariants)                      | DONE   |
-| M3-003 | Application layer (service, repository, contracts, module)         | DONE   |
-| M3-004 | Permissions (inventory.create)                                     | DONE   |
-| M3-005 | HTTP controller (21 endpoints) + Swagger + registration            | DONE   |
-| M3-006 | Domain unit tests (136 tests)                                      | DONE   |
-| M3-007 | Integration tests (36 tests)                                       | DONE   |
-| M3-008 | Concurrency tests (23 tests)                                       | DONE   |
-| M3-009 | HTTP boundary tests (41+ tests)                                    | DONE   |
-| M3-010 | Postman collection + Swagger tag updates                           | DONE   |
+| Task   | Domain                                                     | Status |
+| ------ | ---------------------------------------------------------- | ------ |
+| M3-001 | Inventory persistence (Drizzle schema + migration)         | DONE   |
+| M3-002 | Domain layer (aggregates, events, invariants)              | DONE   |
+| M3-003 | Application layer (service, repository, contracts, module) | DONE   |
+| M3-004 | Permissions (inventory.create)                             | DONE   |
+| M3-005 | HTTP controller (21 endpoints) + Swagger + registration    | DONE   |
+| M3-006 | Domain unit tests (136 tests)                              | DONE   |
+| M3-007 | Integration tests (36 tests)                               | DONE   |
+| M3-008 | Concurrency tests (23 tests)                               | DONE   |
+| M3-009 | HTTP boundary tests (41+ tests)                            | DONE   |
+| M3-010 | Postman collection + Swagger tag updates                   | DONE   |
 
 **Branch:** `feat/m3-inventory-core` (created from `main`)
 **Status:** READY FOR REVIEW — awaiting human approval
