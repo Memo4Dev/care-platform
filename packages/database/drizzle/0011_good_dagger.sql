@@ -1,0 +1,1 @@
+-- Snapshot alignment: 0010 adds this required tenant-scope key before its composite foreign key.

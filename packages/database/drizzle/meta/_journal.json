@@ -1,0 +1,160 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1787577020423,
+      "tag": "0000_concerned_tana_nile",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787579947072,
+      "tag": "0001_spicy_viper",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787581341351,
+      "tag": "0002_dark_shard",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787582000000,
+      "tag": "0003_identity_organization_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787591814947,
+      "tag": "0004_lush_hannibal_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787606434467,
+      "tag": "0005_supreme_wild_child",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787628825048,
+      "tag": "0006_tearful_husk",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787629066501,
+      "tag": "0007_fancy_cyclops",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787629066502,
+      "tag": "0008_subscription_periods_append_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787630205158,
+      "tag": "0009_nifty_aqueduct",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787630224460,
+      "tag": "0010_purple_lockheed",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787630571411,
+      "tag": "0011_good_dagger",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1787630792756,
+      "tag": "0012_lowly_oracle",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1787631798760,
+      "tag": "0013_platform-authorization",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1787633990172,
+      "tag": "0014_support-session-terminal-audit",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1787635000000,
+      "tag": "0015_tenant_provisioning",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1787636000000,
+      "tag": "0016_platform_registration_snapshot",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1787637000000,
+      "tag": "0017_provisioning_terminal_immutability",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1787638000000,
+      "tag": "0018_tenant_override_actor_attribution",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787639000000,
+      "tag": "0019_http_idempotency_outcomes",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787640000000,
+      "tag": "0020_provisioning_retry_saga",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1787641000000,
+      "tag": "0021_outbox_bullmq_delivery",
+      "breakpoints": true
+    }
+  ]
+}

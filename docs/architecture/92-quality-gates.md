@@ -41,6 +41,18 @@ Reject migrations that casually:
 
 Breaking public contract changes require explicit version strategy.
 
+## Design Compliance Gate
+
+Mandatory for every UI/frontend task matching `design_review_gate.trigger_keywords` in `.agent-system/indexes/routing.yaml`. A UI task cannot be accepted unless:
+
+- functional tests pass
+- design compliance review passes (`docs/design/review-checklist.md`)
+- accessibility checks pass where relevant
+
+The reviewer compares the implementation against `docs/design/DESIGN.md` plus only the task-relevant token/component/pattern files selected via `design_routing` topics, and rejects invented colors, invented spacing scales, unnecessary new components, inconsistent typography, arbitrary shadows/radii, duplicate patterns, inaccessible interactions and responsive regressions.
+
+If the design system does not cover a required case: mark a `Design Gap`, never silently invent a permanent new pattern, and request a human design decision when the gap is material.
+
 ## Security Gate
 
 High-risk changes require targeted review:

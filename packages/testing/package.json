@@ -1,0 +1,26 @@
+{
+  "name": "@commerce-platform/testing",
+  "private": true,
+  "version": "0.0.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run --root ../.. --config vitest.config.ts packages/testing/src --passWithNoTests",
+    "test:integration": "vitest run --root ../.. --config vitest.integration.config.ts packages/testing/src",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@commerce-platform/database": "workspace:*",
+    "@testcontainers/postgresql": "^12.1.0",
+    "@types/pg": "^8.23.1",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.23.0",
+    "testcontainers": "^12.1.0"
+  }
+}

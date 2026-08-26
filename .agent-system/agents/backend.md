@@ -11,6 +11,8 @@ subagent
 - `api-contract`
 - `tenant-isolation`
 - `quality-gates`
+- `http-boundary-testing`
+- `idempotency`
 
 ## Mandatory workflow
 1. Read `AGENTS.md`.

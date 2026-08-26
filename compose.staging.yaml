@@ -1,0 +1,166 @@
+services:
+  care-platform-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: care-platform-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      RUNTIME_ROLE: api
+      PORT: "3000"
+      DATABASE_URL: postgres://care_platform_app:${POSTGRES_PASSWORD}@care-platform-postgres:5432/care_platform_staging
+      REDIS_HOST: care-platform-redis
+      REDIS_PORT: "6379"
+      REDIS_USERNAME: default
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET}
+      SUPABASE_JWT_ISSUER: ${SUPABASE_JWT_ISSUER}
+      SUPABASE_PLATFORM_AUDIENCE: ${SUPABASE_PLATFORM_AUDIENCE}
+      SUPABASE_TENANT_AUDIENCE: ${SUPABASE_TENANT_AUDIENCE}
+      SUPABASE_JWKS_URL: ${SUPABASE_JWKS_URL}
+      METRICS_BEARER_TOKEN: ${METRICS_BEARER_TOKEN}
+    depends_on:
+      care-platform-postgres:
+        condition: service_healthy
+      care-platform-redis:
+        condition: service_healthy
+    networks:
+      - care-platform-internal
+      - proxy-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  care-platform-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: care-platform-worker
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      RUNTIME_ROLE: worker
+      DATABASE_URL: postgres://care_platform_app:${POSTGRES_PASSWORD}@care-platform-postgres:5432/care_platform_staging
+      REDIS_HOST: care-platform-redis
+      REDIS_PORT: "6379"
+      REDIS_USERNAME: default
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET}
+      SUPABASE_JWT_ISSUER: ${SUPABASE_JWT_ISSUER}
+      SUPABASE_PLATFORM_AUDIENCE: ${SUPABASE_PLATFORM_AUDIENCE}
+      SUPABASE_TENANT_AUDIENCE: ${SUPABASE_TENANT_AUDIENCE}
+      SUPABASE_JWKS_URL: ${SUPABASE_JWKS_URL}
+      WORKER_CONCURRENCY: "5"
+    depends_on:
+      care-platform-postgres:
+        condition: service_healthy
+      care-platform-redis:
+        condition: service_healthy
+    networks:
+      - care-platform-internal
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  care-platform-relay:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: care-platform-relay
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      RUNTIME_ROLE: relay
+      DATABASE_URL: postgres://care_platform_app:${POSTGRES_PASSWORD}@care-platform-postgres:5432/care_platform_staging
+      REDIS_HOST: care-platform-redis
+      REDIS_PORT: "6379"
+      REDIS_USERNAME: default
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET}
+      SUPABASE_JWT_ISSUER: ${SUPABASE_JWT_ISSUER}
+      SUPABASE_PLATFORM_AUDIENCE: ${SUPABASE_PLATFORM_AUDIENCE}
+      SUPABASE_TENANT_AUDIENCE: ${SUPABASE_TENANT_AUDIENCE}
+      SUPABASE_JWKS_URL: ${SUPABASE_JWKS_URL}
+    depends_on:
+      care-platform-postgres:
+        condition: service_healthy
+      care-platform-redis:
+        condition: service_healthy
+    networks:
+      - care-platform-internal
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  care-platform-postgres:
+    image: postgres:17-alpine
+    container_name: care-platform-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: care_platform_staging
+      POSTGRES_USER: care_platform_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - care-platform-pgdata:/var/lib/postgresql/data
+    networks:
+      - care-platform-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U care_platform_app -d care_platform_staging"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  care-platform-redis:
+    image: redis:7-alpine
+    container_name: care-platform-redis
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes', '--requirepass', '${REDIS_PASSWORD}']
+    volumes:
+      - care-platform-redisdata:/data
+    networks:
+      - care-platform-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  care-platform-migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrate
+    container_name: care-platform-migrate
+    working_dir: /app/packages/database
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://care_platform_app:${POSTGRES_PASSWORD}@care-platform-postgres:5432/care_platform_staging
+    command: ["migrate", "--config", "drizzle.config.ts"]
+    depends_on:
+      care-platform-postgres:
+        condition: service_healthy
+    networks:
+      - care-platform-internal
+    profiles:
+      - migrate
+
+volumes:
+  care-platform-pgdata:
+  care-platform-redisdata:
+
+networks:
+  care-platform-internal:
+    driver: bridge
+  proxy-network:
+    external: true

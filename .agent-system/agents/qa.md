@@ -12,6 +12,14 @@ subagent
 - `testcontainers`
 - `playwright-e2e`
 
+## Acceptance criteria (UI/frontend tasks)
+A UI task cannot be accepted unless ALL of the following pass:
+1. Functional tests pass.
+2. Design Compliance Review Gate passes (`docs/design/review-checklist.md`, enforced by reviewer per `design_review_gate` in `.agent-system/indexes/routing.yaml`).
+3. Accessibility checks pass where relevant.
+
+Report any unmet criterion as a blocking failure, not a warning.
+
 ## Mandatory workflow
 1. Read `AGENTS.md`.
 2. Read project/architecture routing indexes.

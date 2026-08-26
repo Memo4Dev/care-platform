@@ -12,6 +12,30 @@ jobs:
   quality:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: care_platform_test
+          POSTGRES_USER: care_platform_app
+          POSTGRES_PASSWORD: ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U care_platform_app"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,6 +56,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Redis client tools
+        run: sudo apt-get update && sudo apt-get install -y redis-tools
+
+      - name: Configure Redis test ACL
+        run: |
+          redis-cli -h 127.0.0.1 -p 6379 ACL SETUSER ci on '>ci-redis-password' '~*' '&*' '+@all'
+          redis-cli -h 127.0.0.1 -p 6379 ACL SETUSER default off
+          redis-cli -h 127.0.0.1 -p 6379 --user ci --pass ci-redis-password ping
+
       - name: Format check
         run: pnpm format:check
 
@@ -43,6 +76,23 @@ jobs:
 
       - name: Test
         run: pnpm test
+        env:
+          TEST_DATABASE_URL: postgres://care_platform_app:ci-password@localhost:5432/care_platform_test
+          REDIS_INTEGRATION: 'true'
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: '6379'
+          REDIS_USERNAME: ci
+          REDIS_PASSWORD: ci-redis-password
+
+      - name: Integration tests
+        run: pnpm test:integration
+        env:
+          TEST_DATABASE_URL: postgres://care_platform_app:ci-password@localhost:5432/care_platform_test
+          REDIS_INTEGRATION: 'true'
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: '6379'
+          REDIS_USERNAME: ci
+          REDIS_PASSWORD: ci-redis-password
 
       - name: Build
         run: pnpm build

@@ -10,6 +10,7 @@ Events are versioned public contracts between modules.
   "eventType": "inventory.stock-reserved",
   "eventVersion": 1,
   "occurredAt": "...",
+  "eventScope": "TENANT",
   "organizationId": "...",
   "aggregateType": "Reservation",
   "aggregateId": "...",
@@ -20,6 +21,21 @@ Events are versioned public contracts between modules.
   "payload": {}
 }
 ```
+
+## Scope
+
+Every envelope declares exactly one scope:
+
+- `TENANT` events require a non-null `organizationId` and consumers must scope
+  handling to that organization.
+- `GLOBAL` events require `organizationId: null`; consumers must not infer a
+  tenant from a global aggregate. Plan lifecycle and plan entitlement events
+  are global.
+
+Producers and consumers validate this invariant before publishing or handling
+an event. `eventScope` is additive in envelope version 1 so consumers that
+ignore unknown fields remain compatible; consumers that need tenant context
+must validate it rather than assuming `organizationId` is always present.
 
 ## Naming
 

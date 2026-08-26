@@ -1,0 +1,222 @@
+{
+  "info": {
+    "name": "Care Platform API — Staging",
+    "description": "M1 SaaS Foundation staging environment collection.\n\nBase URL: https://api.care-systems.site\n\nAll endpoints require Bearer JWT unless noted.\n\nMutation requests (POST/PUT/PATCH/DELETE) automatically get an Idempotency-Key header.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(pm.request.method)) {",
+          "    pm.request.headers.add({",
+          "        key: 'Idempotency-Key',",
+          "        value: crypto.randomUUID()",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "https://api.care-systems.site" },
+    { "key": "metricsToken", "value": "w9MqY6C5sTatgG_DqPuGlt9uMSQEe6G-pfIodKWHKpI" },
+    { "key": "platformToken", "value": "PASTE_FRESH_JWT_HERE" },
+    { "key": "tenantId", "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8" },
+    { "key": "planId", "value": "01a0396d-fa03-7457-948e-a602bbaa8a8a" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Metrics",
+      "item": [
+        {
+          "name": "GET /metrics (with bearer)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/metrics", "host": ["{{baseUrl}}"], "path": ["metrics"] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{metricsToken}}" }]
+            }
+          }
+        },
+        {
+          "name": "GET /metrics (no auth → 401)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/metrics", "host": ["{{baseUrl}}"], "path": ["metrics"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Platform Admin — Tenants",
+      "item": [
+        {
+          "name": "GET /platform/tenants",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/platform/tenants", "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "tenants"] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{platformToken}}" }]
+            }
+          }
+        },
+        {
+          "name": "GET /platform/tenants/:tenantId",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/tenants/{{tenantId}}",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "tenants", "{{tenantId}}"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{platformToken}}" }]
+            }
+          }
+        },
+        {
+          "name": "POST /platform/tenants/:tenantId/activate",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/tenants/{{tenantId}}/activate",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "tenants", "{{tenantId}}", "activate"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{platformToken}}" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /platform/tenants/:tenantId/suspend",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/tenants/{{tenantId}}/suspend",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "tenants", "{{tenantId}}", "suspend"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{platformToken}}" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\": \"Testing suspend\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /platform/tenants/:tenantId/reactivate",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/tenants/{{tenantId}}/reactivate",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "tenants", "{{tenantId}}", "reactivate"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{platformToken}}" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /platform/tenants/:tenantId/close",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/tenants/{{tenantId}}/close",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "tenants", "{{tenantId}}", "close"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{platformToken}}" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Platform Admin — Plans",
+      "item": [
+        {
+          "name": "GET /platform/plans",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/platform/plans", "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "plans"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{platformToken}}" }] }
+          }
+        },
+        {
+          "name": "GET /platform/plans/:planId",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/plans/{{planId}}",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "plans", "{{planId}}"]
+            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{platformToken}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Platform Admin — Subscriptions",
+      "item": [
+        {
+          "name": "GET /platform/subscriptions",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/platform/subscriptions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "subscriptions"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{platformToken}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Swagger UI",
+      "item": [
+        {
+          "name": "Open Swagger Docs",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/docs", "host": ["{{baseUrl}}"], "path": ["docs"] }
+          }
+        }
+      ]
+    }
+  ]
+}
