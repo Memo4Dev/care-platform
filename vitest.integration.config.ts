@@ -24,7 +24,11 @@ export default defineConfig({
     // integration specs themselves connect through @commerce-platform/testing
     // handles (TEST_DATABASE_URL), so the placeholder URL never opens sockets.
     setupFiles: ['./vitest.setup.ts'],
-    include: ['apps/**/*.integration.spec.ts', 'packages/**/*.integration.spec.ts'],
+    include: [
+      'apps/**/*.integration.spec.ts',
+      'packages/**/*.integration.spec.ts',
+      'apps/**/*.concurrency.spec.ts',
+    ],
     exclude: ['**/node_modules/**', '**/dist/**', '**/.turbo/**', '**/coverage/**'],
     environment: 'node',
     globals: true,

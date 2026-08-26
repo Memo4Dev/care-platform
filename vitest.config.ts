@@ -25,6 +25,7 @@ export default defineConfig({
       '**/coverage/**',
       'apps/**/*.integration.spec.ts',
       'packages/**/*.integration.spec.ts',
+      'apps/**/*.concurrency.spec.ts',
     ],
     environment: 'node',
     globals: true,
