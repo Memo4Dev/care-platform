@@ -130,20 +130,20 @@ All 10 M1 tasks complete (M1-001 through M1-010):
 
 ### Staging smoke test results
 
-| Test                                  | Result |
-| ------------------------------------- | ------ |
-| Health check                          | 200 OK |
-| Catalog CRUD (unit, category, product, variant) | 201/200 |
-| Pricing CRUD (price book, entry, coupon, promotion) | 201/200 |
-| Price Quote resolve                   | 201 (correct price returned) |
-| No token → 401                        | ✅     |
-| Denied user (no perms) → 403          | ✅     |
-| Sales user (pricing.view only) on catalog → 403 | ✅ |
-| Sales user on pricing.view → 200      | ✅     |
-| Sales user on pricing.create → 403    | ✅     |
-| Owner full access → 201               | ✅     |
-| Idempotency key missing → 422         | ✅     |
-| Idempotency replay → 403 (guard-level) | ✅    |
-| Swagger documents 28 M2 endpoints     | ✅     |
-| PostgreSQL tenant-scoped data         | ✅ (31 permissions, 2 roles, 6 products, etc.) |
-| Migrations 0022 + 0023 applied        | ✅ (manually applied — drizzle journal mismatch from M1) |
+| Test                                                | Result                                                   |
+| --------------------------------------------------- | -------------------------------------------------------- |
+| Health check                                        | 200 OK                                                   |
+| Catalog CRUD (unit, category, product, variant)     | 201/200                                                  |
+| Pricing CRUD (price book, entry, coupon, promotion) | 201/200                                                  |
+| Price Quote resolve                                 | 201 (correct price returned)                             |
+| No token → 401                                      | ✅                                                       |
+| Denied user (no perms) → 403                        | ✅                                                       |
+| Sales user (pricing.view only) on catalog → 403     | ✅                                                       |
+| Sales user on pricing.view → 200                    | ✅                                                       |
+| Sales user on pricing.create → 403                  | ✅                                                       |
+| Owner full access → 201                             | ✅                                                       |
+| Idempotency key missing → 422                       | ✅                                                       |
+| Idempotency replay → 403 (guard-level)              | ✅                                                       |
+| Swagger documents 28 M2 endpoints                   | ✅                                                       |
+| PostgreSQL tenant-scoped data                       | ✅ (31 permissions, 2 roles, 6 products, etc.)           |
+| Migrations 0022 + 0023 applied                      | ✅ (manually applied — drizzle journal mismatch from M1) |
