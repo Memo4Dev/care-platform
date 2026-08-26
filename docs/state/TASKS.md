@@ -56,18 +56,18 @@ None
 **Closed:** 2026-08-26
 **Status:** ACCEPTED — all 10 tasks complete, all gates green.
 
-| Task | Domain | Key output |
-|------|--------|------------|
-| M1-001 | Persistence | Drizzle schema, testing harness, dual PG path, CI postgres |
-| M1-002 | Contracts | Error catalog, PlatformError, API envelope, pagination, zod schemas |
-| M1-003 | Organization | Aggregate, lifecycle, branch/warehouse/policy, outbox |
-| M1-004 | Identity & Access | Users, roles, permissions, RBAC, bootstrap Owner |
-| M1-005 | Plans & Entitlements | Versioned plans, overrides, capability/limit evaluation |
-| M1-006 | Subscription & Billing | Lifecycle, append-only periods, trial/billing state |
-| M1-007 | Platform Management | Platform tenants, support sessions, DB-backed authorization |
-| M1-008 | Tenant Provisioning | Process manager, execution registry, terminal immutability |
-| M1-009 | API/Auth + Delivery | JWT auth, RBAC, idempotent mutations, Outbox→BullMQ relay/worker |
-| M1-010 | Integration/Isolation | M1 E2E, concurrency serialization, IDOR/FK negative coverage |
+| Task   | Domain                 | Key output                                                          |
+| ------ | ---------------------- | ------------------------------------------------------------------- |
+| M1-001 | Persistence            | Drizzle schema, testing harness, dual PG path, CI postgres          |
+| M1-002 | Contracts              | Error catalog, PlatformError, API envelope, pagination, zod schemas |
+| M1-003 | Organization           | Aggregate, lifecycle, branch/warehouse/policy, outbox               |
+| M1-004 | Identity & Access      | Users, roles, permissions, RBAC, bootstrap Owner                    |
+| M1-005 | Plans & Entitlements   | Versioned plans, overrides, capability/limit evaluation             |
+| M1-006 | Subscription & Billing | Lifecycle, append-only periods, trial/billing state                 |
+| M1-007 | Platform Management    | Platform tenants, support sessions, DB-backed authorization         |
+| M1-008 | Tenant Provisioning    | Process manager, execution registry, terminal immutability          |
+| M1-009 | API/Auth + Delivery    | JWT auth, RBAC, idempotent mutations, Outbox→BullMQ relay/worker    |
+| M1-010 | Integration/Isolation  | M1 E2E, concurrency serialization, IDOR/FK negative coverage        |
 
 **Final counts:** 193 unit tests, 103+ native PostgreSQL integration tests, 22 migrations.
 **CI:** Green with Redis integration on last 2 runs.

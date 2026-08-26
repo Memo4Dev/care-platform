@@ -80,6 +80,7 @@
 **Decision:** M1 SaaS Foundation milestone is accepted and closed.
 
 **Evidence:**
+
 - 193 unit tests green; 103+ native PostgreSQL integration tests green
 - CI green on last 2 runs including Redis integration (`REDIS_INTEGRATION=true`)
 - Staging deployed and verified (API endpoints, pgAdmin, Swagger)
@@ -87,6 +88,7 @@
 - No open security blockers
 
 **Ratified deferrals / notes:**
+
 - ADR-0001 (error code → HTTP status mapping) deferred to M2. The current 422 convention for business-rule-invalid requests is ratified as the M1 baseline; ADR-0001 ratification and any HTTP-status adjustments land in M2.
 - Default policy values from M1-003 (`DEFAULT_POLICY_VALUES`: RETURN off, REFUND off, PURCHASE on, ORDER_APPROVAL not required, OFFLINE on, CREDIT off, DELIVERY off, INVENTORY on) are accepted as-is. They can be tuned per-tenant via overrides in M2. No further human review required at M1 exit.
 - `ui-ux-pro-max` skill is not installed. Routing uses existing verified skills (`frontend-design`, `frontend-design-system`, `vercel-react-best-practices`, `vercel-composition-patterns`, `web-design-guidelines`, `accessibility`). Skill is deferred until M4 (UI milestone) — no impact on M2/M3 backend work.

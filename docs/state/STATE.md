@@ -9,18 +9,18 @@ Push/Merge pending: No
 
 All 10 M1 tasks complete (M1-001 through M1-010):
 
-| Task | Domain | Status |
-|------|--------|--------|
-| M1-001 | Persistence foundation (Drizzle + testing harness) | DONE |
-| M1-002 | Shared contracts package (error catalog, API envelope, pagination) | DONE |
-| M1-003 | Organization bounded context | DONE |
-| M1-004 | Identity & Access | DONE |
-| M1-005 | Plans & Entitlements | DONE |
-| M1-006 | Subscription & Billing | DONE |
-| M1-007 | Platform Management | DONE |
-| M1-008 | Tenant Provisioning | DONE |
-| M1-009 | API/auth plumbing + delivery architecture | DONE |
-| M1-010 | Final integration/isolation suite | DONE |
+| Task   | Domain                                                             | Status |
+| ------ | ------------------------------------------------------------------ | ------ |
+| M1-001 | Persistence foundation (Drizzle + testing harness)                 | DONE   |
+| M1-002 | Shared contracts package (error catalog, API envelope, pagination) | DONE   |
+| M1-003 | Organization bounded context                                       | DONE   |
+| M1-004 | Identity & Access                                                  | DONE   |
+| M1-005 | Plans & Entitlements                                               | DONE   |
+| M1-006 | Subscription & Billing                                             | DONE   |
+| M1-007 | Platform Management                                                | DONE   |
+| M1-008 | Tenant Provisioning                                                | DONE   |
+| M1-009 | API/auth plumbing + delivery architecture                          | DONE   |
+| M1-010 | Final integration/isolation suite                                  | DONE   |
 
 **Test suite:** 193 unit tests passing, typecheck clean, lint clean
 **CI:** Green (last 2 runs with Redis integration via `REDIS_INTEGRATION=true`)
