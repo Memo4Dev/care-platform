@@ -171,7 +171,8 @@ export class PricingRepository {
           eq(priceEntries.unitId, unitId),
           eq(priceEntries.priceType, priceType),
           eq(priceEntries.channel, channel),
-          or(isNull(priceEntries.effectiveTo), sql`${priceEntries.effectiveFrom} <= ${dateStr}`),
+          sql`${priceEntries.effectiveFrom} <= ${dateStr}`,
+          or(isNull(priceEntries.effectiveTo), sql`${priceEntries.effectiveTo} > ${dateStr}`),
         ),
       )
       .orderBy(asc(priceEntries.effectiveFrom));
@@ -615,8 +616,10 @@ export class PricingRepository {
         type: aggregate.type,
         target: aggregate.target,
         value: aggregate.value,
-        startDate: aggregate.startDate!.toISOString().slice(0, 10),
-        endDate: aggregate.endDate!.toISOString().slice(0, 10),
+        startDate: aggregate.startDate
+          ? aggregate.startDate.toISOString().slice(0, 10)
+          : new Date().toISOString().slice(0, 10),
+        endDate: aggregate.endDate ? aggregate.endDate.toISOString().slice(0, 10) : '2099-12-31',
         isActive: aggregate.isActive,
         version: aggregate.version,
         ...(aggregate.minQuantity !== null ? { minQuantity: aggregate.minQuantity } : {}),
@@ -678,8 +681,10 @@ export class PricingRepository {
         code: aggregate.code,
         type: aggregate.type as 'PERCENTAGE' | 'FIXED_AMOUNT' | 'FREE_SHIPPING',
         value: aggregate.value,
-        startDate: aggregate.startDate!.toISOString().slice(0, 10),
-        endDate: aggregate.endDate!.toISOString().slice(0, 10),
+        startDate: aggregate.startDate
+          ? aggregate.startDate.toISOString().slice(0, 10)
+          : new Date().toISOString().slice(0, 10),
+        endDate: aggregate.endDate ? aggregate.endDate.toISOString().slice(0, 10) : '2099-12-31',
         isActive: aggregate.isActive,
         version: aggregate.version,
         ...(aggregate.promotionId ? { promotionId: aggregate.promotionId } : {}),

@@ -47,11 +47,19 @@ These are templates, not hard-coded authorization.
 | purchase.approve | ✅ | configurable | ❌ | ❌ | ❌ | configurable |
 | credit.use | ✅ | ✅ | configurable | configurable | ❌ | ❌ |
 | credit.override | ✅ | configurable | ❌ | ❌ | ❌ | ❌ |
-| offline.resolve | ✅ | ✅ | configurable | ❌ | ❌ | ❌ |
+| offline.resolve | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | cash.session.open | ✅ | ✅ | configurable | configurable | ❌ | ❌ |
 | cash.reconcile | ✅ | configurable | ❌ | configurable | ❌ | ❌ |
 | delivery.manage | ✅ | configurable | ❌ | ❌ | ❌ | ❌ |
 | users.manage | ✅ | configurable | ❌ | ❌ | ❌ | ❌ |
+| catalog.view | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| catalog.create | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| catalog.edit | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| catalog.delete | ✅ | configurable | ❌ | ❌ | ❌ | ❌ |
+| pricing.view | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| pricing.create | ✅ | configurable | ❌ | ❌ | ❌ | ❌ |
+| pricing.edit | ✅ | configurable | ❌ | ❌ | ❌ | ❌ |
+| pricing.delete | ✅ | configurable | ❌ | ❌ | ❌ | ❌ |
 
 ## Scope Evaluation
 

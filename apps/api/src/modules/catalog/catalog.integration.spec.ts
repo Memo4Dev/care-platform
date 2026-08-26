@@ -1,4 +1,4 @@
-import { newId } from '@commerce-platform/database';
+import { newId, organizations } from '@commerce-platform/database';
 import { createTestDatabase, type TestDatabase } from '@commerce-platform/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -19,10 +19,26 @@ describe('Catalog context persistence', () => {
   let service: CatalogService;
   let repository: CatalogRepository;
 
+  // Pre-seeded test organizations (must exist in organization.organizations
+  // before any catalog operations that reference organizationId via FK).
+  let orgAId: string;
+  let orgBId: string;
+
+  /** Insert a fresh organization for test isolation (unique name per call). */
+  async function createTestOrg(): Promise<string> {
+    const id = newId();
+    await testdb.db.insert(organizations).values({ id, name: `Test Org ${id.slice(0, 8)}` });
+    return id;
+  }
+
   beforeAll(async () => {
     testdb = await createTestDatabase();
     repository = new CatalogRepository();
     service = new CatalogService(testdb.db, repository);
+
+    // Seed two test organizations so FK references succeed.
+    orgAId = await createTestOrg();
+    orgBId = await createTestOrg();
   });
 
   afterAll(async () => {
@@ -59,7 +75,7 @@ describe('Catalog context persistence', () => {
 
   describe('product lifecycle', () => {
     it('given a new product when created then the row persists with DRAFT status and version 1', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const productId = newId();
 
       const result = await service.createProduct({
@@ -90,7 +106,7 @@ describe('Catalog context persistence', () => {
     });
 
     it('given an existing product when updated then the name and version advance', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const { product } = await service.createProduct({
         organizationId: orgId,
         name: 'Original Name',
@@ -107,7 +123,7 @@ describe('Catalog context persistence', () => {
     });
 
     it('given a DRAFT product when activated then status becomes ACTIVE', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const { product } = await service.createProduct({
         organizationId: orgId,
         name: 'Activatable',
@@ -124,7 +140,7 @@ describe('Catalog context persistence', () => {
     });
 
     it('given an ACTIVE product when discontinued then status becomes DISCONTINUED', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const { product } = await service.createProduct({
         organizationId: orgId,
         name: 'Discontinuable',
@@ -146,7 +162,7 @@ describe('Catalog context persistence', () => {
 
   describe('variant lifecycle', () => {
     it('given a product when a variant is added then the variant persists with DRAFT status', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const unitId = newId();
       const { product } = await service.createProduct({
         organizationId: orgId,
@@ -181,7 +197,7 @@ describe('Catalog context persistence', () => {
     });
 
     it('given a duplicate SKU within the same org when inserted past the aggregate then the DB enforces product_variants_org_sku_unique', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const unitId = newId();
       const { product } = await service.createProduct({
         organizationId: orgId,
@@ -221,29 +237,33 @@ describe('Catalog context persistence', () => {
     });
 
     it('given different organizations when both use the same SKU then uniqueness does not leak across tenants', async () => {
-      const orgA = newId();
-      const orgB = newId();
       const unitA = newId();
       const unitB = newId();
 
-      const productA = await service.createProduct({ organizationId: orgA, name: 'OrgA Product' });
+      const productA = await service.createProduct({
+        organizationId: orgAId,
+        name: 'OrgA Product',
+      });
       await service.createUnit({
-        organizationId: orgA,
+        organizationId: orgAId,
         unitId: unitA,
         name: 'Unit A',
         symbol: 'A',
       });
 
-      const productB = await service.createProduct({ organizationId: orgB, name: 'OrgB Product' });
+      const productB = await service.createProduct({
+        organizationId: orgBId,
+        name: 'OrgB Product',
+      });
       await service.createUnit({
-        organizationId: orgB,
+        organizationId: orgBId,
         unitId: unitB,
         name: 'Unit B',
         symbol: 'B',
       });
 
       await service.addVariant({
-        organizationId: orgA,
+        organizationId: orgAId,
         productId: productA.product.id,
         name: 'OrgA Variant',
         sku: 'SHARED-SKU',
@@ -252,7 +272,7 @@ describe('Catalog context persistence', () => {
 
       // Same SKU in a different org must succeed
       await service.addVariant({
-        organizationId: orgB,
+        organizationId: orgBId,
         productId: productB.product.id,
         name: 'OrgB Variant',
         sku: 'SHARED-SKU',
@@ -267,7 +287,7 @@ describe('Catalog context persistence', () => {
     });
 
     it('given a variant when updated then the name and version advance', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const unitId = newId();
       const { product } = await service.createProduct({
         organizationId: orgId,
@@ -298,7 +318,7 @@ describe('Catalog context persistence', () => {
     });
 
     it('given an ACTIVE variant when discontinued then the variant status changes', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const unitId = newId();
       const { product } = await service.createProduct({
         organizationId: orgId,
@@ -330,7 +350,7 @@ describe('Catalog context persistence', () => {
 
   describe('category hierarchy', () => {
     it('given a category with no parent when created then it persists as a root category', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const result = await service.createCategory({
         organizationId: orgId,
         name: 'Beverages',
@@ -346,7 +366,7 @@ describe('Catalog context persistence', () => {
     });
 
     it('given a parent category when a child is created with parentId then the composite tenant FK links them', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const parent = await service.createCategory({
         organizationId: orgId,
         name: 'Food',
@@ -368,11 +388,8 @@ describe('Catalog context persistence', () => {
     });
 
     it('given a category from org A when a cross-tenant parent FK is inserted directly then the composite FK rejects it', async () => {
-      const orgA = newId();
-      const orgB = newId();
-
       const parentA = await service.createCategory({
-        organizationId: orgA,
+        organizationId: orgAId,
         name: 'Org A Category',
       });
 
@@ -383,7 +400,7 @@ describe('Catalog context persistence', () => {
           `INSERT INTO catalog.categories
             (id, organization_id, parent_id, name, sort_order, is_active, version)
            VALUES ($1, $2, $3, $4, 1, true, 1)`,
-          [newId(), orgB, parentA.category.id, 'Cross-tenant child'],
+          [newId(), orgBId, parentA.category.id, 'Cross-tenant child'],
         );
       } catch (caught) {
         dbError = caught as { code?: string; constraint?: string };
@@ -400,7 +417,7 @@ describe('Catalog context persistence', () => {
 
   describe('unit definitions', () => {
     it('given a unit when created then name and symbol are unique within the org', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const result = await service.createUnit({
         organizationId: orgId,
         name: 'Kilogram',
@@ -417,7 +434,7 @@ describe('Catalog context persistence', () => {
     });
 
     it('given a duplicate unit name within the same org when inserted past the aggregate then the DB enforces unit_definitions_org_name_unique', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       await service.createUnit({ organizationId: orgId, name: 'Liter', symbol: 'L' });
 
       let dbError: { code?: string; constraint?: string } | null = null;
@@ -437,7 +454,7 @@ describe('Catalog context persistence', () => {
     });
 
     it('given a duplicate unit symbol within the same org when inserted past the aggregate then the DB enforces unit_definitions_org_symbol_unique', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       await service.createUnit({ organizationId: orgId, name: 'Gram', symbol: 'g' });
 
       let dbError: { code?: string; constraint?: string } | null = null;
@@ -463,7 +480,7 @@ describe('Catalog context persistence', () => {
 
   describe('unit conversions', () => {
     it('given two units when a conversion is created then the factor is persisted correctly', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const unitA = await service.createUnit({
         organizationId: orgId,
         name: 'Kilogram',
@@ -480,7 +497,7 @@ describe('Catalog context persistence', () => {
         organizationId: orgId,
         fromUnitId: unitA.unit.id,
         toUnitId: unitB.unit.id,
-        factor: '1000',
+        factor: '1000.00000000',
       });
 
       expect(result.conversionId).toBeDefined();
@@ -490,12 +507,12 @@ describe('Catalog context persistence', () => {
       expect(conversions[0]).toMatchObject({
         fromUnitId: unitA.unit.id,
         toUnitId: unitB.unit.id,
-        factor: '1000',
+        factor: '1000.00000000',
       });
     });
 
     it('given a duplicate from+to pair within the same org when inserted past the aggregate then the DB enforces unit_conversions_org_from_to_unique', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const unitA = await service.createUnit({
         organizationId: orgId,
         name: 'Meter',
@@ -538,7 +555,7 @@ describe('Catalog context persistence', () => {
 
   describe('barcodes', () => {
     it('given a variant when a barcode is added then the barcode persists as active', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const unitId = newId();
       const { product } = await service.createProduct({
         organizationId: orgId,
@@ -572,7 +589,7 @@ describe('Catalog context persistence', () => {
     });
 
     it('given a barcode within the same org when a duplicate is inserted past the aggregate then the DB enforces barcodes_org_barcode_unique', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const unitId = newId();
       const { product } = await service.createProduct({
         organizationId: orgId,
@@ -612,7 +629,7 @@ describe('Catalog context persistence', () => {
     });
 
     it('given an active barcode when deactivated then is_active becomes false', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const unitId = newId();
       const { product } = await service.createProduct({
         organizationId: orgId,
@@ -655,51 +672,44 @@ describe('Catalog context persistence', () => {
 
   describe('cross-tenant isolation', () => {
     it('given a product in org A when read from org B then findProduct returns null', async () => {
-      const orgA = newId();
-      const orgB = newId();
-
       const { product } = await service.createProduct({
-        organizationId: orgA,
+        organizationId: orgAId,
         name: 'Org A Product',
       });
 
-      const foundFromOrgB = await repository.findProduct(testdb.db, orgB, product.id);
+      const foundFromOrgB = await repository.findProduct(testdb.db, orgBId, product.id);
       expect(foundFromOrgB).toBeNull();
     });
 
     it('given a variant in org A when read from org B then findVariant returns null', async () => {
-      const orgA = newId();
-      const orgB = newId();
       const unitId = newId();
 
       const { product } = await service.createProduct({
-        organizationId: orgA,
+        organizationId: orgAId,
         name: 'Org A Variant Parent',
       });
-      await service.createUnit({ organizationId: orgA, unitId, name: 'Unit', symbol: 'u' });
+      await service.createUnit({ organizationId: orgAId, unitId, name: 'Unit', symbol: 'u' });
       await service.addVariant({
-        organizationId: orgA,
+        organizationId: orgAId,
         productId: product.id,
         name: 'Isolated Variant',
         sku: 'ISO-001',
         baseUnitId: unitId,
       });
-      const variantId = (await repository.findProduct(testdb.db, orgA, product.id))!.variants[0].id;
+      const variantId = (await repository.findProduct(testdb.db, orgAId, product.id))!.variants[0]
+        .id;
 
-      const foundFromOrgB = await repository.findVariant(testdb.db, orgB, variantId);
+      const foundFromOrgB = await repository.findVariant(testdb.db, orgBId, variantId);
       expect(foundFromOrgB).toBeNull();
     });
 
     it('given a category in org A when read from org B then findCategory returns null', async () => {
-      const orgA = newId();
-      const orgB = newId();
-
       const { category } = await service.createCategory({
-        organizationId: orgA,
-        name: 'Org A Category',
+        organizationId: orgAId,
+        name: 'Isolation Category',
       });
 
-      const foundFromOrgB = await repository.findCategory(testdb.db, orgB, category.id);
+      const foundFromOrgB = await repository.findCategory(testdb.db, orgBId, category.id);
       expect(foundFromOrgB).toBeNull();
     });
   });
@@ -710,7 +720,7 @@ describe('Catalog context persistence', () => {
 
   describe('transactional outbox', () => {
     it('given a product creation when persisted then one ProductCreated event is appended to integration.outbox', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const productId = newId();
 
       await service.createProduct({
@@ -734,7 +744,7 @@ describe('Catalog context persistence', () => {
     });
 
     it('given a product with a variant when persisted then two events are appended (ProductCreated + VariantAdded)', async () => {
-      const orgId = newId();
+      const orgId = await createTestOrg();
       const productId = newId();
       const unitId = newId();
 

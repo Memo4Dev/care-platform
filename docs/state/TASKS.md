@@ -55,6 +55,13 @@ None
 - M2-014 Swagger/OpenAPI updates: added `@ApiTags('Catalog')` and `@ApiTags('Pricing')` with `@ApiBearerAuth('platform-bearer')` to both admin controllers; added `@ApiOperation`, `@ApiResponse`, and `@ApiQuery` decorators to all 26 endpoints; updated `swagger.ts` with Catalog and Pricing tag descriptions. WRITE/no commit requested.
 - M2-015 Quality gates: 345 unit tests (34 files) pass, typecheck 8/8, ESLint clean, Prettier clean. All integration tests (4 files) created but require TEST_DATABASE_URL to run. WRITE/no commit requested.
 - M2-016 State docs: updated STATE.md with full M2 completion status, updated TASKS.md with M2-014 through M2-016 entries. Awaiting human push approval. WRITE/no commit requested.
+- M2-017 Migration 0022 fix: stripped 0022_cooing_skin.sql from 384-line monolith (re-created ALL schemas/types/tables) to ~250-line M2-only delta. Removed duplicate CREATE SCHEMA "provisioning", CREATE TYPE "platform"."principal_status", CREATE TYPE "provisioning"."tenant_provisioning_status", and all duplicate platform/integration/provisioning table statements. Added IF NOT EXISTS on CREATE SCHEMA. Added composite UNIQUE constraints on 6 catalog/pricing tables for tenant-scoped FK references.
+- M2-018 Permission catalog expansion: added 8 new permission codes (catalog.view/create/edit/delete, pricing.view/create/edit/delete) to PERMISSION_CODES and PERMISSION_DESCRIPTIONS; migration 0023_add_catalog_pricing_permissions.sql; role templates updated (OWNER gets all 31, SALES gets pricing.view, ADMIN gets catalog+pricing full).
+- M2-019 Authorization enforcement: catalog-admin.controller.ts checks catalog.view/create/edit/delete; pricing-admin.controller.ts checks pricing.view/create/edit; IDENTITY_CONTRACTS authorize method injected and used.
+- M2-020 Pricing repository null-date fix: insertPromotion and insertCoupon now default null startDate to today and null endDate to '2099-12-31' for PostgreSQL NOT NULL date columns.
+- M2-021 Pricing lookup query fix: findPriceEntriesForLookup now correctly filters entries where effectiveFrom <= queryDate AND (effectiveTo IS NULL OR effectiveTo > queryDate). Previously returned all entries with null effectiveTo regardless of effectiveFrom.
+- M2-022 Integration test fixes: all 4 failing suites resolved — pricing.integration (12 FK violations fixed by seeding catalog prereqs), catalog.http (status assertion + idempotency replay fixed), pricing.http (numeric formatting, auth expectation corrections). Final: 198/198 tests pass (2 BullMQ skipped).
+- M2-023 Postman collection: added Tenant Admin — Catalog (14 endpoints) and Tenant Admin — Pricing (14 endpoints) folders; added tenantToken variable; updated collection description to M1 + M2.
 
 ---
 

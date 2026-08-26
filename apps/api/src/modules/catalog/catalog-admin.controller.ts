@@ -162,7 +162,7 @@ export class CatalogAdminController {
     @Query('offset') offset?: string,
   ) {
     const principal = this.principal(request);
-    await this.require(principal, request, 'catalog.read');
+    await this.require(principal, request, 'catalog.view');
     const rows = await this.db
       .select({
         id: products.id,
@@ -187,7 +187,7 @@ export class CatalogAdminController {
   @ApiResponse({ status: 422, description: 'Validation error' })
   async createProduct(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const principal = this.principal(request);
-    await this.require(principal, request, 'catalog.write');
+    await this.require(principal, request, 'catalog.create');
     const input = productCreate.parse(body);
     const result = await this.catalogService.createProduct({
       organizationId: principal.organizationId,
@@ -208,7 +208,7 @@ export class CatalogAdminController {
     @Body() body: unknown,
   ) {
     const principal = this.principal(request);
-    await this.require(principal, request, 'catalog.write');
+    await this.require(principal, request, 'catalog.edit');
     const input = productUpdate.parse(body);
     const result = await this.catalogService.updateProduct({
       organizationId: principal.organizationId,
@@ -231,7 +231,7 @@ export class CatalogAdminController {
     @Body() body: unknown,
   ) {
     const principal = this.principal(request);
-    await this.require(principal, request, 'catalog.write');
+    await this.require(principal, request, 'catalog.create');
     this.requireIdempotencyKey(request);
     const input = variantCreate.parse(body);
     const result = await this.catalogService.addVariant({
@@ -252,7 +252,7 @@ export class CatalogAdminController {
   @ApiResponse({ status: 404, description: 'Product not found' })
   async listVariants(@Req() request: AuthenticatedRequest, @Param('id') productId: string) {
     const principal = this.principal(request);
-    await this.require(principal, request, 'catalog.read');
+    await this.require(principal, request, 'catalog.view');
     const rows = await this.db
       .select()
       .from(productVariants)
@@ -274,7 +274,7 @@ export class CatalogAdminController {
     @Body() body: unknown,
   ) {
     const principal = this.principal(request);
-    await this.require(principal, request, 'catalog.write');
+    await this.require(principal, request, 'catalog.edit');
     const input = variantUpdate.parse(body);
 
     // Resolve productId from the variant row
@@ -312,7 +312,7 @@ export class CatalogAdminController {
   @ApiResponse({ status: 403, description: 'Permission denied' })
   async listCategories(@Req() request: AuthenticatedRequest) {
     const principal = this.principal(request);
-    await this.require(principal, request, 'catalog.read');
+    await this.require(principal, request, 'catalog.view');
     const rows = await this.db
       .select()
       .from(categories)
@@ -328,7 +328,7 @@ export class CatalogAdminController {
   @ApiResponse({ status: 422, description: 'Validation error' })
   async createCategory(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const principal = this.principal(request);
-    await this.require(principal, request, 'catalog.write');
+    await this.require(principal, request, 'catalog.create');
     const input = categoryCreate.parse(body);
     const result = await this.catalogService.createCategory({
       organizationId: principal.organizationId,
@@ -351,7 +351,7 @@ export class CatalogAdminController {
     @Body() body: unknown,
   ) {
     const principal = this.principal(request);
-    await this.require(principal, request, 'catalog.write');
+    await this.require(principal, request, 'catalog.edit');
     const input = categoryUpdate.parse(body);
     const result = await this.catalogService.updateCategory({
       organizationId: principal.organizationId,
@@ -373,7 +373,7 @@ export class CatalogAdminController {
   @ApiResponse({ status: 403, description: 'Permission denied' })
   async listUnits(@Req() request: AuthenticatedRequest) {
     const principal = this.principal(request);
-    await this.require(principal, request, 'catalog.read');
+    await this.require(principal, request, 'catalog.view');
     const rows = await this.db
       .select()
       .from(unitDefinitions)
@@ -390,7 +390,7 @@ export class CatalogAdminController {
   @ApiResponse({ status: 422, description: 'Validation error' })
   async createUnit(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const principal = this.principal(request);
-    await this.require(principal, request, 'catalog.write');
+    await this.require(principal, request, 'catalog.create');
     const input = unitCreate.parse(body);
     const result = await this.catalogService.createUnit({
       organizationId: principal.organizationId,
@@ -412,7 +412,7 @@ export class CatalogAdminController {
   @ApiResponse({ status: 422, description: 'Validation error' })
   async createConversion(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const principal = this.principal(request);
-    await this.require(principal, request, 'catalog.write');
+    await this.require(principal, request, 'catalog.create');
     this.requireIdempotencyKey(request);
     const input = conversionCreate.parse(body);
     const result = await this.catalogService.createConversion({
@@ -438,7 +438,7 @@ export class CatalogAdminController {
   @ApiResponse({ status: 422, description: 'Validation error' })
   async addBarcode(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const principal = this.principal(request);
-    await this.require(principal, request, 'catalog.write');
+    await this.require(principal, request, 'catalog.create');
     this.requireIdempotencyKey(request);
     const input = barcodeAdd.parse(body);
     const result = await this.catalogService.addBarcode({
@@ -460,7 +460,7 @@ export class CatalogAdminController {
   @ApiResponse({ status: 422, description: 'Validation error' })
   async createPackagingDefinition(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const principal = this.principal(request);
-    await this.require(principal, request, 'catalog.write');
+    await this.require(principal, request, 'catalog.create');
     this.requireIdempotencyKey(request);
     const input = packagingCreate.parse(body);
     const result = await this.catalogService.createPackagingDefinition({

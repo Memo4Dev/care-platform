@@ -9,6 +9,8 @@ import { OrganizationModule } from '../organization/organization.module';
 import { TenantAdminController } from '../organization/tenant-admin.controller';
 import { PlatformModule } from '../platform/platform.module';
 import { PlatformAdminController } from '../platform/platform-admin.controller';
+import { PricingModule } from '../pricing/pricing.module';
+import { PricingAdminController } from '../pricing/pricing-admin.controller';
 import { ProvisioningModule } from '../provisioning/provisioning.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 
@@ -22,8 +24,9 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
     ProvisioningModule,
     OrganizationModule,
     CatalogModule,
+    PricingModule,
     IdentityModule,
   ],
-  controllers: [PlatformAdminController, TenantAdminController, CatalogAdminController],
+  controllers: [PlatformAdminController, TenantAdminController, CatalogAdminController, PricingAdminController],
 })
 export class ApiModule {}

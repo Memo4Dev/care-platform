@@ -1,18 +1,14 @@
-CREATE SCHEMA "catalog";
+CREATE SCHEMA IF NOT EXISTS "catalog";
 --> statement-breakpoint
-CREATE SCHEMA "pricing";
---> statement-breakpoint
-CREATE SCHEMA "provisioning";
+CREATE SCHEMA IF NOT EXISTS "pricing";
 --> statement-breakpoint
 CREATE TYPE "catalog"."product_status" AS ENUM('ACTIVE', 'DRAFT', 'DISCONTINUED');--> statement-breakpoint
 CREATE TYPE "catalog"."variant_status" AS ENUM('ACTIVE', 'DRAFT', 'DISCONTINUED');--> statement-breakpoint
-CREATE TYPE "platform"."principal_status" AS ENUM('ACTIVE', 'SUSPENDED');--> statement-breakpoint
 CREATE TYPE "pricing"."channel" AS ENUM('POS', 'ONLINE', 'MOBILE', 'WHOLESALE');--> statement-breakpoint
 CREATE TYPE "pricing"."coupon_type" AS ENUM('PERCENTAGE', 'FIXED_AMOUNT', 'FREE_SHIPPING');--> statement-breakpoint
 CREATE TYPE "pricing"."price_type" AS ENUM('CASH', 'WHOLESALE', 'CREDIT', 'ONLINE');--> statement-breakpoint
 CREATE TYPE "pricing"."promotion_target" AS ENUM('PRODUCT', 'VARIANT', 'CATEGORY', 'ORDER');--> statement-breakpoint
 CREATE TYPE "pricing"."promotion_type" AS ENUM('PERCENTAGE', 'FIXED_AMOUNT', 'BUY_X_GET_Y');--> statement-breakpoint
-CREATE TYPE "provisioning"."tenant_provisioning_status" AS ENUM('REQUESTED', 'CREATING_ORGANIZATION', 'CREATING_IDENTITY_DEFAULTS', 'CREATING_BUSINESS_DEFAULTS', 'CREATING_STOREFRONT', 'COMPLETED', 'FAILED');--> statement-breakpoint
 CREATE TABLE "catalog"."barcodes" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"organization_id" uuid NOT NULL,
@@ -107,67 +103,6 @@ CREATE TABLE "catalog"."unit_definitions" (
 	CONSTRAINT "unit_definitions_org_symbol_unique" UNIQUE("organization_id","symbol")
 );
 --> statement-breakpoint
-CREATE TABLE "integration"."idempotency_outcomes" (
-	"id" uuid PRIMARY KEY NOT NULL,
-	"scope" text NOT NULL,
-	"idempotency_key" text NOT NULL,
-	"request_hash" text NOT NULL,
-	"status" text NOT NULL,
-	"response_json" jsonb,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"completed_at" timestamp with time zone,
-	CONSTRAINT "idempotency_outcomes_scope_key_unique" UNIQUE("scope","idempotency_key")
-);
---> statement-breakpoint
-CREATE TABLE "integration"."inbox" (
-	"event_id" uuid NOT NULL,
-	"consumer" text NOT NULL,
-	"status" text NOT NULL,
-	"received_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"completed_at" timestamp with time zone,
-	"lease_expires_at" timestamp with time zone,
-	"lease_id" uuid,
-	CONSTRAINT "integration_inbox_event_consumer_pk" PRIMARY KEY("event_id","consumer")
-);
---> statement-breakpoint
-CREATE TABLE "platform"."capabilities" (
-	"id" uuid PRIMARY KEY NOT NULL,
-	"code" text NOT NULL,
-	"description" text NOT NULL,
-	CONSTRAINT "platform_capabilities_code_unique" UNIQUE("code")
-);
---> statement-breakpoint
-CREATE TABLE "platform"."principal_roles" (
-	"principal_id" uuid NOT NULL,
-	"role_id" uuid NOT NULL,
-	CONSTRAINT "platform_principal_roles_unique" UNIQUE("principal_id","role_id")
-);
---> statement-breakpoint
-CREATE TABLE "platform"."principals" (
-	"id" uuid PRIMARY KEY NOT NULL,
-	"supabase_user_id" text NOT NULL,
-	"status" "platform"."principal_status" DEFAULT 'ACTIVE' NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"version" integer DEFAULT 1 NOT NULL,
-	CONSTRAINT "platform_principals_supabase_user_unique" UNIQUE("supabase_user_id")
-);
---> statement-breakpoint
-CREATE TABLE "platform"."role_capabilities" (
-	"role_id" uuid NOT NULL,
-	"capability_id" uuid NOT NULL,
-	CONSTRAINT "platform_role_capabilities_unique" UNIQUE("role_id","capability_id")
-);
---> statement-breakpoint
-CREATE TABLE "platform"."roles" (
-	"id" uuid PRIMARY KEY NOT NULL,
-	"code" text NOT NULL,
-	"name" text NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "platform_roles_code_unique" UNIQUE("code")
-);
---> statement-breakpoint
 CREATE TABLE "pricing"."coupons" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"organization_id" uuid NOT NULL,
@@ -257,60 +192,12 @@ CREATE TABLE "pricing"."promotions" (
 	CONSTRAINT "promotions_org_name_unique" UNIQUE("organization_id","name")
 );
 --> statement-breakpoint
-CREATE TABLE "provisioning"."retry_requests" (
-	"id" uuid PRIMARY KEY NOT NULL,
-	"tenant_id" uuid NOT NULL,
-	"provisioning_id" uuid,
-	"registration_reference" text NOT NULL,
-	"idempotency_scope" text NOT NULL,
-	"idempotency_key" text NOT NULL,
-	"request_hash" text NOT NULL,
-	"event_id" uuid NOT NULL,
-	"status" text DEFAULT 'REQUESTED' NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "provisioning_retry_requests_scope_key_unique" UNIQUE("idempotency_scope","idempotency_key"),
-	CONSTRAINT "provisioning_retry_requests_event_unique" UNIQUE("event_id")
-);
---> statement-breakpoint
-CREATE TABLE "provisioning"."tenant_provisioning" (
-	"id" uuid PRIMARY KEY NOT NULL,
-	"tenant_id" uuid NOT NULL,
-	"organization_id" uuid NOT NULL,
-	"status" "provisioning"."tenant_provisioning_status" DEFAULT 'REQUESTED' NOT NULL,
-	"current_step" text NOT NULL,
-	"checkpoints_json" jsonb DEFAULT '{}'::jsonb NOT NULL,
-	"last_error" text,
-	"started_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"completed_at" timestamp with time zone,
-	"version" integer DEFAULT 1 NOT NULL,
-	CONSTRAINT "tenant_provisioning_tenant_unique" UNIQUE("tenant_id"),
-	CONSTRAINT "tenant_provisioning_organization_unique" UNIQUE("organization_id"),
-	CONSTRAINT "tenant_provisioning_completed_at_check" CHECK ("provisioning"."tenant_provisioning"."status" <> 'COMPLETED' OR "provisioning"."tenant_provisioning"."completed_at" IS NOT NULL)
-);
---> statement-breakpoint
-ALTER TABLE "entitlements"."tenant_overrides" DROP CONSTRAINT "tenant_overrides_granted_by_tenant_fk";
---> statement-breakpoint
-ALTER TABLE "platform"."tenants" DROP CONSTRAINT "tenants_subscription_id_subscriptions_id_fk";
---> statement-breakpoint
-ALTER TABLE "entitlements"."tenant_overrides" ALTER COLUMN "granted_by" DROP NOT NULL;--> statement-breakpoint
-ALTER TABLE "entitlements"."tenant_overrides" ADD COLUMN "actor_type" text NOT NULL;--> statement-breakpoint
-ALTER TABLE "entitlements"."tenant_overrides" ADD COLUMN "actor_id" text NOT NULL;--> statement-breakpoint
-ALTER TABLE "entitlements"."tenant_overrides" ADD COLUMN "correlation_id" text NOT NULL;--> statement-breakpoint
-ALTER TABLE "integration"."outbox" ADD COLUMN "published_at" timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "integration"."outbox" ADD COLUMN "publish_lease_id" uuid;--> statement-breakpoint
-ALTER TABLE "integration"."outbox" ADD COLUMN "publish_lease_expires_at" timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "integration"."outbox" ADD COLUMN "publish_attempts" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
-ALTER TABLE "integration"."outbox" ADD COLUMN "last_publish_error" text;--> statement-breakpoint
-ALTER TABLE "platform"."tenants" ADD COLUMN "registration_reference" text DEFAULT 'legacy' NOT NULL;--> statement-breakpoint
-ALTER TABLE "platform"."tenants" ADD COLUMN "registration_status" text DEFAULT 'LEGACY' NOT NULL;--> statement-breakpoint
-ALTER TABLE "platform"."tenants" ADD COLUMN "registration_requested_organization_name" text DEFAULT 'legacy' NOT NULL;--> statement-breakpoint
-ALTER TABLE "platform"."tenants" ADD COLUMN "registration_owner_supabase_subject" text DEFAULT 'legacy' NOT NULL;--> statement-breakpoint
-ALTER TABLE "platform"."tenants" ADD COLUMN "registration_owner_email" text DEFAULT 'legacy' NOT NULL;--> statement-breakpoint
-ALTER TABLE "platform"."tenants" ADD COLUMN "registration_owner_display_name" text DEFAULT 'legacy' NOT NULL;--> statement-breakpoint
-ALTER TABLE "platform"."tenants" ADD COLUMN "registration_verified_at" timestamp with time zone DEFAULT now() NOT NULL;--> statement-breakpoint
-ALTER TABLE "platform"."support_sessions" ADD COLUMN "requested_by_platform_user_id" uuid NOT NULL;--> statement-breakpoint
-ALTER TABLE "platform"."support_sessions" ADD COLUMN "started_by_platform_user_id" uuid;--> statement-breakpoint
-ALTER TABLE "platform"."support_sessions" ADD COLUMN "ended_by_platform_user_id" uuid;--> statement-breakpoint
+ALTER TABLE "catalog"."products" ADD CONSTRAINT "products_id_org_unique" UNIQUE("id","organization_id");--> statement-breakpoint
+ALTER TABLE "catalog"."product_variants" ADD CONSTRAINT "product_variants_id_org_unique" UNIQUE("id","organization_id");--> statement-breakpoint
+ALTER TABLE "catalog"."categories" ADD CONSTRAINT "categories_id_org_unique" UNIQUE("id","organization_id");--> statement-breakpoint
+ALTER TABLE "catalog"."unit_definitions" ADD CONSTRAINT "unit_definitions_id_org_unique" UNIQUE("id","organization_id");--> statement-breakpoint
+ALTER TABLE "pricing"."price_books" ADD CONSTRAINT "price_books_id_org_unique" UNIQUE("id","organization_id");--> statement-breakpoint
+ALTER TABLE "pricing"."promotions" ADD CONSTRAINT "promotions_id_org_unique" UNIQUE("id","organization_id");--> statement-breakpoint
 ALTER TABLE "catalog"."barcodes" ADD CONSTRAINT "barcodes_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "organization"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "catalog"."barcodes" ADD CONSTRAINT "barcodes_variant_tenant_fk" FOREIGN KEY ("variant_id","organization_id") REFERENCES "catalog"."product_variants"("id","organization_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "catalog"."categories" ADD CONSTRAINT "categories_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "organization"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -326,10 +213,6 @@ ALTER TABLE "catalog"."unit_conversions" ADD CONSTRAINT "unit_conversions_organi
 ALTER TABLE "catalog"."unit_conversions" ADD CONSTRAINT "unit_conversions_from_unit_tenant_fk" FOREIGN KEY ("from_unit_id","organization_id") REFERENCES "catalog"."unit_definitions"("id","organization_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "catalog"."unit_conversions" ADD CONSTRAINT "unit_conversions_to_unit_tenant_fk" FOREIGN KEY ("to_unit_id","organization_id") REFERENCES "catalog"."unit_definitions"("id","organization_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "catalog"."unit_definitions" ADD CONSTRAINT "unit_definitions_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "organization"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "platform"."principal_roles" ADD CONSTRAINT "principal_roles_principal_id_principals_id_fk" FOREIGN KEY ("principal_id") REFERENCES "platform"."principals"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "platform"."principal_roles" ADD CONSTRAINT "principal_roles_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "platform"."roles"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "platform"."role_capabilities" ADD CONSTRAINT "role_capabilities_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "platform"."roles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "platform"."role_capabilities" ADD CONSTRAINT "role_capabilities_capability_id_capabilities_id_fk" FOREIGN KEY ("capability_id") REFERENCES "platform"."capabilities"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pricing"."coupons" ADD CONSTRAINT "coupons_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "organization"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pricing"."coupons" ADD CONSTRAINT "coupons_promotion_tenant_fk" FOREIGN KEY ("promotion_id","organization_id") REFERENCES "pricing"."promotions"("id","organization_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pricing"."price_books" ADD CONSTRAINT "price_books_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "organization"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -338,7 +221,6 @@ ALTER TABLE "pricing"."price_entries" ADD CONSTRAINT "price_entries_price_book_t
 ALTER TABLE "pricing"."price_entries" ADD CONSTRAINT "price_entries_variant_tenant_fk" FOREIGN KEY ("variant_id","organization_id") REFERENCES "catalog"."product_variants"("id","organization_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pricing"."price_snapshots" ADD CONSTRAINT "price_snapshots_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "organization"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pricing"."promotions" ADD CONSTRAINT "promotions_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "organization"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "provisioning"."tenant_provisioning" ADD CONSTRAINT "tenant_provisioning_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "organization"."organizations"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "barcodes_organization_id_idx" ON "catalog"."barcodes" USING btree ("organization_id");--> statement-breakpoint
 CREATE INDEX "barcodes_variant_id_idx" ON "catalog"."barcodes" USING btree ("variant_id");--> statement-breakpoint
 CREATE INDEX "barcodes_barcode_idx" ON "catalog"."barcodes" USING btree ("barcode");--> statement-breakpoint
@@ -354,11 +236,6 @@ CREATE INDEX "unit_conversions_organization_id_idx" ON "catalog"."unit_conversio
 CREATE INDEX "unit_conversions_from_unit_idx" ON "catalog"."unit_conversions" USING btree ("from_unit_id");--> statement-breakpoint
 CREATE INDEX "unit_conversions_to_unit_idx" ON "catalog"."unit_conversions" USING btree ("to_unit_id");--> statement-breakpoint
 CREATE INDEX "unit_definitions_organization_id_idx" ON "catalog"."unit_definitions" USING btree ("organization_id");--> statement-breakpoint
-CREATE INDEX "idempotency_outcomes_created_at_idx" ON "integration"."idempotency_outcomes" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "integration_inbox_consumer_status_idx" ON "integration"."inbox" USING btree ("consumer","status");--> statement-breakpoint
-CREATE INDEX "integration_inbox_claim_expiry_idx" ON "integration"."inbox" USING btree ("status","lease_expires_at");--> statement-breakpoint
-CREATE INDEX "platform_principal_roles_role_idx" ON "platform"."principal_roles" USING btree ("role_id");--> statement-breakpoint
-CREATE INDEX "platform_role_capabilities_capability_idx" ON "platform"."role_capabilities" USING btree ("capability_id");--> statement-breakpoint
 CREATE INDEX "coupons_organization_id_idx" ON "pricing"."coupons" USING btree ("organization_id");--> statement-breakpoint
 CREATE INDEX "coupons_active_code_idx" ON "pricing"."coupons" USING btree ("organization_id","is_active","code");--> statement-breakpoint
 CREATE INDEX "price_books_organization_id_idx" ON "pricing"."price_books" USING btree ("organization_id");--> statement-breakpoint
@@ -370,15 +247,4 @@ CREATE INDEX "price_snapshots_organization_id_idx" ON "pricing"."price_snapshots
 CREATE INDEX "price_snapshots_source_idx" ON "pricing"."price_snapshots" USING btree ("source_type","source_id");--> statement-breakpoint
 CREATE INDEX "price_snapshots_variant_idx" ON "pricing"."price_snapshots" USING btree ("variant_id");--> statement-breakpoint
 CREATE INDEX "promotions_organization_id_idx" ON "pricing"."promotions" USING btree ("organization_id");--> statement-breakpoint
-CREATE INDEX "promotions_active_dates_idx" ON "pricing"."promotions" USING btree ("organization_id","is_active","start_date","end_date");--> statement-breakpoint
-CREATE INDEX "provisioning_retry_requests_tenant_status_idx" ON "provisioning"."retry_requests" USING btree ("tenant_id","status");--> statement-breakpoint
-CREATE INDEX "tenant_provisioning_status_idx" ON "provisioning"."tenant_provisioning" USING btree ("status");--> statement-breakpoint
-ALTER TABLE "platform"."tenants" ADD CONSTRAINT "platform_tenants_subscription_organization_fk" FOREIGN KEY ("subscription_id","organization_id") REFERENCES "subscription"."subscriptions"("id","organization_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "platform"."support_sessions" ADD CONSTRAINT "support_sessions_requested_by_platform_user_id_principals_id_fk" FOREIGN KEY ("requested_by_platform_user_id") REFERENCES "platform"."principals"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "platform"."support_sessions" ADD CONSTRAINT "support_sessions_started_by_platform_user_id_principals_id_fk" FOREIGN KEY ("started_by_platform_user_id") REFERENCES "platform"."principals"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "platform"."support_sessions" ADD CONSTRAINT "support_sessions_ended_by_platform_user_id_principals_id_fk" FOREIGN KEY ("ended_by_platform_user_id") REFERENCES "platform"."principals"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "tenant_overrides_actor_idx" ON "entitlements"."tenant_overrides" USING btree ("actor_type","actor_id");--> statement-breakpoint
-CREATE INDEX "integration_outbox_relay_claim_idx" ON "integration"."outbox" USING btree ("published_at","publish_lease_expires_at","occurred_at");--> statement-breakpoint
-CREATE UNIQUE INDEX "platform_tenants_verified_registration_reference_unique" ON "platform"."tenants" USING btree ("registration_reference") WHERE "platform"."tenants"."registration_status" = 'VERIFIED' AND "platform"."tenants"."registration_reference" <> 'legacy';--> statement-breakpoint
-ALTER TABLE "subscription"."subscriptions" ADD CONSTRAINT "subscriptions_id_organization_unique" UNIQUE("id","organization_id");--> statement-breakpoint
-ALTER TABLE "platform"."support_sessions" ADD CONSTRAINT "support_sessions_terminal_audit_check" CHECK ("platform"."support_sessions"."status" NOT IN ('ENDED', 'EXPIRED') OR ("platform"."support_sessions"."ended_at" IS NOT NULL AND "platform"."support_sessions"."ended_by_platform_user_id" IS NOT NULL AND "platform"."support_sessions"."end_reason" IS NOT NULL));
+CREATE INDEX "promotions_active_dates_idx" ON "pricing"."promotions" USING btree ("organization_id","is_active","start_date","end_date");

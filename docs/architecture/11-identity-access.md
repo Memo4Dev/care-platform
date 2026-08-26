@@ -53,3 +53,11 @@ credit.use
 credit.override
 offline.resolve
 delivery.manage
+catalog.view
+catalog.create
+catalog.edit
+catalog.delete
+pricing.view
+pricing.create
+pricing.edit
+pricing.delete

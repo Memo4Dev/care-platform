@@ -7,8 +7,9 @@ import type { DatabaseClient, PriceType, Channel } from '@commerce-platform/data
 import { PlatformError } from '@commerce-platform/contracts';
 import { TenantBearerGuard, type AuthenticatedRequest } from '../../common/auth/http-auth.guards';
 import type { OrganizationUserPrincipal } from '../../common/auth/authenticated-principal';
-// correlationIdFor imported for future authorization use
+import { correlationIdFor } from '../../common/http/correlation';
 import { DATABASE } from '../database/database.tokens';
+import { IDENTITY_CONTRACTS, type IdentityContracts } from '../identity/contracts';
 import { PricingService } from './application/pricing.service';
 
 // ---------------------------------------------------------------------------
@@ -119,6 +120,7 @@ export class PricingAdminController {
   constructor(
     @Inject(DATABASE) private readonly db: DatabaseClient,
     @Inject(PricingService) private readonly pricing: PricingService,
+    @Inject(IDENTITY_CONTRACTS) private readonly identity: IdentityContracts,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -131,6 +133,7 @@ export class PricingAdminController {
   @ApiResponse({ status: 422, description: 'Validation error' })
   async createPriceBook(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const principal = this.principal(request);
+    await this.require(principal, request, 'pricing.create');
     const input = priceBookCreate.parse(body);
     const result = await this.pricing.createPriceBook({
       organizationId: principal.organizationId,
@@ -146,6 +149,7 @@ export class PricingAdminController {
   @ApiResponse({ status: 200, description: 'Price book list' })
   async listPriceBooks(@Req() request: AuthenticatedRequest) {
     const principal = this.principal(request);
+    await this.require(principal, request, 'pricing.view');
     const rows = await this.db
       .select({
         id: priceBooks.id,
@@ -173,6 +177,7 @@ export class PricingAdminController {
     @Body() body: unknown,
   ) {
     const principal = this.principal(request);
+    await this.require(principal, request, 'pricing.edit');
     this.requireIdempotencyKey(request);
     const input = priceBookUpdate.parse(body);
 
@@ -198,6 +203,7 @@ export class PricingAdminController {
   @ApiResponse({ status: 404, description: 'Price book not found' })
   async setDefaultPriceBook(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
     const principal = this.principal(request);
+    await this.require(principal, request, 'pricing.edit');
     this.requireIdempotencyKey(request);
     const result = await this.pricing.setDefaultPriceBook({
       organizationId: principal.organizationId,
@@ -219,6 +225,7 @@ export class PricingAdminController {
   @ApiResponse({ status: 422, description: 'Validation error' })
   async createPriceEntry(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const principal = this.principal(request);
+    await this.require(principal, request, 'pricing.create');
     this.requireIdempotencyKey(request);
     const input = priceEntryCreate.parse(body);
     const result = await this.pricing.createPriceEntry({
@@ -241,6 +248,7 @@ export class PricingAdminController {
   @ApiResponse({ status: 200, description: 'Price entry list' })
   async listPriceEntries(@Req() request: AuthenticatedRequest) {
     const principal = this.principal(request);
+    await this.require(principal, request, 'pricing.view');
     const rows = await this.db
       .select()
       .from(priceEntries)
@@ -261,6 +269,7 @@ export class PricingAdminController {
     @Body() body: unknown,
   ) {
     const principal = this.principal(request);
+    await this.require(principal, request, 'pricing.edit');
     this.requireIdempotencyKey(request);
     const input = priceEntryUpdate.parse(body);
     const result = await this.pricing.updatePriceEntry({
@@ -281,6 +290,7 @@ export class PricingAdminController {
   @ApiResponse({ status: 422, description: 'Validation error' })
   async createPromotion(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const principal = this.principal(request);
+    await this.require(principal, request, 'pricing.create');
     this.requireIdempotencyKey(request);
     const input = promotionCreate.parse(body);
     const result = await this.pricing.createPromotion({
@@ -302,6 +312,7 @@ export class PricingAdminController {
   @ApiResponse({ status: 200, description: 'Promotion list' })
   async listPromotions(@Req() request: AuthenticatedRequest) {
     const principal = this.principal(request);
+    await this.require(principal, request, 'pricing.view');
     const rows = await this.db
       .select()
       .from(promotions)
@@ -321,6 +332,7 @@ export class PricingAdminController {
     @Body() body: unknown,
   ) {
     const principal = this.principal(request);
+    await this.require(principal, request, 'pricing.edit');
     this.requireIdempotencyKey(request);
     const input = promotionUpdate.parse(body);
 
@@ -346,6 +358,7 @@ export class PricingAdminController {
   @ApiResponse({ status: 422, description: 'Validation error' })
   async createCoupon(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const principal = this.principal(request);
+    await this.require(principal, request, 'pricing.create');
     this.requireIdempotencyKey(request);
     const input = couponCreate.parse(body);
     const result = await this.pricing.createCoupon({
@@ -367,6 +380,7 @@ export class PricingAdminController {
   @ApiResponse({ status: 200, description: 'Coupon list' })
   async listCoupons(@Req() request: AuthenticatedRequest) {
     const principal = this.principal(request);
+    await this.require(principal, request, 'pricing.view');
     const rows = await this.db
       .select()
       .from(coupons)
@@ -383,6 +397,7 @@ export class PricingAdminController {
   @ApiResponse({ status: 409, description: 'Coupon expired or max uses reached' })
   async redeemCoupon(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
     const principal = this.principal(request);
+    await this.require(principal, request, 'pricing.create');
     this.requireIdempotencyKey(request);
     const result = await this.pricing.redeemCoupon({
       organizationId: principal.organizationId,
@@ -402,6 +417,7 @@ export class PricingAdminController {
   @ApiResponse({ status: 422, description: 'Validation error' })
   async resolvePriceQuote(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const principal = this.principal(request);
+    await this.require(principal, request, 'pricing.view');
     const input = quoteRequest.parse(body);
     const quote = await this.pricing.resolvePriceQuote({
       organizationId: principal.organizationId,
@@ -432,5 +448,22 @@ export class PricingAdminController {
         details: { field: 'Idempotency-Key' },
       });
     return key;
+  }
+
+  private async require(
+    principal: OrganizationUserPrincipal,
+    request: AuthenticatedRequest,
+    permissionCode: string,
+  ) {
+    await this.identity
+      .authorize({
+        userId: principal.organizationUserId,
+        organizationId: principal.organizationId,
+        permissionCode,
+        correlationId: correlationIdFor(request),
+      })
+      .then((decision) => {
+        if (!decision.allowed) throw PlatformError.permissionDenied();
+      });
   }
 }

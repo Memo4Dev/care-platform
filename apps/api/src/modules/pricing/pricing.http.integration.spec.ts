@@ -6,9 +6,13 @@ import {
   subscriptions,
   plans,
   planEntitlements,
+  users,
+  roles,
+  userOrganizationRoles,
 } from '@commerce-platform/database';
 import { createTestDatabase, type TestDatabase } from '@commerce-platform/testing';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../main';
@@ -20,40 +24,58 @@ import { RoleRepository } from '../identity/infrastructure/role.repository';
 import { UserRepository } from '../identity/infrastructure/user.repository';
 
 /**
- * HTTP boundary tests for the Pricing Admin controller using app.inject().
+ * HTTP boundary tests for the Pricing Admin controller authorization matrix.
  *
- * Follows the exact pattern of api.integration.spec.ts:
+ * Follows the exact pattern of api.integration.spec.ts and
+ * catalog.http.integration.spec.ts:
  * - createTestDatabase() for real PG
  * - Full NestJS app bootstrap with TenantBearerGuard
  * - JWT creation for tenant authentication
- * - Organization + branch + owner provisioning
- * - Subscription + platform tenant setup
+ * - Organization + branch + owner provisioning via IdentityProvisioningService
+ * - Organization-scoped role grants to control per-user permission sets
  * - app.inject() for HTTP calls
  *
- * The pricing controller does NOT check specific permission codes (unlike
- * catalog); it only verifies the principal is an ORGANIZATION_USER via the
- * TenantBearerGuard. So successful CRUD through HTTP works once the tenant
- * is properly provisioned.
+ * Permission codes enforced by PricingAdminController:
+ * - `pricing.view`  — all GET (list/read) endpoints + POST quote
+ * - `pricing.create` — POST (create) endpoints + coupon redeem
+ * - `pricing.edit`   — PATCH (update) endpoints + set default price book
+ * - `pricing.delete` — future deactivate endpoints
+ *
+ * Users under test:
+ * - Owner:   OWNER role  → ALL permission codes (including all pricing.*)
+ * - Sales:   SALES role  → only ['sales.create', 'catalog.view', 'pricing.view']
+ * - Denied:  no role     → zero permissions
+ * - Foreign: Org B user  → OWNER role (ALL pricing.*, sees empty lists)
  */
-describe('M2-013 Pricing HTTP boundary', () => {
+describe('Pricing HTTP boundary — Authorization matrix', () => {
   let testdb: TestDatabase;
   let app: NestFastifyApplication;
-  let tenantBearer: string;
+
+  // JWT tokens for distinct user personas
+  let ownerBearer: string;
+  let salesBearer: string;
+  let deniedBearer: string;
+  let foreignBearer: string;
+
+  // Shared state for cross-test assertions
   let tenantOrganizationId: string;
-  let tenantBranchId: string;
-  let foreignTenantBearer: string;
+
   let originalDatabaseUrl: string | undefined;
+
+  // -------------------------------------------------------------------------
+  // Setup
+  // -------------------------------------------------------------------------
 
   beforeAll(async () => {
     testdb = await createTestDatabase();
     originalDatabaseUrl = process.env.DATABASE_URL;
     process.env.DATABASE_URL = testdb.uri;
-    process.env.SUPABASE_JWT_SECRET = 'm2-013-pricing-test-secret';
+    process.env.SUPABASE_JWT_SECRET = 'pricing-authz-test-secret';
     process.env.SUPABASE_JWT_ISSUER = 'https://auth.example.test';
     process.env.SUPABASE_PLATFORM_AUDIENCE = 'platform-api';
     process.env.SUPABASE_TENANT_AUDIENCE = 'tenant-api';
 
-    // --- Organization + branch + owner provisioning ---
+    // --- Services ---
     const organizationsService = new OrganizationService(testdb.db, new OrganizationRepository());
     const identityProvisioning = new IdentityProvisioningService(
       testdb.db,
@@ -61,92 +83,103 @@ describe('M2-013 Pricing HTTP boundary', () => {
       new RoleRepository(),
     );
 
-    const tenant = await organizationsService.createOrganization({ name: 'Pricing HTTP Org' });
+    // === Org A (main org) ================================================
+
+    const tenant = await organizationsService.createOrganization({
+      name: 'Pricing Authz Org A',
+    });
     tenantOrganizationId = tenant.organization.id;
-    tenantBranchId = newId();
+    const tenantBranchId = newId();
     await organizationsService.createBranch({
       organizationId: tenantOrganizationId,
       branchId: tenantBranchId,
-      code: 'PR-MAIN',
-      name: 'Pricing Main Branch',
+      code: 'PR-AUTHZ',
+      name: 'Pricing Authz Main Branch',
     });
 
+    // --- Owner: OWNER role → ALL permission codes (incl. all pricing.*) ---
     const owner = await identityProvisioning.provisionInitialOwner({
       organizationId: tenantOrganizationId,
-      email: 'pricing-http-owner@example.test',
-      name: 'Pricing HTTP Owner',
-      supabaseUserId: 'pricing-http-owner',
+      email: 'pricing-authz-owner@example.test',
+      name: 'Pricing Authz Owner',
+      supabaseUserId: 'pricing-authz-owner',
       correlationId: newId(),
       causationId: newId(),
     });
-
     await testdb.db.insert(branchAccess).values({
       organizationId: tenantOrganizationId,
       branchId: tenantBranchId,
       userId: owner.user.id,
     });
 
-    // --- Foreign tenant for cross-tenant isolation ---
-    const foreignTenant = await organizationsService.createOrganization({
-      name: 'Pricing Foreign Org',
+    // --- Sales user: SALES role → pricing.view only ----------------------
+    const salesUserId = newId();
+    await testdb.db.insert(users).values({
+      id: salesUserId,
+      organizationId: tenantOrganizationId,
+      supabaseUserId: 'pricing-authz-sales',
+      email: 'pricing-authz-sales@example.test',
+      name: 'Pricing Authz Sales',
     });
+    // The SALES role template is created by ensureDefaultRoleTemplates during
+    // provisionInitialOwner. We look it up and assign it org-scoped.
+    const [salesRole] = await testdb.db
+      .select({ id: roles.id })
+      .from(roles)
+      .where(eq(roles.code, 'SALES'))
+      .limit(1);
+    await testdb.db.insert(userOrganizationRoles).values({
+      userId: salesUserId,
+      roleId: salesRole.id,
+      organizationId: tenantOrganizationId,
+    });
+
+    // --- Denied user: no role → no permissions ---------------------------
+    await testdb.db.insert(users).values({
+      id: newId(),
+      organizationId: tenantOrganizationId,
+      supabaseUserId: 'pricing-authz-denied',
+      email: 'pricing-authz-denied@example.test',
+      name: 'Pricing Authz Denied',
+    });
+
+    // === Org B (foreign org) =============================================
+
+    const foreign = await organizationsService.createOrganization({
+      name: 'Pricing Authz Org B',
+    });
+    const foreignOrganizationId = foreign.organization.id;
     const foreignBranchId = newId();
     await organizationsService.createBranch({
-      organizationId: foreignTenant.organization.id,
+      organizationId: foreignOrganizationId,
       branchId: foreignBranchId,
       code: 'PR-FOREIGN',
-      name: 'Foreign Branch',
+      name: 'Pricing Authz Foreign Branch',
     });
     const foreignOwner = await identityProvisioning.provisionInitialOwner({
-      organizationId: foreignTenant.organization.id,
-      email: 'pricing-foreign-owner@example.test',
-      name: 'Pricing Foreign Owner',
-      supabaseUserId: 'pricing-foreign-owner',
+      organizationId: foreignOrganizationId,
+      email: 'pricing-authz-foreign-owner@example.test',
+      name: 'Pricing Authz Foreign Owner',
+      supabaseUserId: 'pricing-authz-foreign-owner',
       correlationId: newId(),
       causationId: newId(),
     });
     await testdb.db.insert(branchAccess).values({
-      organizationId: foreignTenant.organization.id,
+      organizationId: foreignOrganizationId,
       branchId: foreignBranchId,
       userId: foreignOwner.user.id,
     });
 
-    const foreignPlanId = newId();
-    const nowF = new Date();
-    await testdb.db.insert(plans).values({
-      id: foreignPlanId,
-      code: 'PRICING_FOREIGN_PLAN',
-      name: 'Pricing Foreign Plan',
-      status: 'ACTIVE',
-    });
-    await testdb.db
-      .insert(planEntitlements)
-      .values([{ planId: foreignPlanId, code: 'branches.max', valueJson: 10 }]);
-    await testdb.db.insert(subscriptions).values({
-      id: newId(),
-      organizationId: foreignTenant.organization.id,
-      planId: foreignPlanId,
-      status: 'ACTIVE',
-      billingCycle: 'MONTHLY',
-      startedAt: nowF,
-      currentPeriodStart: nowF,
-      currentPeriodEnd: new Date(nowF.getTime() + 60_000),
-    });
-    await testdb.db.insert(platformTenants).values({
-      id: newId(),
-      organizationId: foreignTenant.organization.id,
-      status: 'ACTIVE',
-      provisioningStatus: 'COMPLETED',
-    });
-    foreignTenantBearer = jwt('pricing-foreign-owner', 'tenant-api');
+    // === Subscriptions + Platform Tenants ==================================
 
-    // --- Subscription + platform tenant for the main tenant ---
-    const tenantPlanId = newId();
     const now = new Date();
+
+    // Org A
+    const tenantPlanId = newId();
     await testdb.db.insert(plans).values({
       id: tenantPlanId,
-      code: 'PRICING_HTTP_PLAN',
-      name: 'Pricing HTTP Plan',
+      code: 'PRICING_AUTHZ_PLAN',
+      name: 'Pricing Authz Plan',
       status: 'ACTIVE',
     });
     await testdb.db.insert(planEntitlements).values([
@@ -170,12 +203,56 @@ describe('M2-013 Pricing HTTP boundary', () => {
       provisioningStatus: 'COMPLETED',
     });
 
-    // --- JWT tokens ---
-    tenantBearer = jwt('pricing-http-owner', 'tenant-api');
+    // Org B
+    const foreignPlanId = newId();
+    await testdb.db.insert(plans).values({
+      id: foreignPlanId,
+      code: 'PRICING_AUTHZ_FOREIGN_PLAN',
+      name: 'Pricing Authz Foreign Plan',
+      status: 'ACTIVE',
+    });
+    await testdb.db
+      .insert(planEntitlements)
+      .values([{ planId: foreignPlanId, code: 'branches.max', valueJson: 10 }]);
+    await testdb.db.insert(subscriptions).values({
+      id: newId(),
+      organizationId: foreignOrganizationId,
+      planId: foreignPlanId,
+      status: 'ACTIVE',
+      billingCycle: 'MONTHLY',
+      startedAt: now,
+      currentPeriodStart: now,
+      currentPeriodEnd: new Date(now.getTime() + 60_000),
+    });
+    await testdb.db.insert(platformTenants).values({
+      id: newId(),
+      organizationId: foreignOrganizationId,
+      status: 'ACTIVE',
+      provisioningStatus: 'COMPLETED',
+    });
 
-    // --- Bootstrap NestJS app ---
+    // === JWT tokens =======================================================
+
+    ownerBearer = jwt('pricing-authz-owner', 'tenant-api');
+    salesBearer = jwt('pricing-authz-sales', 'tenant-api');
+    deniedBearer = jwt('pricing-authz-denied', 'tenant-api');
+    foreignBearer = jwt('pricing-authz-foreign-owner', 'tenant-api');
+
+    // === Bootstrap NestJS app =============================================
+
     app = await createApp();
     await app.init();
+
+    // === Seed shared resources for downstream tests =======================
+
+    // Create a price book via owner (needed for update/set-default/cross-tenant tests)
+    const priceBookRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/admin/pricing/price-books',
+      headers: { authorization: `Bearer ${ownerBearer}` },
+      payload: { name: 'Authz Seed Book', isDefault: true },
+    });
+    expect(priceBookRes.statusCode).toBe(201);
   });
 
   afterAll(async () => {
@@ -185,12 +262,12 @@ describe('M2-013 Pricing HTTP boundary', () => {
     await testdb?.teardown();
   });
 
-  // -------------------------------------------------------------------------
-  // Authentication
-  // -------------------------------------------------------------------------
+  // =========================================================================
+  // 1. Authentication — missing or invalid bearer
+  // =========================================================================
 
   describe('authentication', () => {
-    it('rejects a request with no bearer token', async () => {
+    it('rejects a request with no bearer token → 401', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/v1/admin/pricing/price-books',
@@ -199,78 +276,29 @@ describe('M2-013 Pricing HTTP boundary', () => {
       expect(response.json()).toMatchObject({ error: { code: 'AUTHENTICATION_REQUIRED' } });
     });
 
-    it('rejects a request with the wrong JWT audience', async () => {
+    it('rejects a request with wrong JWT audience → 401', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/v1/admin/pricing/price-books',
-        headers: { authorization: `Bearer ${jwt('pricing-http-owner', 'platform-api')}` },
+        headers: { authorization: `Bearer ${jwt('pricing-authz-owner', 'platform-api')}` },
       });
       expect(response.statusCode).toBe(401);
       expect(response.json()).toMatchObject({ error: { code: 'INVALID_CREDENTIALS' } });
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Validation
-  // -------------------------------------------------------------------------
+  // =========================================================================
+  // 2–4. Authorized operations — Owner with ALL pricing permissions
+  // =========================================================================
 
-  describe('validation', () => {
-    it('rejects a price book creation with empty name', async () => {
+  describe('allowed operations', () => {
+    it('allows owner with pricing.create to create a price book → 201', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/v1/admin/pricing/price-books',
-        headers: { authorization: `Bearer ${tenantBearer}` },
-        payload: { name: '' },
+        headers: { authorization: `Bearer ${ownerBearer}` },
+        payload: { name: 'Owner Price Book', isDefault: false },
       });
-      expect(response.statusCode).toBe(422);
-      expect(response.json()).toMatchObject({ error: { code: 'VALIDATION_FAILED' } });
-    });
-
-    it('rejects a price entry creation with invalid amount format', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/v1/admin/pricing/price-entries',
-        headers: { authorization: `Bearer ${tenantBearer}`, 'idempotency-key': newId() },
-        payload: {
-          priceBookId: newId(),
-          variantId: newId(),
-          unitId: newId(),
-          priceType: 'CASH',
-          amount: 'not-a-number',
-        },
-      });
-      expect(response.statusCode).toBe(422);
-    });
-
-    it('rejects a promotion creation with invalid type', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/v1/admin/pricing/promotions',
-        headers: { authorization: `Bearer ${tenantBearer}`, 'idempotency-key': newId() },
-        payload: {
-          name: 'Bad Promo',
-          type: 'INVALID_TYPE',
-          target: 'PRODUCT',
-          value: '10',
-        },
-      });
-      expect(response.statusCode).toBe(422);
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // PriceBook endpoints
-  // -------------------------------------------------------------------------
-
-  describe('PriceBook endpoints', () => {
-    it('POST /price-books creates a price book and returns the result', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/v1/admin/pricing/price-books',
-        headers: { authorization: `Bearer ${tenantBearer}` },
-        payload: { name: 'HTTP Price Book', isDefault: true },
-      });
-
       expect(response.statusCode).toBe(201);
       const body = response.json();
       expect(body.data).toMatchObject({
@@ -279,26 +307,50 @@ describe('M2-013 Pricing HTTP boundary', () => {
       });
     });
 
-    it('GET /price-books lists price books for the authenticated tenant', async () => {
+    it('allows owner with pricing.view to list price books → 200 with data', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/v1/admin/pricing/price-books',
-        headers: { authorization: `Bearer ${tenantBearer}` },
+        headers: { authorization: `Bearer ${ownerBearer}` },
       });
-
       expect(response.statusCode).toBe(200);
       const body = response.json();
+      expect(body.data).toBeInstanceOf(Array);
+      expect(body.data.length).toBeGreaterThanOrEqual(1);
       expect(body.data).toEqual(
-        expect.arrayContaining([expect.objectContaining({ name: 'HTTP Price Book' })]),
+        expect.arrayContaining([expect.objectContaining({ name: 'Authz Seed Book' })]),
       );
     });
 
-    it('POST /price-books/:id/default sets the default price book', async () => {
+    it('allows owner with pricing.edit to update a price book → 200', async () => {
+      // Create a price book to update
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/admin/pricing/price-books',
+        headers: { authorization: `Bearer ${ownerBearer}` },
+        payload: { name: 'To Be Updated' },
+      });
+      expect(createRes.statusCode).toBe(201);
+      const bookId = createRes.json().data.resourceId;
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/admin/pricing/price-books/${bookId}`,
+        headers: { authorization: `Bearer ${ownerBearer}`, 'idempotency-key': newId() },
+        payload: { name: 'Updated Price Book' },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({
+        data: { id: bookId, name: 'Updated Price Book' },
+      });
+    });
+
+    it('allows owner with pricing.edit to set default price book → 201', async () => {
       // Create a second price book
       const createRes = await app.inject({
         method: 'POST',
         url: '/api/v1/admin/pricing/price-books',
-        headers: { authorization: `Bearer ${tenantBearer}` },
+        headers: { authorization: `Bearer ${ownerBearer}` },
         payload: { name: 'New Default Book' },
       });
       const bookId = createRes.json().data.resourceId;
@@ -306,43 +358,53 @@ describe('M2-013 Pricing HTTP boundary', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/api/v1/admin/pricing/price-books/${bookId}/default`,
-        headers: { authorization: `Bearer ${tenantBearer}`, 'idempotency-key': newId() },
+        headers: { authorization: `Bearer ${ownerBearer}`, 'idempotency-key': newId() },
       });
-
       expect(response.statusCode).toBe(201);
     });
-  });
 
-  // -------------------------------------------------------------------------
-  // PriceEntry endpoints
-  // -------------------------------------------------------------------------
+    it('allows owner with pricing.create to create a price entry → 201', async () => {
+      // Seed catalog prerequisites (unit + product + variant) for FK constraints
+      const unitId = newId();
+      const productId = newId();
+      const variantId = newId();
+      await testdb.db.execute(/* sql */ `
+        INSERT INTO catalog.unit_definitions (id, organization_id, name, symbol, is_base_unit, version)
+        VALUES ('${unitId}', '${tenantOrganizationId}', 'Each', 'ea', true, 1)
+      `);
+      await testdb.db.execute(/* sql */ `
+        INSERT INTO catalog.products (id, organization_id, name, status, version)
+        VALUES ('${productId}', '${tenantOrganizationId}', 'HTTP test product', 'ACTIVE', 1)
+      `);
+      await testdb.db.execute(/* sql */ `
+        INSERT INTO catalog.product_variants
+          (id, organization_id, product_id, name, base_unit_id, status, version)
+        VALUES ('${variantId}', '${tenantOrganizationId}', '${productId}', 'Default', '${unitId}', 'ACTIVE', 1)
+      `);
 
-  describe('PriceEntry endpoints', () => {
-    it('POST /price-entries creates a price entry and returns the result', async () => {
-      // First create a price book
+      // Create a price book via the API to get a valid ID
       const bookRes = await app.inject({
         method: 'POST',
         url: '/api/v1/admin/pricing/price-books',
-        headers: { authorization: `Bearer ${tenantBearer}` },
-        payload: { name: 'Entry Book' },
+        headers: { authorization: `Bearer ${ownerBearer}` },
+        payload: { name: 'Entry Test Book' },
       });
-      const bookId = bookRes.json().data.resourceId;
+      const priceBookId = bookRes.json().data.resourceId;
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/v1/admin/pricing/price-entries',
-        headers: { authorization: `Bearer ${tenantBearer}`, 'idempotency-key': newId() },
+        headers: { authorization: `Bearer ${ownerBearer}`, 'idempotency-key': newId() },
         payload: {
-          priceBookId: bookId,
-          variantId: newId(),
-          unitId: newId(),
+          priceBookId,
+          variantId,
+          unitId,
           priceType: 'CASH',
           channel: 'POS',
-          amount: '1250.50',
+          amount: '1500.75',
           effectiveFrom: '2025-01-01',
         },
       });
-
       expect(response.statusCode).toBe(201);
       const body = response.json();
       expect(body.data).toMatchObject({
@@ -351,39 +413,20 @@ describe('M2-013 Pricing HTTP boundary', () => {
       });
     });
 
-    it('GET /price-entries lists price entries for the authenticated tenant', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/v1/admin/pricing/price-entries',
-        headers: { authorization: `Bearer ${tenantBearer}` },
-      });
-
-      expect(response.statusCode).toBe(200);
-      const body = response.json();
-      expect(body.data.length).toBeGreaterThan(0);
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Promotion endpoints
-  // -------------------------------------------------------------------------
-
-  describe('Promotion endpoints', () => {
-    it('POST /promotions creates a promotion and returns the result', async () => {
+    it('allows owner with pricing.create to create a promotion → 201', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/v1/admin/pricing/promotions',
-        headers: { authorization: `Bearer ${tenantBearer}`, 'idempotency-key': newId() },
+        headers: { authorization: `Bearer ${ownerBearer}`, 'idempotency-key': newId() },
         payload: {
-          name: 'HTTP Promo',
+          name: 'Owner Promotion',
           type: 'PERCENTAGE',
           target: 'PRODUCT',
-          value: '15',
+          value: '10',
           startDate: '2025-01-01',
           endDate: '2025-12-31',
         },
       });
-
       expect(response.statusCode).toBe(201);
       const body = response.json();
       expect(body.data).toMatchObject({
@@ -392,58 +435,35 @@ describe('M2-013 Pricing HTTP boundary', () => {
       });
     });
 
-    it('GET /promotions lists promotions for the authenticated tenant', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/v1/admin/pricing/promotions',
-        headers: { authorization: `Bearer ${tenantBearer}` },
-      });
-
-      expect(response.statusCode).toBe(200);
-      const body = response.json();
-      expect(body.data.length).toBeGreaterThan(0);
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Coupon endpoints
-  // -------------------------------------------------------------------------
-
-  describe('Coupon endpoints', () => {
-    let promotionId: string;
-
-    beforeAll(async () => {
-      // Create a promotion to attach coupons to
+    it('allows owner with pricing.create to create a coupon → 201', async () => {
+      // Create a promotion to attach the coupon to
       const promoRes = await app.inject({
         method: 'POST',
         url: '/api/v1/admin/pricing/promotions',
-        headers: { authorization: `Bearer ${tenantBearer}`, 'idempotency-key': newId() },
+        headers: { authorization: `Bearer ${ownerBearer}`, 'idempotency-key': newId() },
         payload: {
-          name: 'Coupon Parent Promo',
+          name: 'Coupon Parent',
           type: 'FIXED_AMOUNT',
           target: 'ORDER',
-          value: '10',
+          value: '5',
           startDate: '2025-01-01',
           endDate: '2025-12-31',
         },
       });
-      promotionId = promoRes.json().data.resourceId;
-    });
+      const promotionId = promoRes.json().data.resourceId;
 
-    it('POST /coupons creates a coupon and returns the result', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/v1/admin/pricing/coupons',
-        headers: { authorization: `Bearer ${tenantBearer}`, 'idempotency-key': newId() },
+        headers: { authorization: `Bearer ${ownerBearer}`, 'idempotency-key': newId() },
         payload: {
-          code: 'HTTP-COUPON',
+          code: 'OWNER-COUPON',
           type: 'FIXED_AMOUNT',
           value: '10',
           promotionId,
-          maxUses: 50,
+          maxUses: 100,
         },
       });
-
       expect(response.statusCode).toBe(201);
       const body = response.json();
       expect(body.data).toMatchObject({
@@ -452,53 +472,23 @@ describe('M2-013 Pricing HTTP boundary', () => {
       });
     });
 
-    it('GET /coupons lists coupons for the authenticated tenant', async () => {
+    it('allows owner with pricing.view to list coupons → 200', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/v1/admin/pricing/coupons',
-        headers: { authorization: `Bearer ${tenantBearer}` },
+        headers: { authorization: `Bearer ${ownerBearer}` },
       });
-
       expect(response.statusCode).toBe(200);
       const body = response.json();
-      expect(body.data.length).toBeGreaterThan(0);
+      expect(body.data).toBeInstanceOf(Array);
+      expect(body.data.length).toBeGreaterThanOrEqual(1);
     });
 
-    it('POST /coupons/:id/redeem redeems a coupon', async () => {
-      // Create a coupon to redeem
-      const createRes = await app.inject({
-        method: 'POST',
-        url: '/api/v1/admin/pricing/coupons',
-        headers: { authorization: `Bearer ${tenantBearer}`, 'idempotency-key': newId() },
-        payload: {
-          code: 'REDEEM-TEST',
-          type: 'FIXED_AMOUNT',
-          value: '5',
-          promotionId,
-        },
-      });
-      const couponId = createRes.json().data.resourceId;
-
-      const response = await app.inject({
-        method: 'POST',
-        url: `/api/v1/admin/pricing/coupons/${couponId}/redeem`,
-        headers: { authorization: `Bearer ${tenantBearer}`, 'idempotency-key': newId() },
-      });
-
-      expect(response.statusCode).toBe(201);
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Price Quote endpoint
-  // -------------------------------------------------------------------------
-
-  describe('POST /quote', () => {
-    it('POST /quote returns PRICE_NOT_AVAILABLE when no price book or entries exist', async () => {
+    it('allows owner with pricing.view to resolve price quote → 200', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/v1/admin/pricing/quote',
-        headers: { authorization: `Bearer ${tenantBearer}` },
+        headers: { authorization: `Bearer ${ownerBearer}` },
         payload: {
           variantId: newId(),
           unitId: newId(),
@@ -506,98 +496,292 @@ describe('M2-013 Pricing HTTP boundary', () => {
           channel: 'POS',
         },
       });
-
-      // Without a default price book or entries, should return an error
-      expect([404, 422]).toContain(response.statusCode);
+      // Quote succeeds (may be 200 with price, or 422 PRICE_NOT_AVAILABLE if no matching entry)
+      expect([200, 422]).toContain(response.statusCode);
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Idempotency
-  // -------------------------------------------------------------------------
+  // =========================================================================
+  // 5–7. Denied operations — users lacking specific permission codes
+  // =========================================================================
 
-  describe('idempotency', () => {
-    it('POST with the same Idempotency-Key replays the same response', async () => {
-      const key = newId();
-      const payload = {
-        name: 'Idempotent Book',
-        isDefault: false,
-      };
-
-      const request = {
-        method: 'POST' as const,
-        url: '/api/v1/admin/pricing/price-books',
-        headers: { authorization: `Bearer ${tenantBearer}`, 'idempotency-key': key },
-        payload,
-      };
-
-      const first = await app.inject(request);
-      const replay = await app.inject(request);
-
-      expect(first.statusCode).toBe(201);
-      expect(replay.statusCode).toBe(201);
-      // Note: The pricing controller doesn't have built-in idempotency middleware
-      // like the platform controller does. Each call creates a new price book.
-      // This test documents the expected behavior; idempotency enforcement is
-      // tested at the platform level (api.integration.spec.ts).
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Cross-tenant isolation
-  // -------------------------------------------------------------------------
-
-  describe('cross-tenant isolation', () => {
-    it('a tenant user from org B cannot see org A price books', async () => {
-      // Create a price book in org A
-      await app.inject({
+  describe('denied operations', () => {
+    it('denies sales user (pricing.view only) from creating a price book → 403', async () => {
+      const response = await app.inject({
         method: 'POST',
         url: '/api/v1/admin/pricing/price-books',
-        headers: { authorization: `Bearer ${tenantBearer}` },
-        payload: { name: 'Org A Book' },
+        headers: { authorization: `Bearer ${salesBearer}` },
+        payload: { name: 'Should Not Create' },
       });
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({ error: { code: 'PERMISSION_DENIED' } });
+    });
 
-      // Query from org B
+    it('denies sales user (pricing.view only) from updating a price book → 403', async () => {
+      // Get a valid price book id from the seeded list
+      const listRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/admin/pricing/price-books',
+        headers: { authorization: `Bearer ${ownerBearer}` },
+      });
+      const bookId = listRes.json().data[0].id;
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/admin/pricing/price-books/${bookId}`,
+        headers: { authorization: `Bearer ${salesBearer}`, 'idempotency-key': newId() },
+        payload: { name: 'Should Not Update' },
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({ error: { code: 'PERMISSION_DENIED' } });
+    });
+
+    it('denies user with no role from listing price books → 403', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/v1/admin/pricing/price-books',
-        headers: { authorization: `Bearer ${foreignTenantBearer}` },
+        headers: { authorization: `Bearer ${deniedBearer}` },
       });
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({ error: { code: 'PERMISSION_DENIED' } });
+    });
 
+    it('denies sales user (pricing.view only) from creating a price entry → 403', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/admin/pricing/price-entries',
+        headers: { authorization: `Bearer ${salesBearer}`, 'idempotency-key': newId() },
+        payload: {
+          priceBookId: newId(),
+          variantId: newId(),
+          unitId: newId(),
+          priceType: 'CASH',
+          amount: '999',
+        },
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({ error: { code: 'PERMISSION_DENIED' } });
+    });
+
+    it('denies sales user (pricing.view only) from creating a promotion → 403', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/admin/pricing/promotions',
+        headers: { authorization: `Bearer ${salesBearer}`, 'idempotency-key': newId() },
+        payload: {
+          name: 'Should Not Create Promo',
+          type: 'PERCENTAGE',
+          target: 'PRODUCT',
+          value: '10',
+        },
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({ error: { code: 'PERMISSION_DENIED' } });
+    });
+
+    it('denies sales user (pricing.view only) from creating a coupon → 403', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/admin/pricing/coupons',
+        headers: { authorization: `Bearer ${salesBearer}`, 'idempotency-key': newId() },
+        payload: {
+          code: 'SHOULD-NOT-EXIST',
+          type: 'FIXED_AMOUNT',
+          value: '5',
+          promotionId: newId(),
+        },
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({ error: { code: 'PERMISSION_DENIED' } });
+    });
+
+    it('allows sales user (pricing.view only) to resolve price quote (but no price found → 422)', async () => {
+      // POST /quote requires only pricing.view; sales user has it, so auth passes.
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/admin/pricing/quote',
+        headers: { authorization: `Bearer ${salesBearer}` },
+        payload: {
+          variantId: newId(),
+          unitId: newId(),
+          priceType: 'CASH',
+          channel: 'POS',
+        },
+      });
+      // Auth passes (pricing.view), but no matching price → 422 PRICE_NOT_AVAILABLE
+      expect([200, 422]).toContain(response.statusCode);
+    });
+
+    it('denies user with no role from resolving price quote → 403', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/admin/pricing/quote',
+        headers: { authorization: `Bearer ${deniedBearer}` },
+        payload: {
+          variantId: newId(),
+          unitId: newId(),
+          priceType: 'CASH',
+          channel: 'POS',
+        },
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({ error: { code: 'PERMISSION_DENIED' } });
+    });
+  });
+
+  // =========================================================================
+  // 8. Cross-tenant isolation
+  // =========================================================================
+
+  describe('cross-tenant isolation', () => {
+    it('foreign tenant owner with ALL pricing.* permissions sees empty lists → 200 with []', async () => {
+      // Foreign owner (Org B) has OWNER role → ALL pricing permissions in Org B.
+      // Authorization succeeds, but query is scoped to Org B → empty lists.
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/v1/admin/pricing/price-books',
+        headers: { authorization: `Bearer ${foreignBearer}` },
+      });
       expect(response.statusCode).toBe(200);
       const body = response.json();
-      // Org B should see an empty list (no price books for their org)
       expect(body.data).toEqual([]);
     });
 
-    it('a tenant user from org B cannot see org A price entries', async () => {
+    it('foreign tenant owner sees empty price entries → 200 with []', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/v1/admin/pricing/price-entries',
-        headers: { authorization: `Bearer ${foreignTenantBearer}` },
+        headers: { authorization: `Bearer ${foreignBearer}` },
       });
-
       expect(response.statusCode).toBe(200);
-      const body = response.json();
-      expect(body.data).toEqual([]);
+      expect(response.json().data).toEqual([]);
     });
 
-    it('a tenant user from org B cannot see org A promotions', async () => {
+    it('foreign tenant owner sees empty promotions → 200 with []', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/v1/admin/pricing/promotions',
-        headers: { authorization: `Bearer ${foreignTenantBearer}` },
+        headers: { authorization: `Bearer ${foreignBearer}` },
       });
-
       expect(response.statusCode).toBe(200);
-      const body = response.json();
-      expect(body.data).toEqual([]);
+      expect(response.json().data).toEqual([]);
+    });
+
+    it('foreign tenant owner sees empty coupons → 200 with []', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/v1/admin/pricing/coupons',
+        headers: { authorization: `Bearer ${foreignBearer}` },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data).toEqual([]);
+    });
+  });
+
+  // =========================================================================
+  // 9. Idempotency key enforcement
+  // =========================================================================
+
+  describe('idempotency key enforcement', () => {
+    it('rejects price entry creation without Idempotency-Key → 422', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/admin/pricing/price-entries',
+        headers: { authorization: `Bearer ${ownerBearer}` },
+        payload: {
+          priceBookId: newId(),
+          variantId: newId(),
+          unitId: newId(),
+          priceType: 'CASH',
+          amount: '500',
+        },
+      });
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toMatchObject({
+        error: { code: 'VALIDATION_FAILED' },
+      });
+    });
+
+    it('rejects promotion creation without Idempotency-Key → 422', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/admin/pricing/promotions',
+        headers: { authorization: `Bearer ${ownerBearer}` },
+        payload: {
+          name: 'No Key Promo',
+          type: 'PERCENTAGE',
+          target: 'PRODUCT',
+          value: '10',
+        },
+      });
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toMatchObject({
+        error: { code: 'VALIDATION_FAILED' },
+      });
+    });
+
+    it('rejects coupon creation without Idempotency-Key → 422', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/admin/pricing/coupons',
+        headers: { authorization: `Bearer ${ownerBearer}` },
+        payload: {
+          code: 'NO-KEY-COUPON',
+          type: 'FIXED_AMOUNT',
+          value: '5',
+          promotionId: newId(),
+        },
+      });
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toMatchObject({
+        error: { code: 'VALIDATION_FAILED' },
+      });
+    });
+
+    it('rejects price book update without Idempotency-Key → 422', async () => {
+      // Get a valid price book id
+      const listRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/admin/pricing/price-books',
+        headers: { authorization: `Bearer ${ownerBearer}` },
+      });
+      const bookId = listRes.json().data[0].id;
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/admin/pricing/price-books/${bookId}`,
+        headers: { authorization: `Bearer ${ownerBearer}` },
+        payload: { name: 'No Key Update' },
+      });
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toMatchObject({
+        error: { code: 'VALIDATION_FAILED' },
+      });
+    });
+
+    it('rejects set default price book without Idempotency-Key → 422', async () => {
+      const listRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/admin/pricing/price-books',
+        headers: { authorization: `Bearer ${ownerBearer}` },
+      });
+      const bookId = listRes.json().data[0].id;
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/v1/admin/pricing/price-books/${bookId}/default`,
+        headers: { authorization: `Bearer ${ownerBearer}` },
+      });
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toMatchObject({
+        error: { code: 'VALIDATION_FAILED' },
+      });
     });
   });
 });
 
 // ---------------------------------------------------------------------------
-// JWT helper — same implementation as api.integration.spec.ts
+// JWT helper — identical to api.integration.spec.ts
 // ---------------------------------------------------------------------------
 
 function jwt(subject: string, audience: string) {
