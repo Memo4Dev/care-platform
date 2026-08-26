@@ -17,9 +17,12 @@
   "dependencies": {
     "@commerce-platform/contracts": "workspace:*",
     "@commerce-platform/database": "workspace:*",
+    "@fastify/swagger": "^9.8.1",
+    "@fastify/swagger-ui": "^6.1.1",
     "@nestjs/common": "^11.1.6",
     "@nestjs/core": "^11.1.6",
     "@nestjs/platform-fastify": "^11.1.6",
+    "@nestjs/swagger": "^11.4.7",
     "bullmq": "^5.81.3",
     "drizzle-orm": "^0.45.2",
     "ioredis": "^5.11.1",

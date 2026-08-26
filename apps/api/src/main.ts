@@ -8,6 +8,7 @@ import { readRuntimeRole } from './common/events/delivery-config';
 import { PlatformErrorFilter } from './common/http/platform-error.filter';
 import { correlationIdFor, type RequestWithCorrelation } from './common/http/correlation';
 import { bootstrapRelay, bootstrapWorker } from './runtime';
+import { setupSwagger } from './swagger';
 
 export async function createApp(): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), {
@@ -40,6 +41,7 @@ export async function bootstrap(): Promise<NestFastifyApplication> {
   const app = await createApp();
   const port = Number(process.env.PORT ?? 3000);
 
+  setupSwagger(app);
   await app.listen({ port, host: '0.0.0.0' });
 
   return app;

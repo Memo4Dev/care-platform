@@ -23,6 +23,7 @@ import {
   type DatabaseClient,
 } from '@commerce-platform/database';
 import { cursorPageRequestSchema, PlatformError, uuidSchema } from '@commerce-platform/contracts';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { PlatformBearerGuard, type AuthenticatedRequest } from '../../common/auth/http-auth.guards';
 import { correlationIdFor } from '../../common/http/correlation';
 import { DATABASE } from '../database/database.tokens';
@@ -56,6 +57,7 @@ const limits = z.object({
 
 @Controller('/api/v1/platform')
 @UseGuards(PlatformBearerGuard)
+@ApiBearerAuth('platform-bearer')
 export class PlatformAdminController {
   constructor(
     @Inject(DATABASE) private readonly db: DatabaseClient,
