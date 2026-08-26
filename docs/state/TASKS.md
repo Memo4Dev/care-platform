@@ -14,7 +14,7 @@ None
 - Technology decision
 - Agent orchestration design
 - Design Compliance Review Gate made mandatory for UI/frontend tasks: `docs/design/review-checklist.md` (process checklist: 10 verification axes, reject list, acceptance triad functional tests + design compliance review + accessibility where relevant, Design Gap policy); machine-readable `design_review_gate` in routing.yaml triggering on frontend/ui/ux/page/component/layout/responsive/styling/dashboard; reviewer manifest owns the gate (+ web-design-guidelines/accessibility skills), qa manifest blocks unmet acceptance criteria; AGENTS.md rule 7 + work loop updated; Design Compliance Gate section in docs/architecture/92-quality-gates.md; frontend DoD block in docs/architecture/97-definition-of-done.md; reviewer findings fixed (checklist ownership exemption, sales-pos in triggers, gate references in implementing manifests); 407-check validation green; independent reviewer PASS WITH NOTES
-- Design-system orchestration integration: docs/design/DESIGN.md established as UI source of truth and committed; discoverability added to PROJECT_INDEX.md/project-index.yaml; architecture-index.yaml design_system section (source/tokens/components/patterns); routing.yaml frontend-admin UI rule + conditional design_routing topics (always DESIGN.md, then task-relevant token/component/pattern files only); frontend-admin/storefront manifests read DESIGN.md before any UI work; AGENTS.md mandatory design-system compliance rules; "platform admin" keyword moved to the UI rule with platform-saas as reviewer so admin UI tasks enter the design flow; 327-check validation of all paths/agent IDs/skill IDs green; independent reviewer PASS WITH NOTES
+- Design-system orchestration integration: docs/design/DESIGN.md established as UI source of truth and committed; discoverability added to PROJECT_INDEX.md/project-index.yaml; architecture-index.yaml design_system section (source/tokens/components/patterns); routing.yaml frontend-admin UI rule + conditional design_routing topics (always DESIGN.md, then task-relevant token/component/pattern files only); frontend-admin/storefront manifests read DESIGN.md before any UI work; AGENTS.md mandatory design-system compliance rules; "platform admin" keyword moved to the UI rule with platform-saas as reviewer so admin UI tasks enter the design flow instead of bypassing it; subscription/plan/entitlement/provisioning keywords remain with platform-saas; 327-check validation of all paths/agent IDs/skill IDs green; independent reviewer PASS WITH NOTES
 - M0-001 Bootstrap monorepo
 - M0-002 Configure quality tooling
 - M0-003 Configure Docker local services
@@ -48,3 +48,28 @@ None
 - M1-009 final tenant-auth blocker: Tenant bearer principal resolution now requires an active Organization user linked to an `ACTIVE`, fully provisioned Platform Tenant. Missing or incomplete Platform Tenant links fail with `TENANT_PROVISIONING_INCOMPLETE`; suspended and closed tenants fail with `TENANT_SUSPENDED`. Native Fastify `app.inject` integration coverage exercises unlinked, pending, suspended, and closed states. Format, lint, strict typecheck, build, 193 unit tests, and 97 native PostgreSQL integration tests pass; no commit requested.
 - M1-010 Final M1 integration/isolation suite: native PostgreSQL M1 E2E verifies verified registration provisioning, Platform activation, Owner bearer login, default branch/warehouse readiness, authenticated `branches.max` rejection, tenant suspension denial, foreign-branch IDOR masking, and composite tenant-FK rejection. Provisioning grants the initial Owner explicit access to the default branch via its narrow Identity contract, preserving bounded-context ownership. Scenario coverage/gaps are independently recorded in `docs/state/M1-010-TEST-GAP-REPORT.md`: TEN-002/003, SUB-002 and M1 E2E are newly exercised; TEN-004 and SUB-001/003/004 are verified by existing native suites; TEN-001 remains correctly deferred until M5 Sales exists. Local format/lint/typecheck/unit/native-PG-integration/build gates pass; Redis relay-worker coverage is CI-only and **must run with `REDIS_INTEGRATION=true` plus authenticated Redis before push acceptance**. WRITE/no commit requested.
 - M1-010 blocker remediation: the final E2E now invokes the real `POST /api/v1/platform/tenants` registration endpoint using a controlled trusted-registration adapter, then runs provisioning, activation and Owner JWT readiness. Tenant organization mutations acquire a transaction-scoped PostgreSQL advisory lock before constrained usage evaluation; native concurrent `branches.max=1` requests with distinct idempotency keys produce exactly one `201`, one `PLAN_LIMIT_REACHED`, and one persisted branch. No M2 scope added; WRITE/no commit requested.
+
+---
+
+## M1 milestone closure
+
+**Closed:** 2026-08-26
+**Status:** ACCEPTED — all 10 tasks complete, all gates green.
+
+| Task | Domain | Key output |
+|------|--------|------------|
+| M1-001 | Persistence | Drizzle schema, testing harness, dual PG path, CI postgres |
+| M1-002 | Contracts | Error catalog, PlatformError, API envelope, pagination, zod schemas |
+| M1-003 | Organization | Aggregate, lifecycle, branch/warehouse/policy, outbox |
+| M1-004 | Identity & Access | Users, roles, permissions, RBAC, bootstrap Owner |
+| M1-005 | Plans & Entitlements | Versioned plans, overrides, capability/limit evaluation |
+| M1-006 | Subscription & Billing | Lifecycle, append-only periods, trial/billing state |
+| M1-007 | Platform Management | Platform tenants, support sessions, DB-backed authorization |
+| M1-008 | Tenant Provisioning | Process manager, execution registry, terminal immutability |
+| M1-009 | API/Auth + Delivery | JWT auth, RBAC, idempotent mutations, Outbox→BullMQ relay/worker |
+| M1-010 | Integration/Isolation | M1 E2E, concurrency serialization, IDOR/FK negative coverage |
+
+**Final counts:** 193 unit tests, 103+ native PostgreSQL integration tests, 22 migrations.
+**CI:** Green with Redis integration on last 2 runs.
+**Staging:** Deployed; API endpoints, pgAdmin, Swagger verified.
+**Open items:** ui-ux-pro-max skill deferred to M4; ADR-0001 HTTP mapping deferred to M2; M1-001 default policy values accepted as-is (tunable per-tenant in M2).

@@ -72,3 +72,21 @@
 - M1-010 validation record: the M1 exit flow requires the bootstrap Owner to hold explicit access to the deterministic default branch. Tenant Provisioning requests that access only through the narrow `IDENTITY_PROVISIONING` contract after Organization creates the default branch; it does not write Identity persistence directly. Local native PostgreSQL success remains insufficient for Outbox/BullMQ delivery: authenticated Redis CI coverage with `REDIS_INTEGRATION=true` is a mandatory pre-acceptance gate after push.
 - M1-010 concurrency hardening: tenant branch/warehouse mutation transactions acquire a deterministic organization advisory lock before usage/entitlement evaluation and aggregate mutation. This makes distinct-idempotency-key resource-limit races evaluate serially, returning `PLAN_LIMIT_REACHED` to the excess request instead of relying on a stale aggregate CAS conflict.
 - Orchestration improvement pass: enriched 5 stub skills (idempotency, supabase-auth, event-contracts, quality-gates, http-boundary-testing new), added session reconciliation to orchestrator, host-mutation-safety/MCP safety/secrets rules to AGENTS.md, routing rules for HTTP endpoints/mutations/async workflows, infrastructure-aware review to reviewer, environment-aware DoD with milestone acceptance checklist; 32 requirements classified as 13 sufficient, 19 enriched/created; all routing indexes validated, no duplicate rules
+
+---
+
+## M1 milestone closure (2026-08-26)
+
+**Decision:** M1 SaaS Foundation milestone is accepted and closed.
+
+**Evidence:**
+- 193 unit tests green; 103+ native PostgreSQL integration tests green
+- CI green on last 2 runs including Redis integration (`REDIS_INTEGRATION=true`)
+- Staging deployed and verified (API endpoints, pgAdmin, Swagger)
+- Swagger/OpenAPI docs live; Postman collection ready
+- No open security blockers
+
+**Ratified deferrals / notes:**
+- ADR-0001 (error code → HTTP status mapping) deferred to M2. The current 422 convention for business-rule-invalid requests is ratified as the M1 baseline; ADR-0001 ratification and any HTTP-status adjustments land in M2.
+- Default policy values from M1-003 (`DEFAULT_POLICY_VALUES`: RETURN off, REFUND off, PURCHASE on, ORDER_APPROVAL not required, OFFLINE on, CREDIT off, DELIVERY off, INVENTORY on) are accepted as-is. They can be tuned per-tenant via overrides in M2. No further human review required at M1 exit.
+- `ui-ux-pro-max` skill is not installed. Routing uses existing verified skills (`frontend-design`, `frontend-design-system`, `vercel-react-best-practices`, `vercel-composition-patterns`, `web-design-guidelines`, `accessibility`). Skill is deferred until M4 (UI milestone) — no impact on M2/M3 backend work.
