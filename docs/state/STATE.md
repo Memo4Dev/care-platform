@@ -79,12 +79,12 @@ All 10 M1 tasks complete (M1-001 through M1-010):
 
 ### Test summary
 
-| Category                   | Files   | Tests                         | Status                              |
-| -------------------------- | ------- | ----------------------------- | ----------------------------------- |
-| Unit tests (pnpm test)     | 34      | 345                           | GREEN                               |
-| Integration (native PG)    | 16      | 198                           | GREEN (2 skipped: BullMQ no Redis)  |
-| HTTP boundary (app.inject) | 4       | 75+                           | GREEN                               |
-| Cross-tenant isolation     | 4 files | embedded in integration specs | GREEN                               |
+| Category                   | Files   | Tests                         | Status                             |
+| -------------------------- | ------- | ----------------------------- | ---------------------------------- |
+| Unit tests (pnpm test)     | 34      | 345                           | GREEN                              |
+| Integration (native PG)    | 16      | 198                           | GREEN (2 skipped: BullMQ no Redis) |
+| HTTP boundary (app.inject) | 4       | 75+                           | GREEN                              |
+| Cross-tenant isolation     | 4 files | embedded in integration specs | GREEN                              |
 
 ### Quality gates
 

@@ -27,6 +27,11 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
     PricingModule,
     IdentityModule,
   ],
-  controllers: [PlatformAdminController, TenantAdminController, CatalogAdminController, PricingAdminController],
+  controllers: [
+    PlatformAdminController,
+    TenantAdminController,
+    CatalogAdminController,
+    PricingAdminController,
+  ],
 })
 export class ApiModule {}
