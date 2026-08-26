@@ -16,3 +16,16 @@
 - Allocation overflow can become OfflinePendingVerification.
 - Same-branch automatic recovery is attempted first.
 - Unresolved conflicts require Manager/Sales resolution.
+
+## Offline POS Authentication
+
+POS operator authentication (Employee Card/Barcode + PIN) must remain
+compatible with offline operation. When the device is offline:
+
+- Operator identity is verified against locally cached credentials.
+- Authorization (RBAC, branch scope, POS permissions) uses the last
+  synced permission snapshot.
+- Cash Session operations (open/close/movements) queue locally and
+  reconcile with the server on sync.
+- Manager approvals (Manager Card + PIN) record both `performedBy`
+  (active cashier) and `approvedBy` (manager) for later server audit.

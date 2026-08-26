@@ -65,6 +65,20 @@ SYSTEM_SERVICE
 
 Never overload one credential model across all principal types.
 
+## POS Operator Authentication
+
+POS quick operator authentication uses Employee Card/Barcode + PIN:
+
+- Barcode/card alone is never sufficient for operator identification.
+- Employee barcode/card identifiers must be opaque credential identifiers.
+  Do not encode email, role, organizationId, or permissions in the card.
+- Authentication proves identity; authorization (server-side RBAC, branch scope,
+  POS permissions) is resolved separately after successful authentication.
+- Manager approval may use Manager Card + PIN without replacing or logging
+  out the active cashier. Both actors are recorded:
+  `performedBy = active cashier`, `approvedBy = manager`.
+- POS authentication must remain compatible with offline operation.
+
 ## Session / Token Principles
 
 - short-lived access tokens
@@ -75,6 +89,7 @@ Never overload one credential model across all principal types.
 - platform-admin tokens cannot be accepted by tenant/public endpoints unless intentionally supported
 - online-customer tokens cannot call admin APIs
 - device credentials are separate from user credentials
+- POS operator credentials (employee card + PIN) are separate from device credentials
 
 ## Secrets
 

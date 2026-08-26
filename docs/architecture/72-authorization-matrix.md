@@ -48,6 +48,7 @@ These are templates, not hard-coded authorization.
 | credit.use | ✅ | ✅ | configurable | configurable | ❌ | ❌ |
 | credit.override | ✅ | configurable | ❌ | ❌ | ❌ | ❌ |
 | offline.resolve | ✅ | ✅ | configurable | ❌ | ❌ | ❌ |
+| cash.session.open | ✅ | ✅ | configurable | configurable | ❌ | ❌ |
 | cash.reconcile | ✅ | configurable | ❌ | configurable | ❌ | ❌ |
 | delivery.manage | ✅ | configurable | ❌ | ❌ | ❌ | ❌ |
 | users.manage | ✅ | configurable | ❌ | ❌ | ❌ | ❌ |
