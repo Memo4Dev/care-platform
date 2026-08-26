@@ -62,6 +62,9 @@ None
 - M2-021 Pricing lookup query fix: findPriceEntriesForLookup now correctly filters entries where effectiveFrom <= queryDate AND (effectiveTo IS NULL OR effectiveTo > queryDate). Previously returned all entries with null effectiveTo regardless of effectiveFrom.
 - M2-022 Integration test fixes: all 4 failing suites resolved — pricing.integration (12 FK violations fixed by seeding catalog prereqs), catalog.http (status assertion + idempotency replay fixed), pricing.http (numeric formatting, auth expectation corrections). Final: 198/198 tests pass (2 BullMQ skipped).
 - M2-023 Postman collection: added Tenant Admin — Catalog (14 endpoints) and Tenant Admin — Pricing (14 endpoints) folders; added tenantToken variable; updated collection description to M1 + M2.
+- M2-024 CI fix: added `feat/**` branch pattern to GitHub Actions CI trigger (was only `main`, `feature/**`, PRs).
+- M2-025 Staging deployment: deployed commit `d0990ac5` to staging VPS (109.199.125.205). Applied migrations 0022 + 0023 manually (drizzle journal mismatch from M1 required manual SQL execution). All 5 services healthy (API, worker, relay, postgres, redis).
+- M2-026 Staging smoke tests: verified catalog CRUD (unit, category, product, variant), pricing CRUD (price book, entry, coupon, promotion), price quote resolve, authorization (401/403/200), idempotency key enforcement, Swagger 28 endpoints, PostgreSQL tenant-scoped data isolation.
 
 ---
 

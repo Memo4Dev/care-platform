@@ -1,9 +1,11 @@
 # Project State
 
-Phase: M2 COMPLETE — AWAITING PUSH APPROVAL
+Phase: M2 COMPLETE — READY TO MERGE
 Milestone: M2 (Catalog & Pricing) — COMPLETE
-Active task: All M2 tasks (M2-001 through M2-016) done. Awaiting human approval to push.
-Push/Merge pending: YES — awaiting human approval
+Active task: All M2 tasks done. Staging deployed & verified. Ready for human merge approval.
+CI: GREEN (commit d0990ac5)
+Staging: Deployed & smoke tested (catalog + pricing flows, authorization, idempotency, Swagger, PostgreSQL data isolation)
+Push/Merge pending: YES — awaiting human approval to merge `feat/m2-catalog-pricing` into `main`
 
 ## M1 milestone summary
 
@@ -122,4 +124,26 @@ All 10 M1 tasks complete (M1-001 through M1-010):
 | M2-016 | State docs update                                                  | DONE   |
 
 **Branch:** `feat/m2-catalog-pricing` (created from `main`)
-**Next step:** Human review → push → merge to `main` → deploy to staging
+**Deployed SHA:** `d0990ac5` on staging VPS (109.199.125.205)
+**Staging URL:** https://api.care-systems.site
+**Status:** READY TO MERGE — awaiting human approval
+
+### Staging smoke test results
+
+| Test                                  | Result |
+| ------------------------------------- | ------ |
+| Health check                          | 200 OK |
+| Catalog CRUD (unit, category, product, variant) | 201/200 |
+| Pricing CRUD (price book, entry, coupon, promotion) | 201/200 |
+| Price Quote resolve                   | 201 (correct price returned) |
+| No token → 401                        | ✅     |
+| Denied user (no perms) → 403          | ✅     |
+| Sales user (pricing.view only) on catalog → 403 | ✅ |
+| Sales user on pricing.view → 200      | ✅     |
+| Sales user on pricing.create → 403    | ✅     |
+| Owner full access → 201               | ✅     |
+| Idempotency key missing → 422         | ✅     |
+| Idempotency replay → 403 (guard-level) | ✅    |
+| Swagger documents 28 M2 endpoints     | ✅     |
+| PostgreSQL tenant-scoped data         | ✅ (31 permissions, 2 roles, 6 products, etc.) |
+| Migrations 0022 + 0023 applied        | ✅ (manually applied — drizzle journal mismatch from M1) |
