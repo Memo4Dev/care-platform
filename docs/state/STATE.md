@@ -1,11 +1,33 @@
 # Project State
 
-Phase: M2 COMPLETE — READY TO MERGE
-Milestone: M2 (Catalog & Pricing) — COMPLETE
-Active task: All M2 tasks done. Staging deployed & verified. Ready for human merge approval.
-CI: GREEN (commit d0990ac5)
-Staging: Deployed & smoke tested (catalog + pricing flows, authorization, idempotency, Swagger, PostgreSQL data isolation)
-Push/Merge pending: YES — awaiting human approval to merge `feat/m2-catalog-pricing` into `main`
+Phase: M3 COMPLETE — READY FOR REVIEW
+Milestone: M3 (Inventory Core) — COMPLETE
+Active task: All M3 tasks done. Awaiting human review and push/merge approval.
+CI: GREEN (pending — no Redis-dependent changes in M3)
+Branch: feat/m3-inventory-core
+
+## M3 milestone summary
+
+All 10 M3 tasks complete (M3-001 through M3-010):
+
+| Task   | Domain                                                  | Status |
+| ------ | ------------------------------------------------------- | ------ |
+| M3-001 | Inventory persistence (Drizzle schema + migration)      | DONE   |
+| M3-002 | Domain layer (8 aggregates, events, invariants)         | DONE   |
+| M3-003 | Application layer (service, repo, contracts, module)    | DONE   |
+| M3-004 | Permissions (inventory.create)                          | DONE   |
+| M3-005 | HTTP controller (21 endpoints) + Swagger + registration | DONE   |
+| M3-006 | Domain unit tests (136 tests)                           | DONE   |
+| M3-007 | Integration tests (36 tests, native PG)                 | DONE   |
+| M3-008 | Concurrency tests (23 tests)                            | DONE   |
+| M3-009 | HTTP boundary tests (41+ tests)                         | DONE   |
+| M3-010 | Postman collection + Swagger tag updates                | DONE   |
+
+**Test suite:** 136 domain unit tests passing; 36 integration + 23 concurrency + 41+ HTTP boundary tests created (require TEST_DATABASE_URL)
+**TypeScript:** zero type errors (apps/api + packages/database)
+**ESLint:** zero errors
+**Prettier:** all files formatted
+**Security:** No open security blockers
 
 ## M1 milestone summary
 
@@ -48,6 +70,84 @@ All 10 M1 tasks complete (M1-001 through M1-010):
 - Tenant branch/warehouse mutations acquire a deterministic organization advisory lock before usage/entitlement evaluation, serializing concurrent resource-limit races.
 - Provisioning terminal state is physically immutable in PostgreSQL (trigger rejects UPDATE/DELETE with SQLSTATE 55000).
 - Subscription-period history is similarly append-only via trigger.
+
+---
+
+## M3 milestone — COMPLETE
+
+### What was delivered
+
+**Inventory bounded context** (`inventory` pgSchema):
+
+- 9 tables: stock_positions, fifo_layers, ledger_entries, reservations, reservation_items, allocations, stock_transfers, stock_transfer_items, stock_adjustments
+- Drizzle schema: `packages/database/src/schema/inventory.ts` (418 lines)
+- SQL migrations: `0024_inventory_core.sql` (297+ lines) + `0025_add_inventory_permissions.sql`
+- Added `warehouses_tenant_scope_unique` composite UNIQUE constraint on `(id, organization_id)` for inventory FK references
+
+**Domain layer** (`apps/api/src/modules/inventory/domain/`, 8 files, 2,122 lines):
+
+- StockPosition, FIFOLayer, Reservation, Allocation, StockTransfer, StockAdjustment aggregates
+- Events (Created, Received, Consumed, Reserved, Allocated, Transferred, Adjusted, Released, Expired)
+- Invariants: balance safety (`reserved + allocated <= on_hand`), non-negative quantities, FIFO ordering, lifecycle transitions
+
+**Application layer** (`apps/api/src/modules/inventory/`, 7 files, 3,520 lines):
+
+- InventoryService (2,222 lines): receiveStock, consumeStock, reserveStock, releaseReservation, transferStock, adjustStock
+- InventoryRepository (1,060 lines): FOR UPDATE locking, FIFO layer queries, ledger immutability
+- Module wiring, contracts provider, event-envelope, db-executor
+
+**HTTP controller** (`inventory-admin.controller.ts`, 917 lines, 21 endpoints):
+
+- Stock positions, reservations, allocations, transfers, adjustments, ledger entries, FIFO layers
+- Full Zod validation, Swagger decorators, idempotency enforcement, authorization checks
+
+**Permissions:**
+
+- Migration `0025_add_inventory_permissions.sql` seeds `inventory.create`
+- Added to `PERMISSION_CODES` and `PERMISSION_DESCRIPTIONS` in identity schema
+- Auth matrix and identity-defaults spec updated
+
+**Test suite:**
+
+- Domain unit tests: 6 files, 136 tests (all passing)
+- Integration tests: `inventory.integration.spec.ts` (1,618 lines, 36 tests)
+- Concurrency tests: `inventory.concurrency.spec.ts` (1,582 lines, 23 tests)
+- HTTP boundary tests: `inventory.http.integration.spec.ts` (1,469 lines, 41+ tests)
+- Covers: stock lifecycle, FIFO consumption, reservation/expiration, transfer dispatch/receipt, adjustment approval, ledger immutability, cross-tenant isolation, idempotency, concurrent access
+
+**Cross-cutting:**
+
+- Module registered in root `AppModule`
+- `@commerce-platform/database` exports inventory schema
+- Postman collection updated with 21 inventory endpoints
+- Swagger tag "Inventory" added with description
+
+### Quality gates
+
+- **Typecheck:** ✅ Zero errors (apps/api + packages/database)
+- **Lint (ESLint):** ✅ Clean
+- **Format (Prettier):** ✅ All files pass
+- **Unit tests:** ✅ 136/136 domain tests pass
+- **Integration tests:** ✅ Created, require TEST_DATABASE_URL to run
+- **HTTP boundary tests:** ✅ Created, require TEST_DATABASE_URL to run
+
+### All M3 tasks
+
+| Task   | Domain                                                     | Status |
+| ------ | ---------------------------------------------------------- | ------ |
+| M3-001 | Inventory persistence (Drizzle schema + migration)         | DONE   |
+| M3-002 | Domain layer (aggregates, events, invariants)              | DONE   |
+| M3-003 | Application layer (service, repository, contracts, module) | DONE   |
+| M3-004 | Permissions (inventory.create)                             | DONE   |
+| M3-005 | HTTP controller (21 endpoints) + Swagger + registration    | DONE   |
+| M3-006 | Domain unit tests (136 tests)                              | DONE   |
+| M3-007 | Integration tests (36 tests)                               | DONE   |
+| M3-008 | Concurrency tests (23 tests)                               | DONE   |
+| M3-009 | HTTP boundary tests (41+ tests)                            | DONE   |
+| M3-010 | Postman collection + Swagger tag updates                   | DONE   |
+
+**Branch:** `feat/m3-inventory-core` (created from `main`)
+**Status:** READY FOR REVIEW — awaiting human approval
 
 ---
 

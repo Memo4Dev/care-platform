@@ -82,6 +82,13 @@
 - CASH SESSION-002: Cash count and reconciliation on Cash Session close is enabled by default (`cashSession.requireReconciliationOnClose = true`). Organization policy may disable mandatory reconciliation, but session close remains fully audited regardless.
 - CASH SESSION-003: Manager approval at POS may use Manager Card + PIN without replacing or logging out the active cashier. Record `performedBy = active cashier` and `approvedBy = manager` for audit.
 - POS OFFLINE-001: POS operator authentication and Cash Session operations must remain compatible with offline POS operation. Operator identity is verified against locally cached credentials; authorization uses last synced permission snapshot; session operations queue locally and reconcile on sync.
+- M3-001: Inventory is tracked per Organization + Branch + Warehouse + Variant. The core balance formula is `Available = OnHand - Reserved - Allocated`. There are no direct quantity edits; corrections happen through Adjustment transactions. FIFO is the costing strategy (oldest remaining cost layers first). The ledger is append-only and immutable.
+- M3-001: `inventory.stock_positions` has a composite UNIQUE constraint on `(organization_id, warehouse_id, variant_id)` and CHECK constraints ensuring `reserved + allocated <= on_hand` and all quantities non-negative. The warehouse table gained a `warehouses_tenant_scope_unique` composite UNIQUE on `(id, organization_id)` to support inventory FK references.
+- M3-001: `inventory.fifo_layers` are append-only with a partial index on `remaining_quantity > 0` to accelerate oldest-first consumption queries. `inventory.ledger_entries` uses DB-side `gen_random_uuid()` for IDs and is immutable.
+- M3-004: `inventory.create` permission code is seeded via migration `0025_add_inventory_permissions.sql`. Combined with pre-existing `inventory.view`, `inventory.adjust`, and `inventory.transfer` from M1 migration `0002_dark_shard.sql`. OWNER and ADMIN get full inventory permissions; SALES and WAREHOUSE get read-only (`inventory.view`).
+- M3-005: Inventory HTTP controller uses 21 endpoints with Zod validation, Swagger decorators, idempotency enforcement, and authorization checks via `IDENTITY_CONTRACTS.authorize()`. Registered in `api.module.ts` with Swagger tag "Inventory".
+- M3-006-009: Domain tests (136 unit) run without database; integration/concurrency/HTTP-boundary tests require `TEST_DATABASE_URL`. Domain tests use pure aggregate manipulation with mock clocks. Integration tests use real PostgreSQL via `createTestDatabase()`.
+- M3 concurrency: `InventoryRepository` uses `SELECT ... FOR UPDATE` on stock position and FIFO layers for pessimistic locking. Idempotency claims and outcomes are in the same transaction as business mutations.
 
 ---
 

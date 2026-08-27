@@ -169,6 +169,20 @@
       "when": 1787800000000,
       "tag": "0023_add_catalog_pricing_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1787801000000,
+      "tag": "0024_inventory_core",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787802000000,
+      "tag": "0025_add_inventory_permissions",
+      "breakpoints": true
     }
   ]
 }

@@ -127,6 +127,9 @@ export const warehouses = organizationSchema.table(
       table.branchId,
       table.code,
     ),
+    // Composite tenant scope unique — anchors inventory FK references
+    // (mirrors branches_tenant_scope_unique pattern).
+    unique('warehouses_tenant_scope_unique').on(table.id, table.organizationId),
     // Postgres does not auto-index FK columns; keep tenant/branch lookups and
     // cascade deletes indexed.
     index('warehouses_organization_id_idx').on(table.organizationId),

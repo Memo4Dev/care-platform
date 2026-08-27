@@ -5,6 +5,8 @@ import { CatalogModule } from '../catalog/catalog.module';
 import { CatalogAdminController } from '../catalog/catalog-admin.controller';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
 import { IdentityModule } from '../identity/identity.module';
+import { InventoryModule } from '../inventory/inventory.module';
+import { InventoryAdminController } from '../inventory/inventory-admin.controller';
 import { OrganizationModule } from '../organization/organization.module';
 import { TenantAdminController } from '../organization/tenant-admin.controller';
 import { PlatformModule } from '../platform/platform.module';
@@ -25,6 +27,7 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
     OrganizationModule,
     CatalogModule,
     PricingModule,
+    InventoryModule,
     IdentityModule,
   ],
   controllers: [
@@ -32,6 +35,7 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
     TenantAdminController,
     CatalogAdminController,
     PricingAdminController,
+    InventoryAdminController,
   ],
 })
 export class ApiModule {}

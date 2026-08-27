@@ -101,31 +101,59 @@ No application or database migration work performed in M0-001 through M0-005.
 
 ---
 
-## Summary: All 22 M1 migrations
+## Summary: All 23 M1/M3 migrations
 
-| #    | File                                          | Domain                   | Description                                                      |
-| ---- | --------------------------------------------- | ------------------------ | ---------------------------------------------------------------- |
-| 0000 | `0000_concerned_tana_nile.sql`                | Organization             | Schema, enums, organizations/branches/warehouses/policies/outbox |
-| 0001 | `0001_spicy_viper.sql`                        | Identity                 | Schema, users/roles/permissions/branch_access, capability seed   |
-| 0002 | `0002_dark_shard.sql`                         | Identity                 | Drizzle-generated (metadata companion to 0001)                   |
-| 0003 | `0003_identity_organization_roles.sql`        | Identity                 | Organization-scoped role grants, composite tenant FKs            |
-| 0004 | `0004_lush_hannibal_king.sql`                 | Identity                 | `initial_owner_assignments` bootstrap claim table                |
-| 0005 | `0005_supreme_wild_child.sql`                 | Entitlements             | Plans, plan_entitlements, tenant_overrides                       |
-| 0006 | `0006_tearful_husk.sql`                       | Subscription             | Subscriptions and subscription_periods schema                    |
-| 0007 | `0007_fancy_cyclops.sql`                      | Subscription             | Subscription schema (companion migration)                        |
-| 0008 | `0008_subscription_periods_append_only.sql`   | Subscription             | Append-only trigger on subscription_periods                      |
-| 0009 | `0009_nifty_aqueduct.sql`                     | Platform                 | Platform tenants and support sessions                            |
-| 0010 | `0010_purple_lockheed.sql`                    | Platform                 | Platform schema (companion migration)                            |
-| 0011 | `0011_good_dagger.sql`                        | Platform                 | Platform schema (companion migration)                            |
-| 0012 | `0012_lowly_oracle.sql`                       | Platform                 | Subscription version reference type fix                          |
-| 0013 | `0013_platform-authorization.sql`             | Platform                 | Platform principals, roles, capabilities, assignments            |
-| 0014 | `0014_support-session-terminal-audit.sql`     | Platform                 | Support session terminal audit                                   |
-| 0015 | `0015_tenant_provisioning.sql`                | Provisioning             | Process manager schema with checkpoint enum                      |
-| 0016 | `0016_platform_registration_snapshot.sql`     | Provisioning             | Registration snapshot + legacy marking                           |
-| 0017 | `0017_provisioning_terminal_immutability.sql` | Provisioning             | Terminal process immutability trigger                            |
-| 0018 | `0018_tenant_override_actor_attribution.sql`  | Entitlements             | Override actor_type/actor_id/correlation_id + trigger            |
-| 0019 | `0019_http_idempotency_outcomes.sql`          | Integration              | HTTP idempotency outcomes table                                  |
-| 0020 | `0020_provisioning_retry_saga.sql`            | Integration/Provisioning | Inbox + retry_requests delivery tables                           |
-| 0021 | `0021_outbox_bullmq_delivery.sql`             | Integration              | Outbox relay publication/lease + Inbox lease                     |
+| #    | File                                          | Domain                   | Description                                                                                                       |
+| ---- | --------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| 0000 | `0000_concerned_tana_nile.sql`                | Organization             | Schema, enums, organizations/branches/warehouses/policies/outbox                                                  |
+| 0001 | `0001_spicy_viper.sql`                        | Identity                 | Schema, users/roles/permissions/branch_access, capability seed                                                    |
+| 0002 | `0002_dark_shard.sql`                         | Identity                 | Drizzle-generated (metadata companion to 0001)                                                                    |
+| 0003 | `0003_identity_organization_roles.sql`        | Identity                 | Organization-scoped role grants, composite tenant FKs                                                             |
+| 0004 | `0004_lush_hannibal_king.sql`                 | Identity                 | `initial_owner_assignments` bootstrap claim table                                                                 |
+| 0005 | `0005_supreme_wild_child.sql`                 | Entitlements             | Plans, plan_entitlements, tenant_overrides                                                                        |
+| 0006 | `0006_tearful_husk.sql`                       | Subscription             | Subscriptions and subscription_periods schema                                                                     |
+| 0007 | `0007_fancy_cyclops.sql`                      | Subscription             | Subscription schema (companion migration)                                                                         |
+| 0008 | `0008_subscription_periods_append_only.sql`   | Subscription             | Append-only trigger on subscription_periods                                                                       |
+| 0009 | `0009_nifty_aqueduct.sql`                     | Platform                 | Platform tenants and support sessions                                                                             |
+| 0010 | `0010_purple_lockheed.sql`                    | Platform                 | Platform schema (companion migration)                                                                             |
+| 0011 | `0011_good_dagger.sql`                        | Platform                 | Platform schema (companion migration)                                                                             |
+| 0012 | `0012_lowly_oracle.sql`                       | Platform                 | Subscription version reference type fix                                                                           |
+| 0013 | `0013_platform-authorization.sql`             | Platform                 | Platform principals, roles, capabilities, assignments                                                             |
+| 0014 | `0014_support-session-terminal-audit.sql`     | Platform                 | Support session terminal audit                                                                                    |
+| 0015 | `0015_tenant_provisioning.sql`                | Provisioning             | Process manager schema with checkpoint enum                                                                       |
+| 0016 | `0016_platform_registration_snapshot.sql`     | Provisioning             | Registration snapshot + legacy marking                                                                            |
+| 0017 | `0017_provisioning_terminal_immutability.sql` | Provisioning             | Terminal process immutability trigger                                                                             |
+| 0018 | `0018_tenant_override_actor_attribution.sql`  | Entitlements             | Override actor_type/actor_id/correlation_id + trigger                                                             |
+| 0019 | `0019_http_idempotency_outcomes.sql`          | Integration              | HTTP idempotency outcomes table                                                                                   |
+| 0020 | `0020_provisioning_retry_saga.sql`            | Integration/Provisioning | Inbox + retry_requests delivery tables                                                                            |
+| 0021 | `0021_outbox_bullmq_delivery.sql`             | Integration              | Outbox relay publication/lease + Inbox lease                                                                      |
+| 0024 | `0024_inventory_core.sql`                     | Inventory                | Inventory schema: stock_positions, fifo_layers, ledger_entries, reservations, allocations, transfers, adjustments |
+| 0025 | `0025_add_inventory_permissions.sql`          | Identity/Inventory       | Seeds `inventory.create` permission code into identity.permissions                                                |
 
 All migrations are additive-only. No destructive DDL. No production rollout performed (test harness applied).
+
+## M3-001: Inventory Core Persistence
+
+`0024_inventory_core.sql` — Inventory schema and core tables.
+
+- Creates logical schema `inventory`.
+- Creates tables:
+  - `inventory.stock_positions` — Core aggregate identity with (organization_id, warehouse_id, variant_id) uniqueness. CHECK constraints enforce non-negative on_hand/reserved/allocated and reserved + allocated <= on_hand. Composite tenant FKs to warehouses and product_variants. Optimistic version for balance mutations.
+  - `inventory.fifo_layers` — Append-only cost layers for FIFO consumption. Partial index on remaining_quantity > 0 accelerates oldest-first consumption query.
+  - `inventory.ledger_entries` — Immutable movement history. Uses DB-side gen_random_uuid() for IDs. Indexes on organization_id, stock_position_id, and (reference_type, reference_id).
+  - `inventory.reservations` — Temporary stock holds with status lifecycle (ACTIVE/CONSUMED/RELEASED/EXPIRED), expiry support, and optimistic version.
+  - `inventory.reservation_items` — Line items within a reservation, FK to parent reservation.
+  - `inventory.allocations` — Confirmed stock commitments with status lifecycle and optimistic version.
+  - `inventory.stock_transfers` — Inter-warehouse transfers with lifecycle (DRAFT/DISPATCHED/IN_TRANSIT/RECEIVED/CANCELLED). Composite FKs to source and destination warehouses.
+  - `inventory.stock_transfer_items` — Line items with received_quantity for partial receipt tracking.
+  - `inventory.stock_adjustments` — Immutable audit trail for manual corrections with before/after quantities and approval tracking.
+- All DDL is idempotent (IF NOT EXISTS).
+- Drizzle schema: `packages/database/src/schema/inventory.ts`.
+
+## M3-004: Inventory Permissions
+
+`0025_add_inventory_permissions.sql` — Seeds inventory permission.
+
+- Inserts `inventory.create` into `identity.permissions` with ON CONFLICT DO NOTHING.
+- Combined with pre-existing `inventory.view`, `inventory.adjust`, and `inventory.transfer` from M1 migration `0002_dark_shard.sql`.
+- OWNER and ADMIN get full inventory permissions; SALES and WAREHOUSE get read-only (`inventory.view`).

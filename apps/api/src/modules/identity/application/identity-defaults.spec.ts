@@ -102,6 +102,15 @@ const MATRIX: ReadonlyArray<{
     purchasing: 'Y',
   },
   {
+    code: 'inventory.create',
+    owner: 'Y',
+    manager: 'C',
+    sales: 'N',
+    cashier: 'N',
+    warehouse: 'C',
+    purchasing: 'N',
+  },
+  {
     code: 'inventory.adjust',
     owner: 'Y',
     manager: 'C',
