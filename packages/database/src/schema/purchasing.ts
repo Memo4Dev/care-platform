@@ -169,6 +169,8 @@ export const purchaseOrderItems = purchasingSchema.table(
     ...timestamps,
   },
   (table) => [
+    // Tenant-scope unique for FK references from child tables (goods_receipt_items)
+    uniqueIndex('purchase_order_items_tenant_scope_unique').on(table.id, table.organizationId),
     index('purchase_order_items_organization_id_idx').on(table.organizationId),
     index('purchase_order_items_purchase_order_id_idx').on(table.purchaseOrderId),
     index('purchase_order_items_variant_id_idx').on(table.variantId),

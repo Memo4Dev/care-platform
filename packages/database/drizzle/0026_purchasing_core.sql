@@ -128,6 +128,10 @@ CREATE TABLE IF NOT EXISTS purchasing.purchase_order_items (
 CREATE INDEX IF NOT EXISTS purchase_order_items_organization_id_idx
     ON purchasing.purchase_order_items (organization_id);
 
+-- Tenant-scope unique for FK references from child tables (goods_receipt_items)
+CREATE UNIQUE INDEX IF NOT EXISTS purchase_order_items_tenant_scope_unique
+    ON purchasing.purchase_order_items (id, organization_id);
+
 CREATE INDEX IF NOT EXISTS purchase_order_items_purchase_order_id_idx
     ON purchasing.purchase_order_items (purchase_order_id);
 
