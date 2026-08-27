@@ -220,6 +220,43 @@ export class Supplier {
   }
 
   /**
+   * Domain command: update supplier profile fields (name, contact, address,
+   * notes). Emits a SupplierUpdated event.
+   */
+  updateProfile(data: {
+    name?: string;
+    contactName?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    notes?: string | null;
+  }): void {
+    if (data.name !== undefined) {
+      if (!data.name || data.name.trim().length === 0) {
+        throw PlatformError.of(ERROR_CODES.VALIDATION_FAILED, 'Supplier name is mandatory.', {
+          details: { name: data.name },
+        });
+      }
+      this._name = data.name.trim();
+    }
+    if (data.contactName !== undefined) this._contactName = data.contactName;
+    if (data.email !== undefined) this._email = data.email;
+    if (data.phone !== undefined) this._phone = data.phone;
+    if (data.address !== undefined) this._address = data.address;
+    if (data.notes !== undefined) this._notes = data.notes;
+
+    this.bumpVersion();
+
+    this.domainEvents.push({
+      type: 'SupplierUpdated',
+      occurredAt: this.clock(),
+      organizationId: this.organizationId,
+      aggregateId: this.id,
+      name: this._name,
+    });
+  }
+
+  /**
    * Domain command: deactivate the supplier (soft-disable).
    * Emits a SupplierDeactivated event; throws if already inactive.
    */

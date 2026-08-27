@@ -108,6 +108,13 @@ export interface PurchaseOrderCancelledEvent {
   readonly reason?: string | null;
 }
 
+export interface PurchaseOrderUpdatedEvent {
+  readonly type: 'PurchaseOrderUpdated';
+  readonly occurredAt: Date;
+  readonly organizationId: string;
+  readonly aggregateId: string;
+}
+
 export interface PurchaseOrderItemAddedEvent {
   readonly type: 'PurchaseOrderItemAdded';
   readonly occurredAt: Date;
@@ -220,6 +227,7 @@ export type PurchasingDomainEvent =
   | SupplierUpdatedEvent
   | SupplierDeactivatedEvent
   | PurchaseOrderCreatedEvent
+  | PurchaseOrderUpdatedEvent
   | PurchaseOrderSubmittedEvent
   | PurchaseOrderApprovedEvent
   | PurchaseOrderRejectedEvent

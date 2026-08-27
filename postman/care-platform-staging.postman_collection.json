@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Care Platform API — Staging",
-    "description": "M1 + M2 + M3 (Catalog, Pricing & Inventory) staging environment collection.\n\nBase URL: https://api.care-systems.site\n\nAll endpoints require Bearer JWT unless noted.\n\nMutation requests (POST/PUT/PATCH/DELETE) automatically get an Idempotency-Key header.\n\nM3 adds Tenant Admin endpoints for Inventory management under /api/v1/admin/inventory/.",
+    "description": "M1 + M2 + M3 + M4 (Catalog, Pricing, Inventory & Purchasing) staging environment collection.\n\nBase URL: https://api.care-systems.site\n\nAll endpoints require Bearer JWT unless noted.\n\nMutation requests (POST/PUT/PATCH/DELETE) automatically get an Idempotency-Key header.\n\nM3 adds Tenant Admin endpoints for Inventory management under /api/v1/admin/inventory/.\n\nM4 adds Tenant Admin endpoints for Purchasing management under /api/v1/admin/purchasing/ (suppliers, purchase orders, goods receipts).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -35,7 +35,11 @@
     { "key": "allocationId", "value": "Allocation ID (auto-set after create)" },
     { "key": "transferId", "value": "Transfer ID (auto-set after create)" },
     { "key": "warehouseId", "value": "d68ce259-db38-480e-a845-f3a849015d50" },
-    { "key": "variantId", "value": "Variant ID (create via catalog first)" }
+    { "key": "variantId", "value": "Variant ID (create via catalog first)" },
+    { "key": "supplierId", "value": "Supplier ID (auto-set after create)" },
+    { "key": "purchaseOrderId", "value": "Purchase order ID (auto-set after create)" },
+    { "key": "goodsReceiptId", "value": "Goods receipt ID (auto-set after create)" },
+    { "key": "poItemId", "value": "PO line item ID (auto-set after create)" }
   ],
   "item": [
     {
@@ -774,6 +778,231 @@
             "method": "GET",
             "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/adjustments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "adjustments"] },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tenant Admin — Purchasing",
+      "item": [
+        {
+          "name": "GET /purchasing/suppliers (list)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/suppliers?limit=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "suppliers"], "query": [{ "key": "limit", "value": "50" }] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /purchasing/suppliers (create)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/suppliers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "suppliers"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Supplies\",\n  \"code\": \"ACME-001\",\n  \"contactName\": \"John Doe\",\n  \"email\": \"john@acme.com\",\n  \"phone\": \"+1-555-0100\",\n  \"address\": \"123 Main St, Springfield\",\n  \"notes\": \"Primary supplier\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "PATCH /purchasing/suppliers/:id (update)",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/suppliers/{{supplierId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "suppliers", "{{supplierId}}"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Supplies Updated\",\n  \"contactName\": \"Jane Smith\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "GET /purchasing/purchase-orders (list)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders?limit=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders"], "query": [{ "key": "limit", "value": "50" }] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /purchasing/purchase-orders (create)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplierId\": \"{{supplierId}}\",\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"expectedDeliveryDate\": \"2026-09-15T00:00:00.000Z\",\n  \"notes\": \"Restock order\",\n  \"items\": [\n    {\n      \"variantId\": \"{{variantId}}\",\n      \"quantity\": \"100\",\n      \"unitCost\": \"12.50\",\n      \"packagingUnit\": \"BOX\",\n      \"packagingQuantity\": \"10\",\n      \"packagingConversion\": \"10\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "GET /purchasing/purchase-orders/:id (detail)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "PATCH /purchasing/purchase-orders/:id (update)",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expectedDeliveryDate\": \"2026-09-20T00:00:00.000Z\",\n  \"notes\": \"Updated delivery date\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /purchasing/purchase-orders/:id/submit",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}/submit", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}", "submit"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ]
+          }
+        },
+        {
+          "name": "POST /purchasing/purchase-orders/:id/approve",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}/approve", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}", "approve"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ]
+          }
+        },
+        {
+          "name": "POST /purchasing/purchase-orders/:id/reject",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}/reject", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}", "reject"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Budget exceeded\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /purchasing/purchase-orders/:id/send",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}/send", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}", "send"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ]
+          }
+        },
+        {
+          "name": "POST /purchasing/purchase-orders/:id/cancel",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}", "cancel"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Supplier cannot fulfill\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "GET /purchasing/goods-receipts (list)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/goods-receipts?limit=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "goods-receipts"], "query": [{ "key": "limit", "value": "50" }] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /purchasing/goods-receipts (create)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/goods-receipts", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "goods-receipts"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purchaseOrderId\": \"{{purchaseOrderId}}\",\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"receivedDate\": \"2026-09-15T10:00:00.000Z\",\n  \"notes\": \"Full shipment received\",\n  \"items\": [\n    {\n      \"purchaseOrderItemId\": \"{{poItemId}}\",\n      \"variantId\": \"{{variantId}}\",\n      \"quantityReceived\": \"100\",\n      \"quantityAccepted\": \"98\",\n      \"quantityRejected\": \"2\",\n      \"unitCost\": \"12.50\",\n      \"notes\": \"2 damaged units\"\n    }\n  ],\n  \"costs\": [\n    {\n      \"costType\": \"SHIPPING\",\n      \"amount\": \"250.00\",\n      \"description\": \"Freight charges\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "GET /purchasing/goods-receipts/:id (detail)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/goods-receipts/{{goodsReceiptId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "goods-receipts", "{{goodsReceiptId}}"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /purchasing/goods-receipts/:id/confirm",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/goods-receipts/{{goodsReceiptId}}/confirm", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "goods-receipts", "{{goodsReceiptId}}", "confirm"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ]
+          }
+        },
+        {
+          "name": "POST /purchasing/goods-receipts/:id/cancel",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/goods-receipts/{{goodsReceiptId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "goods-receipts", "{{goodsReceiptId}}", "cancel"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Incorrect items\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
           }
         }
       ]

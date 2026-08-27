@@ -124,6 +124,11 @@ export class PurchasingRepository {
     supplierId: string,
     data: {
       name?: string;
+      contactName?: string | null;
+      email?: string | null;
+      phone?: string | null;
+      address?: string | null;
+      notes?: string | null;
       isActive?: boolean;
     },
     version: number,
@@ -132,6 +137,11 @@ export class PurchasingRepository {
       .update(suppliers)
       .set({
         ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.contactName !== undefined ? { contactName: data.contactName } : {}),
+        ...(data.email !== undefined ? { email: data.email } : {}),
+        ...(data.phone !== undefined ? { phone: data.phone } : {}),
+        ...(data.address !== undefined ? { address: data.address } : {}),
+        ...(data.notes !== undefined ? { notes: data.notes } : {}),
         ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
         updatedAt: new Date(),
         version: version + 1,
@@ -232,6 +242,7 @@ export class PurchasingRepository {
     data: {
       status?: string;
       notes?: string | null;
+      expectedDeliveryDate?: Date | null;
     },
     version: number,
   ): Promise<PurchaseOrderRow | null> {
@@ -240,6 +251,9 @@ export class PurchasingRepository {
       .set({
         ...(data.status !== undefined ? { status: data.status } : {}),
         ...(data.notes !== undefined ? { notes: data.notes } : {}),
+        ...(data.expectedDeliveryDate !== undefined
+          ? { expectedDeliveryDate: data.expectedDeliveryDate }
+          : {}),
         updatedAt: new Date(),
         version: version + 1,
       })

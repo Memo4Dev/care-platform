@@ -13,6 +13,7 @@ export type PurchasingEventType =
   | 'purchasing.supplier-updated'
   | 'purchasing.supplier-deactivated'
   | 'purchasing.purchase-order-created'
+  | 'purchasing.purchase-order-updated'
   | 'purchasing.purchase-order-submitted'
   | 'purchasing.purchase-order-approved'
   | 'purchasing.purchase-order-rejected'

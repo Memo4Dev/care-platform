@@ -162,7 +162,14 @@ export class PurchasingService {
   async updateSupplier(
     orgId: string,
     supplierId: string,
-    data: { name: string },
+    data: {
+      name?: string;
+      contactName?: string | null;
+      email?: string | null;
+      phone?: string | null;
+      address?: string | null;
+      notes?: string | null;
+    },
     idempotencyKey: string,
     principal: { id: string },
   ): Promise<SupplierRow> {
@@ -212,14 +219,21 @@ export class PurchasingService {
         version: existing.version,
       });
 
-      aggregate.updateName(data.name);
+      aggregate.updateProfile(data);
 
       // Persist with version check
       const updated = await this.repository.updateSupplier(
         tx,
         orgId,
         supplierId,
-        { name: aggregate.name },
+        {
+          name: aggregate.name,
+          contactName: aggregate.contactName,
+          email: aggregate.email,
+          phone: aggregate.phone,
+          address: aggregate.address,
+          notes: aggregate.notes,
+        },
         existing.version,
       );
 
@@ -375,6 +389,92 @@ export class PurchasingService {
   // ===========================================================================
   // Purchase Order Commands
   // ===========================================================================
+
+  async updatePO(
+    orgId: string,
+    poId: string,
+    data: {
+      expectedDeliveryDate?: Date | null;
+      notes?: string | null;
+    },
+    idempotencyKey: string,
+    principal: { id: string },
+  ): Promise<PurchaseOrderRow> {
+    const scope = `purchasing:updatePO:${orgId}`;
+
+    const result = await this.db.transaction(async (tx) => {
+      const claim = await this.repository.claimIdempotency(
+        tx,
+        idempotencyKey,
+        scope,
+      );
+
+      if (claim.kind === 'existing') {
+        if (claim.status === 'COMPLETED' && claim.responseJson) {
+          return claim.responseJson as unknown as PurchaseOrderRow;
+        }
+        throw PlatformError.idempotencyConflict('Request is being processed.', {
+          details: { idempotencyKey },
+        });
+      }
+
+      const existing = await this.repository.findPOById(tx, orgId, poId);
+      if (!existing) {
+        throw PlatformError.notFound(`Purchase order ${poId} not found.`, {
+          details: { poId, organizationId: orgId },
+        });
+      }
+
+      // Only DRAFT POs can be edited
+      if (existing.status !== 'DRAFT') {
+        throw PlatformError.of(
+          ERROR_CODES.OPERATION_NOT_ALLOWED,
+          `Cannot update purchase order in status "${existing.status}". Must be DRAFT.`,
+          { details: { poId, status: existing.status } },
+        );
+      }
+
+      const updated = await this.repository.updatePO(
+        tx,
+        orgId,
+        poId,
+        {
+          expectedDeliveryDate: data.expectedDeliveryDate,
+          notes: data.notes,
+        },
+        existing.version,
+      );
+
+      if (!updated) {
+        throw PlatformError.of(
+          ERROR_CODES.RESOURCE_VERSION_CONFLICT,
+          `Purchase order ${poId} was modified concurrently.`,
+          { details: { poId, expectedVersion: existing.version } },
+        );
+      }
+
+      await this.repository.writeOutbox(
+        tx,
+        purchasingEvent(
+          'purchasing.purchase-order-updated',
+          orgId,
+          'PurchaseOrder',
+          updated.id,
+          updated.version,
+          idempotencyKey,
+          idempotencyKey,
+          principal.id,
+          {},
+        ),
+      );
+
+      await this.repository.writeOutcome(tx, claim.claimId, 'COMPLETED', updated as unknown as Record<string, unknown>);
+
+      return updated;
+    });
+
+    return result;
+  }
 
   async createPO(
     orgId: string,
