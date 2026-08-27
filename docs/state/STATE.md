@@ -10,31 +10,31 @@ Branch: feat/m4-purchasing
 
 All 10 M4 tasks complete (M4-001 through M4-010):
 
-| Task   | Domain                                                  | Status |
-| ------ | ------------------------------------------------------- | ------ |
-| M4-001 | Purchasing persistence (Drizzle schema + migration)     | DONE   |
-| M4-002 | Domain layer (3 aggregates, events, invariants)         | DONE   |
-| M4-003 | Application layer (service, repo, contracts, module)    | DONE   |
-| M4-004 | Inventory contract expansion (receiveStock)             | DONE   |
-| M4-005 | HTTP controller (16 endpoints) + Swagger                | DONE   |
-| M4-006 | Domain unit tests (79 tests)                            | DONE   |
-| M4-007 | Integration tests (20 tests, native PG)                 | DONE   |
-| M4-008 | HTTP boundary tests (34 tests)                          | DONE   |
-| M4-009 | Postman collection + Swagger tag updates                | DONE   |
-| M4-010 | State docs + quality gates + permission migration       | DONE   |
+| Task   | Domain                                               | Status |
+| ------ | ---------------------------------------------------- | ------ |
+| M4-001 | Purchasing persistence (Drizzle schema + migration)  | DONE   |
+| M4-002 | Domain layer (3 aggregates, events, invariants)      | DONE   |
+| M4-003 | Application layer (service, repo, contracts, module) | DONE   |
+| M4-004 | Inventory contract expansion (receiveStock)          | DONE   |
+| M4-005 | HTTP controller (16 endpoints) + Swagger             | DONE   |
+| M4-006 | Domain unit tests (79 tests)                         | DONE   |
+| M4-007 | Integration tests (20 tests, native PG)              | DONE   |
+| M4-008 | HTTP boundary tests (34 tests)                       | DONE   |
+| M4-009 | Postman collection + Swagger tag updates             | DONE   |
+| M4-010 | State docs + quality gates + permission migration    | DONE   |
 
 ## Quality gates
 
-| Gate | Local | CI | VPS |
-|------|-------|----|-----|
-| TypeScript | ✅ PASS | PENDING | — |
-| ESLint | ✅ PASS | PENDING | — |
-| Prettier | ✅ PASS | PENDING | — |
-| Domain unit tests (79) | ✅ PASS | PENDING | — |
-| Integration tests (20) | NOT EXECUTED | REQUIRED | NOT REQUIRED |
+| Gate                     | Local        | CI       | VPS          |
+| ------------------------ | ------------ | -------- | ------------ |
+| TypeScript               | ✅ PASS      | PENDING  | —            |
+| ESLint                   | ✅ PASS      | PENDING  | —            |
+| Prettier                 | ✅ PASS      | PENDING  | —            |
+| Domain unit tests (79)   | ✅ PASS      | PENDING  | —            |
+| Integration tests (20)   | NOT EXECUTED | REQUIRED | NOT REQUIRED |
 | HTTP boundary tests (34) | NOT EXECUTED | REQUIRED | NOT REQUIRED |
-| Reviewer | ✅ PASS | — | — |
-| Security review | ✅ PASS | — | — |
+| Reviewer                 | ✅ PASS      | —        | —            |
+| Security review          | ✅ PASS      | —        | —            |
 
 ## Permission migration (0027)
 
@@ -66,6 +66,7 @@ approve/reject/send/cancel), goods receipt (create/list/get/confirm/cancel),
 cross-tenant isolation (foreign org sees empty data), and not-found (404).
 
 Compile verification:
+
 - `npx tsc --noEmit -p apps/api/tsconfig.json` → exit 0
 - spec file type-checked with a temporary config including the spec → exit 0
 

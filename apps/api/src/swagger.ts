@@ -26,10 +26,7 @@ export function setupSwagger(app: NestFastifyApplication): void {
       'Inventory',
       'Stock positions, reservations, allocations, transfers, adjustments, FIFO layers',
     )
-    .addTag(
-      'Purchasing',
-      'Suppliers, purchase orders, goods receipts, purchasing costs',
-    )
+    .addTag('Purchasing', 'Suppliers, purchase orders, goods receipts, purchasing costs')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

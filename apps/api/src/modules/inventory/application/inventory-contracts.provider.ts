@@ -74,8 +74,7 @@ export class InventoryContractProvider implements InventoryContracts {
           onHand: input.quantity,
         });
       } else {
-        const newOnHand =
-          parseFloat(stockPos.onHand) + parseFloat(input.quantity);
+        const newOnHand = parseFloat(stockPos.onHand) + parseFloat(input.quantity);
         const updated = await this.repository.updateStockPosition(
           tx,
           input.organizationId,

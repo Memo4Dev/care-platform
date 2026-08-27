@@ -160,7 +160,9 @@ export const purchaseOrderItems = purchasingSchema.table(
     purchaseOrderId: uuid('purchase_order_id').notNull(),
     variantId: uuid('variant_id').notNull(),
     quantity: decimal('quantity', { precision: 14, scale: 4 }).notNull(),
-    receivedQuantity: decimal('received_quantity', { precision: 14, scale: 4 }).notNull().default('0'),
+    receivedQuantity: decimal('received_quantity', { precision: 14, scale: 4 })
+      .notNull()
+      .default('0'),
     unitCost: decimal('unit_cost', { precision: 14, scale: 4 }).notNull(),
     packagingUnit: text('packaging_unit'),
     packagingQuantity: decimal('packaging_quantity', { precision: 14, scale: 4 }),
@@ -270,7 +272,9 @@ export const goodsReceiptItems = purchasingSchema.table(
     variantId: uuid('variant_id').notNull(),
     quantityReceived: decimal('quantity_received', { precision: 14, scale: 4 }).notNull(),
     quantityAccepted: decimal('quantity_accepted', { precision: 14, scale: 4 }).notNull(),
-    quantityRejected: decimal('quantity_rejected', { precision: 14, scale: 4 }).notNull().default('0'),
+    quantityRejected: decimal('quantity_rejected', { precision: 14, scale: 4 })
+      .notNull()
+      .default('0'),
     unitCost: decimal('unit_cost', { precision: 14, scale: 4 }).notNull(),
     notes: text('notes'),
     ...timestamps,

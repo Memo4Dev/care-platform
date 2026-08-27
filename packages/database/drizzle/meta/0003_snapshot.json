@@ -72,12 +72,8 @@
           "tableFrom": "branch_access",
           "tableTo": "organizations",
           "schemaTo": "organization",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -86,14 +82,8 @@
           "tableFrom": "branch_access",
           "tableTo": "users",
           "schemaTo": "identity",
-          "columnsFrom": [
-            "user_id",
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id",
-            "organization_id"
-          ],
+          "columnsFrom": ["user_id", "organization_id"],
+          "columnsTo": ["id", "organization_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -102,14 +92,8 @@
           "tableFrom": "branch_access",
           "tableTo": "branches",
           "schemaTo": "organization",
-          "columnsFrom": [
-            "branch_id",
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id",
-            "organization_id"
-          ],
+          "columnsFrom": ["branch_id", "organization_id"],
+          "columnsTo": ["id", "organization_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -117,10 +101,7 @@
       "compositePrimaryKeys": {
         "branch_access_pk": {
           "name": "branch_access_pk",
-          "columns": [
-            "user_id",
-            "branch_id"
-          ]
+          "columns": ["user_id", "branch_id"]
         }
       },
       "uniqueConstraints": {},
@@ -165,9 +146,7 @@
         "permissions_code_unique": {
           "name": "permissions_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
+          "columns": ["code"]
         }
       },
       "policies": {},
@@ -214,12 +193,8 @@
           "tableFrom": "role_permissions",
           "tableTo": "roles",
           "schemaTo": "identity",
-          "columnsFrom": [
-            "role_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["role_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -228,12 +203,8 @@
           "tableFrom": "role_permissions",
           "tableTo": "permissions",
           "schemaTo": "identity",
-          "columnsFrom": [
-            "permission_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["permission_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -241,10 +212,7 @@
       "compositePrimaryKeys": {
         "role_permissions_pk": {
           "name": "role_permissions_pk",
-          "columns": [
-            "role_id",
-            "permission_id"
-          ]
+          "columns": ["role_id", "permission_id"]
         }
       },
       "uniqueConstraints": {},
@@ -332,12 +300,8 @@
           "tableFrom": "roles",
           "tableTo": "organizations",
           "schemaTo": "organization",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -347,18 +311,12 @@
         "roles_org_code_unique": {
           "name": "roles_org_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "organization_id",
-            "code"
-          ]
+          "columns": ["organization_id", "code"]
         },
         "roles_tenant_scope_unique": {
           "name": "roles_tenant_scope_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "id",
-            "organization_id"
-          ]
+          "columns": ["id", "organization_id"]
         }
       },
       "policies": {},
@@ -454,12 +412,8 @@
           "tableFrom": "user_branch_roles",
           "tableTo": "organizations",
           "schemaTo": "organization",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -468,14 +422,8 @@
           "tableFrom": "user_branch_roles",
           "tableTo": "users",
           "schemaTo": "identity",
-          "columnsFrom": [
-            "user_id",
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id",
-            "organization_id"
-          ],
+          "columnsFrom": ["user_id", "organization_id"],
+          "columnsTo": ["id", "organization_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -484,14 +432,8 @@
           "tableFrom": "user_branch_roles",
           "tableTo": "branches",
           "schemaTo": "organization",
-          "columnsFrom": [
-            "branch_id",
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id",
-            "organization_id"
-          ],
+          "columnsFrom": ["branch_id", "organization_id"],
+          "columnsTo": ["id", "organization_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -500,14 +442,8 @@
           "tableFrom": "user_branch_roles",
           "tableTo": "roles",
           "schemaTo": "identity",
-          "columnsFrom": [
-            "role_id",
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id",
-            "organization_id"
-          ],
+          "columnsFrom": ["role_id", "organization_id"],
+          "columnsTo": ["id", "organization_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -515,11 +451,7 @@
       "compositePrimaryKeys": {
         "user_branch_roles_pk": {
           "name": "user_branch_roles_pk",
-          "columns": [
-            "user_id",
-            "branch_id",
-            "role_id"
-          ]
+          "columns": ["user_id", "branch_id", "role_id"]
         }
       },
       "uniqueConstraints": {},
@@ -595,12 +527,8 @@
           "tableFrom": "user_organization_roles",
           "tableTo": "organizations",
           "schemaTo": "organization",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -609,14 +537,8 @@
           "tableFrom": "user_organization_roles",
           "tableTo": "users",
           "schemaTo": "identity",
-          "columnsFrom": [
-            "user_id",
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id",
-            "organization_id"
-          ],
+          "columnsFrom": ["user_id", "organization_id"],
+          "columnsTo": ["id", "organization_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -625,14 +547,8 @@
           "tableFrom": "user_organization_roles",
           "tableTo": "roles",
           "schemaTo": "identity",
-          "columnsFrom": [
-            "role_id",
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id",
-            "organization_id"
-          ],
+          "columnsFrom": ["role_id", "organization_id"],
+          "columnsTo": ["id", "organization_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -640,10 +556,7 @@
       "compositePrimaryKeys": {
         "user_organization_roles_pk": {
           "name": "user_organization_roles_pk",
-          "columns": [
-            "user_id",
-            "role_id"
-          ]
+          "columns": ["user_id", "role_id"]
         }
       },
       "uniqueConstraints": {},
@@ -753,12 +666,8 @@
           "tableFrom": "users",
           "tableTo": "organizations",
           "schemaTo": "organization",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -768,24 +677,17 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         },
         "users_supabase_user_id_unique": {
           "name": "users_supabase_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "supabase_user_id"
-          ]
+          "columns": ["supabase_user_id"]
         },
         "users_tenant_scope_unique": {
           "name": "users_tenant_scope_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "id",
-            "organization_id"
-          ]
+          "columns": ["id", "organization_id"]
         }
       },
       "policies": {},
@@ -957,12 +859,8 @@
           "tableFrom": "branches",
           "tableTo": "organizations",
           "schemaTo": "organization",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -972,18 +870,12 @@
         "branches_org_code_unique": {
           "name": "branches_org_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "organization_id",
-            "code"
-          ]
+          "columns": ["organization_id", "code"]
         },
         "branches_tenant_scope_unique": {
           "name": "branches_tenant_scope_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "id",
-            "organization_id"
-          ]
+          "columns": ["id", "organization_id"]
         }
       },
       "policies": {},
@@ -1068,12 +960,8 @@
           "tableFrom": "organization_policies",
           "tableTo": "organizations",
           "schemaTo": "organization",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1083,10 +971,7 @@
         "organization_policies_org_version_unique": {
           "name": "organization_policies_org_version_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "organization_id",
-            "version"
-          ]
+          "columns": ["organization_id", "version"]
         }
       },
       "policies": {},
@@ -1248,12 +1133,8 @@
           "tableFrom": "warehouses",
           "tableTo": "organizations",
           "schemaTo": "organization",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1262,14 +1143,8 @@
           "tableFrom": "warehouses",
           "tableTo": "branches",
           "schemaTo": "organization",
-          "columnsFrom": [
-            "branch_id",
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id",
-            "organization_id"
-          ],
+          "columnsFrom": ["branch_id", "organization_id"],
+          "columnsTo": ["id", "organization_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1279,11 +1154,7 @@
         "warehouses_org_branch_code_unique": {
           "name": "warehouses_org_branch_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "organization_id",
-            "branch_id",
-            "code"
-          ]
+          "columns": ["organization_id", "branch_id", "code"]
         }
       },
       "policies": {},
@@ -1295,10 +1166,7 @@
     "identity.user_status": {
       "name": "user_status",
       "schema": "identity",
-      "values": [
-        "ACTIVE",
-        "SUSPENDED"
-      ]
+      "values": ["ACTIVE", "SUSPENDED"]
     },
     "organization.organization_policy_type": {
       "name": "organization_policy_type",
@@ -1317,10 +1185,7 @@
     "organization.organization_status": {
       "name": "organization_status",
       "schema": "organization",
-      "values": [
-        "ACTIVE",
-        "SUSPENDED"
-      ]
+      "values": ["ACTIVE", "SUSPENDED"]
     }
   },
   "schemas": {

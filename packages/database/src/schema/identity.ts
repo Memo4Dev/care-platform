@@ -150,9 +150,7 @@ export const permissions = identitySchema.table(
     description: text('description').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [
-    unique('permissions_code_unique').on(table.code),
-  ],
+  (table) => [unique('permissions_code_unique').on(table.code)],
 );
 
 // ---------------------------------------------------------------------------

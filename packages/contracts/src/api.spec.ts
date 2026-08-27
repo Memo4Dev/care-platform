@@ -26,9 +26,7 @@ describe('correlation ids', () => {
   });
 
   it('accepts foreign trace parents but rejects junk', () => {
-    expect(correlationIdSchema.parse('  gateway-trace-0001  ')).toBe(
-      'gateway-trace-0001',
-    );
+    expect(correlationIdSchema.parse('  gateway-trace-0001  ')).toBe('gateway-trace-0001');
     // Lenient inbound acceptance: any non-empty trimmed value is preserved.
     expect(correlationIdSchema.parse('short')).toBe('short');
     expect(correlationIdSchema.safeParse('').success).toBe(false);
@@ -59,9 +57,7 @@ describe('error envelope schema', () => {
   });
 
   it('discriminates success vs error bodies structurally', () => {
-    expect(isApiErrorBody({ error: { code: 'RESOURCE_NOT_FOUND', message: 'x' } })).toBe(
-      true,
-    );
+    expect(isApiErrorBody({ error: { code: 'RESOURCE_NOT_FOUND', message: 'x' } })).toBe(true);
     expect(isApiErrorBody({ data: { id: '1' } })).toBe(false);
     expect(isApiErrorBody(null)).toBe(false);
   });

@@ -169,12 +169,8 @@
           "tableFrom": "branches",
           "tableTo": "organizations",
           "schemaTo": "organization",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -184,18 +180,12 @@
         "branches_org_code_unique": {
           "name": "branches_org_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "organization_id",
-            "code"
-          ]
+          "columns": ["organization_id", "code"]
         },
         "branches_tenant_scope_unique": {
           "name": "branches_tenant_scope_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "id",
-            "organization_id"
-          ]
+          "columns": ["id", "organization_id"]
         }
       },
       "policies": {},
@@ -280,12 +270,8 @@
           "tableFrom": "organization_policies",
           "tableTo": "organizations",
           "schemaTo": "organization",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -295,10 +281,7 @@
         "organization_policies_org_version_unique": {
           "name": "organization_policies_org_version_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "organization_id",
-            "version"
-          ]
+          "columns": ["organization_id", "version"]
         }
       },
       "policies": {},
@@ -460,12 +443,8 @@
           "tableFrom": "warehouses",
           "tableTo": "organizations",
           "schemaTo": "organization",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -474,14 +453,8 @@
           "tableFrom": "warehouses",
           "tableTo": "branches",
           "schemaTo": "organization",
-          "columnsFrom": [
-            "branch_id",
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id",
-            "organization_id"
-          ],
+          "columnsFrom": ["branch_id", "organization_id"],
+          "columnsTo": ["id", "organization_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -491,11 +464,7 @@
         "warehouses_org_branch_code_unique": {
           "name": "warehouses_org_branch_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "organization_id",
-            "branch_id",
-            "code"
-          ]
+          "columns": ["organization_id", "branch_id", "code"]
         }
       },
       "policies": {},
@@ -521,10 +490,7 @@
     "organization.organization_status": {
       "name": "organization_status",
       "schema": "organization",
-      "values": [
-        "ACTIVE",
-        "SUSPENDED"
-      ]
+      "values": ["ACTIVE", "SUSPENDED"]
     }
   },
   "schemas": {
