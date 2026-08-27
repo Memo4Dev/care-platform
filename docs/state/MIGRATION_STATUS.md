@@ -130,6 +130,7 @@ No application or database migration work performed in M0-001 through M0-005.
 | 0024 | `0024_inventory_core.sql`                     | Inventory                | Inventory schema: stock_positions, fifo_layers, ledger_entries, reservations, allocations, transfers, adjustments |
 | 0025 | `0025_add_inventory_permissions.sql`          | Identity/Inventory       | Seeds `inventory.create` permission code into identity.permissions                                                |
 | 0026 | `0026_purchasing_core.sql`                    | Purchasing               | Purchasing schema: suppliers, purchase_orders, purchase_order_items, goods_receipts, goods_receipt_items, purchase_costs |
+| 0027 | `0027_add_purchasing_permissions.sql`          | Identity/Purchasing      | Seeds purchasing.read/write/approve/receive permission codes into identity.permissions                                  |
 
 All migrations are additive-only. No destructive DDL. No production rollout performed (test harness applied).
 
@@ -173,3 +174,12 @@ All migrations are additive-only. No destructive DDL. No production rollout perf
   - `purchasing.purchase_costs` — Additional costs (shipping/customs/handling/other) feeding landed cost and FIFO.
 - All DDL is idempotent (IF NOT EXISTS).
 - Drizzle schema: `packages/database/src/schema/purchasing.ts`.
+
+## M4-010: Purchasing Permissions
+
+`0027_add_purchasing_permissions.sql` — Seeds purchasing permission codes.
+
+- Seeds 4 permission codes into `identity.permissions`: `purchasing.read`, `purchasing.write`, `purchasing.approve`, `purchasing.receive`.
+- Uses `ON CONFLICT ("code") DO NOTHING` for safe re-delivery.
+- IDs follow sequence (000000000033–000000000036) after inventory (000000000032).
+- Legacy `purchase.create`/`purchase.approve` from migration 0002 are preserved unchanged.

@@ -1,33 +1,55 @@
 # Project State
 
-Phase: M3 COMPLETE — READY FOR REVIEW
-Milestone: M3 (Inventory Core) — COMPLETE
-Active task: All M3 tasks done. Awaiting human review and push/merge approval.
-CI: GREEN (pending — no Redis-dependent changes in M3)
-Branch: feat/m3-inventory-core
+Phase: M4 COMPLETE — READY FOR REVIEW
+Milestone: M4 (Purchasing) — COMPLETE
+Active task: All M4 tasks done. Awaiting human review and push/merge approval.
+CI: PENDING — integration tests require TEST_DATABASE_URL
+Branch: feat/m4-purchasing
 
-## M3 milestone summary
+## M4 milestone summary
 
-All 10 M3 tasks complete (M3-001 through M3-010):
+All 10 M4 tasks complete (M4-001 through M4-010):
 
 | Task   | Domain                                                  | Status |
 | ------ | ------------------------------------------------------- | ------ |
-| M3-001 | Inventory persistence (Drizzle schema + migration)      | DONE   |
-| M3-002 | Domain layer (8 aggregates, events, invariants)         | DONE   |
-| M3-003 | Application layer (service, repo, contracts, module)    | DONE   |
-| M3-004 | Permissions (inventory.create)                          | DONE   |
-| M3-005 | HTTP controller (21 endpoints) + Swagger + registration | DONE   |
-| M3-006 | Domain unit tests (136 tests)                           | DONE   |
-| M3-007 | Integration tests (36 tests, native PG)                 | DONE   |
-| M3-008 | Concurrency tests (23 tests)                            | DONE   |
-| M3-009 | HTTP boundary tests (41+ tests)                         | DONE   |
-| M3-010 | Postman collection + Swagger tag updates                | DONE   |
+| M4-001 | Purchasing persistence (Drizzle schema + migration)     | DONE   |
+| M4-002 | Domain layer (3 aggregates, events, invariants)         | DONE   |
+| M4-003 | Application layer (service, repo, contracts, module)    | DONE   |
+| M4-004 | Inventory contract expansion (receiveStock)             | DONE   |
+| M4-005 | HTTP controller (16 endpoints) + Swagger                | DONE   |
+| M4-006 | Domain unit tests (79 tests)                            | DONE   |
+| M4-007 | Integration tests (20 tests, native PG)                 | DONE   |
+| M4-008 | HTTP boundary tests (34 tests)                          | DONE   |
+| M4-009 | Postman collection + Swagger tag updates                | DONE   |
+| M4-010 | State docs + quality gates + permission migration       | DONE   |
 
-**Test suite:** 136 domain unit tests passing; 36 integration + 23 concurrency + 41+ HTTP boundary tests created (require TEST_DATABASE_URL)
-**TypeScript:** zero type errors (apps/api + packages/database)
-**ESLint:** zero errors
-**Prettier:** all files formatted
-**Security:** No open security blockers
+## Quality gates
+
+| Gate | Local | CI | VPS |
+|------|-------|----|-----|
+| TypeScript | ✅ PASS | PENDING | — |
+| ESLint | ✅ PASS | PENDING | — |
+| Prettier | ✅ PASS | PENDING | — |
+| Domain unit tests (79) | ✅ PASS | PENDING | — |
+| Integration tests (20) | NOT EXECUTED | REQUIRED | NOT REQUIRED |
+| HTTP boundary tests (34) | NOT EXECUTED | REQUIRED | NOT REQUIRED |
+| Reviewer | ✅ PASS | — | — |
+| Security review | ✅ PASS | — | — |
+
+## Permission migration (0027)
+
+Seeds `purchasing.read`, `purchasing.write`, `purchasing.approve`, `purchasing.receive` into `identity.permissions`.
+ON CONFLICT DO NOTHING — safe for re-delivery.
+Legacy `purchase.create`/`purchase.approve` (0002) preserved unchanged.
+
+## GR → Inventory boundary
+
+- Purchasing calls `INVENTORY_CONTRACTS.receiveStock()` — never mutates inventory tables directly
+- Landed cost = unitCost + (additionalCosts / totalAcceptedQty)
+- Duplicate GR confirmation is idempotent
+- Partial receipt only credits accepted quantity
+- Over-receipt obeys organization PURCHASE policy
+- Confirmed GR is immutable
 
 ## M4 purchasing — HTTP boundary tests
 

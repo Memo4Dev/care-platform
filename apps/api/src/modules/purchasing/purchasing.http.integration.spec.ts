@@ -245,6 +245,29 @@ describe('Purchasing HTTP boundary', () => {
     const migrationSql = readFileSync(migrationFilePath, 'utf8');
     await testdb.client.query(migrationSql);
 
+    // --- Seed purchasing permissions: re-run 0027_add_purchasing_permissions.sql
+    // The purchasing permission codes (purchasing.read/write/approve/receive) must
+    // exist in identity.permissions for TenantBearerGuard authorization to resolve
+    // OWNER role → permission set correctly.
+    const permMigrationPath = [
+      process.cwd(),
+      resolve(process.cwd(), '../..'),
+      resolve(process.cwd(), '../../..'),
+    ]
+      .map((dir) => resolve(dir, 'packages/database/drizzle/0027_add_purchasing_permissions.sql'))
+      .find((candidate) => {
+        try {
+          readFileSync(candidate);
+          return true;
+        } catch {
+          return false;
+        }
+      });
+    if (permMigrationPath) {
+      const permSql = readFileSync(permMigrationPath, 'utf8');
+      await testdb.client.query(permSql);
+    }
+
     // --- Services ---
     const organizationsService = new OrganizationService(testdb.db, new OrganizationRepository());
     const identityProvisioning = new IdentityProvisioningService(
