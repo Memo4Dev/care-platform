@@ -5,7 +5,7 @@ export function setupSwagger(app: NestFastifyApplication): void {
   const config = new DocumentBuilder()
     .setTitle('Care Platform API')
     .setDescription(
-      'M1/M2/M3/M4 SaaS Foundation — Platform Admin, Tenant Admin, Identity, Subscriptions, Entitlements, Provisioning, Catalog, Pricing, Inventory, Purchasing',
+      'M1–M5 SaaS Foundation — Platform Admin, Tenant Admin, Identity, Subscriptions, Entitlements, Provisioning, Catalog, Pricing, Inventory, Purchasing, Customers',
     )
     .setVersion('0.1.0')
     .addBearerAuth(
@@ -27,6 +27,7 @@ export function setupSwagger(app: NestFastifyApplication): void {
       'Stock positions, reservations, allocations, transfers, adjustments, FIFO layers',
     )
     .addTag('Purchasing', 'Suppliers, purchase orders, goods receipts, purchasing costs')
+    .addTag('Customers', 'Organization-scoped Individual and Business customers for POS sales')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

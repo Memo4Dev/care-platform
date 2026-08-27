@@ -186,3 +186,20 @@ All migrations are additive-only. No destructive DDL. No production rollout perf
 - Applied successfully to VPS `care_platform_staging` on 2026-08-27; the
   migration journal contains 28 entries and all purchasing tables/permissions
   were verified after deployment.
+
+## M5-003: Customers Baseline Persistence
+
+`0028_customers_baseline.sql` — Additive Customers bounded-context migration.
+
+- Creates logical schema `customers` and `customers.business_customers`.
+- Supports only `INDIVIDUAL` and `BUSINESS` customer types, with a database
+  check constraint and organization-scoped nullable customer-code uniqueness.
+- Adds organization, tenant-scope, and display-name indexes; no CRM, address,
+  credit, wallet, or loyalty tables are introduced.
+- The clean native PostgreSQL test harness applies the journaled migration and
+  verifies the schema, tenant isolation, idempotency, outbox, and concurrent
+  uniqueness behavior.
+- This migration is not applied to staging. `drizzle-kit generate` currently
+  emits a false full-schema 0029 diff because historical M1–M4 snapshots are
+  sparse; that untracked artifact was discarded and the journal remains at the
+  reviewed 0028 entry. No generated 0029 migration is part of M5-003.

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Care Platform API — Staging",
-    "description": "M1 + M2 + M3 + M4 (Catalog, Pricing, Inventory & Purchasing) staging environment collection.\n\nBase URL: https://api.care-systems.site\n\nAll endpoints require Bearer JWT unless noted.\n\nMutation requests (POST/PUT/PATCH/DELETE) automatically get an Idempotency-Key header.\n\nM3 adds Tenant Admin endpoints for Inventory management under /api/v1/admin/inventory/.\n\nM4 adds Tenant Admin endpoints for Purchasing management under /api/v1/admin/purchasing/ (suppliers, purchase orders, goods receipts).",
+    "description": "M1 + M2 + M3 + M4 + M5 (Catalog, Pricing, Inventory, Purchasing & Customers) staging environment collection.\n\nBase URL: https://api.care-systems.site\n\nAll endpoints require Bearer JWT unless noted.\n\nMutation requests (POST/PUT/PATCH/DELETE) automatically get an Idempotency-Key header.\n\nM3 adds Tenant Admin endpoints for Inventory management under /api/v1/admin/inventory/.\n\nM4 adds Tenant Admin endpoints for Purchasing management under /api/v1/admin/purchasing/ (suppliers, purchase orders, goods receipts).\n\nM5 adds Tenant Admin customer reference endpoints under /api/v1/admin/customers/.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -22,9 +22,9 @@
   ],
   "variable": [
     { "key": "baseUrl", "value": "https://api.care-systems.site" },
-    { "key": "metricsToken", "value": "w9MqY6C5sTatgG_DqPuGlt9uMSQEe6G-pfIodKWHKpI" },
-    { "key": "platformToken", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwbGF0Zm9ybS1vd25lci05NDgyZTU2MyIsImF1ZCI6ImF1dGhlbnRpY2F0ZWQiLCJpc3MiOiJodHRwczovL3Jia2p6eGFobHh3c2Z0d2drd3p0LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJleHAiOjE3ODc4ODE3NDYsImlhdCI6MTc4Nzc5NTM0NiwiZW1haWwiOiJwbGF0Zm9ybS1vd25lci05NDgyZTU2M0BkZXYiLCJhcHBfbWV0YWRhdGEiOnt9LCJ1c2VyX21ldGFkYXRhIjp7fSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQifQ.OaSzWuZ491r07NGTrjQZbyHnv1pxnCJf_nupOuafPCg" },
-    { "key": "tenantToken", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZW5hbnQtb3duZXItYWVkMTEyYTkiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiaXNzIjoiaHR0cHM6Ly9yYmtqenhhaGx4d3NmdHdna3d6dC5zdXBhYmFzZS5jby9hdXRoL3YxIiwiZXhwIjoxNzg3ODgxNzQ2LCJpYXQiOjE3ODc3OTUzNDYsImVtYWlsIjoidGVuYW50LW93bmVyLWFlZDExMmE5QGRldiIsImFwcF9tZXRhZGF0YSI6e30sInVzZXJfbWV0YWRhdGEiOnt9LCJyb2xlIjoiYXV0aGVudGljYXRlZCJ9.c9_ks3KwjKhfjMjMPwsv2s1MiNCWLukr6mHjAWI5N8M" },
+    { "key": "metricsToken", "value": "" },
+    { "key": "platformToken", "value": "" },
+    { "key": "tenantToken", "value": "" },
     { "key": "tenantId", "value": "926b7e97-0492-48d6-afe6-64c2bf3afc8d" },
     { "key": "tenantOrgId", "value": "926b7e97-0492-48d6-afe6-64c2bf3afc8d" },
     { "key": "tenantBranchId", "value": "d33ea40c-b3c5-42f9-9451-affbbbdb1e88" },
@@ -39,7 +39,8 @@
     { "key": "supplierId", "value": "Supplier ID (auto-set after create)" },
     { "key": "purchaseOrderId", "value": "Purchase order ID (auto-set after create)" },
     { "key": "goodsReceiptId", "value": "Goods receipt ID (auto-set after create)" },
-    { "key": "poItemId", "value": "PO line item ID (auto-set after create)" }
+    { "key": "poItemId", "value": "PO line item ID (auto-set after create)" },
+    { "key": "customerId", "value": "Customer ID (auto-set after create)" }
   ],
   "item": [
     {
@@ -1003,6 +1004,58 @@
               "raw": "{\n  \"reason\": \"Incorrect items\"\n}",
               "options": { "raw": { "language": "json" } }
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tenant Admin — Customers",
+      "item": [
+        {
+          "name": "GET /customers/search",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/customers/search?q=Acme&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "customers", "search"], "query": [{ "key": "q", "value": "Acme" }, { "key": "limit", "value": "20" }] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /customers (create)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/customers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "customers"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"BUSINESS\",\n  \"displayName\": \"Acme Customer\",\n  \"code\": \"ACME-001\",\n  \"phone\": \"+201000000000\",\n  \"email\": \"sales@acme.example.test\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.data && body.data.id) pm.collectionVariables.set('customerId', body.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /customers/:id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/customers/{{customerId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "customers", "{{customerId}}"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         }
       ]

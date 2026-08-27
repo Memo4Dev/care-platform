@@ -6,10 +6,20 @@ None
 
 ## In Progress
 
-None
+- M5 — Sales & POS Core
+  - [x] M5-003 Customer baseline: additive persistence, domain, transactional outbox/idempotency, tenant-admin HTTP boundary, narrow Customers contract, Swagger/Postman, and local review/gates complete. Previously committed staging credentials were removed from the collection; credential rotation remains a pre-push security follow-up.
+  - [ ] M5-004 Persisted POS Cart aggregate and APIs.
+  - [ ] M5-005 Hold/resume Cart reservation lifecycle and configurable TTL policy through Inventory contracts.
+  - [ ] M5-006 Barcode, availability, and Pricing quote integration for Cart lines.
+  - [ ] M5-007 Checkout to immutable `PENDING_PAYMENT` Sale snapshot.
+  - [ ] M5-008 Payment completion contract/internal application path and pre-completion cancellation.
+  - [ ] M5-009 Exactly-once Inventory allocation/FIFO consumption integration and concurrency coverage.
+  - [ ] M5-010 Sales HTTP/OpenAPI/Postman, integration, security, and final quality gates.
+  - [ ] M5 final state reconciliation and await explicit push approval.
 
 ## Done
 
+- M5-003 Customer baseline: `customers.business_customers` persistence and migration 0028; Individual/Business aggregate; tenant-scoped create/get/search; atomic idempotency and Customers contract; strict HTTP validation/authentication/authorization/IDOR coverage; minimized event/response DTOs; Swagger/Postman updates; 567 unit and 376 native PostgreSQL integration tests pass locally. Redis/BullMQ remains CI-required, and staging credential rotation is required before push.
 - M5-002 Sales/POS architecture decision recording: accepted ADR-0009 documents hold-only Cart reservation (15-minute configurable TTL), `PENDING_PAYMENT → COMPLETED | CANCELLED` Sale lifecycle, future Payments completion boundary, and minimal Customers baseline. Relevant architecture/state docs updated before implementation.
 - Architecture design
 - Technology decision

@@ -2,8 +2,8 @@
 
 Phase: M5 IN PROGRESS
 Milestone: M5 (Sales & POS Core)
-Active task: M5-002 — approved Cart/Sale/Customer boundaries recorded before implementation.
-CI: M4 main CI in progress after merge `05d9292`.
+Active task: M5-003 — Customer baseline complete locally; historical staging credential rotation remains a pre-push security follow-up.
+CI: M4 main CI run 38 for merge `05d9292` passed; M5 changes are unpushed and have no remote CI run yet.
 Branch: feat/m5-sales-pos-core
 
 ## M4 milestone summary
@@ -36,6 +36,18 @@ All 10 M4 tasks complete (M4-001 through M4-010):
 | Build                         | —                   | ✅ PASS | ✅ PASS |
 | Reviewer                      | ✅ PASS             | —       | —       |
 | Security review               | ✅ PASS             | —       | —       |
+
+## M5-003 current verification
+
+- Customers persistence and HTTP boundary use real PostgreSQL with the full
+  NestJS/Fastify `app.inject` pipeline.
+- Focused domain/application unit tests: 7 passed.
+- Focused PostgreSQL persistence and HTTP tests: 13 passed (3 persistence,
+  10 HTTP), including concurrent duplicate-code handling, tenant IDOR masking,
+  malformed-ID validation, and idempotency replay/conflict behavior.
+- Full native PostgreSQL regression passed: 376 passed, 2 Redis-only tests
+  skipped. Redis/BullMQ execution remains a CI-required gate.
+- The current M5 implementation is not deployed to staging.
 
 ## Staging deployment — 2026-08-27
 

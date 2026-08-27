@@ -17,6 +17,7 @@ import { PurchasingModule } from '../purchasing/purchasing.module';
 import { PurchasingAdminController } from '../purchasing/purchasing-admin.controller';
 import { ProvisioningModule } from '../provisioning/provisioning.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { CustomersModule } from '../customers/customers.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
     PricingModule,
     InventoryModule,
     PurchasingModule,
+    CustomersModule,
     IdentityModule,
   ],
   controllers: [
