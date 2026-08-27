@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateLandedCost,
   validateGRStatusTransition,
-  validateNonNegativeQuantity,
   validateOverReceiptPolicy,
   validatePOStatusTransition,
   validatePositiveQuantity,
@@ -223,7 +222,9 @@ describe('Purchasing Invariants', () => {
 
     it('given over receipt allowed with max percent and within limit then does not throw', () => {
       // 10 ordered, 20% max → cap = 12. Received 11 is within limit
-      expect(() => validateOverReceiptPolicy(10, 11, { allowOverReceipt: true, maxOverReceiptPercent: 20 })).not.toThrow();
+      expect(() =>
+        validateOverReceiptPolicy(10, 11, { allowOverReceipt: true, maxOverReceiptPercent: 20 }),
+      ).not.toThrow();
     });
 
     it('given over receipt allowed with max percent and exceeds limit then throws', () => {
@@ -241,7 +242,9 @@ describe('Purchasing Invariants', () => {
 
     it('given over receipt allowed with exact cap then does not throw', () => {
       // 10 ordered, 50% max → cap = 15. Received 15 is exactly at cap
-      expect(() => validateOverReceiptPolicy(10, 15, { allowOverReceipt: true, maxOverReceiptPercent: 50 })).not.toThrow();
+      expect(() =>
+        validateOverReceiptPolicy(10, 15, { allowOverReceipt: true, maxOverReceiptPercent: 50 }),
+      ).not.toThrow();
     });
   });
 

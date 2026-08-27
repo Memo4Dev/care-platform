@@ -34,8 +34,5 @@ export interface PurchasingContracts {
    * Load a supplier by ID within an organization.
    * Returns null when no supplier exists.
    */
-  getSupplier(
-    organizationId: string,
-    supplierId: string,
-  ): Promise<SupplierView | null>;
+  getSupplier(organizationId: string, supplierId: string): Promise<SupplierView | null>;
 }

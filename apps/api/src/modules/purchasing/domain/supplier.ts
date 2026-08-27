@@ -262,11 +262,9 @@ export class Supplier {
    */
   deactivate(): void {
     if (!this._isActive) {
-      throw PlatformError.of(
-        ERROR_CODES.OPERATION_NOT_ALLOWED,
-        'Supplier is already inactive.',
-        { details: { aggregateId: this.id, isActive: this._isActive } },
-      );
+      throw PlatformError.of(ERROR_CODES.OPERATION_NOT_ALLOWED, 'Supplier is already inactive.', {
+        details: { aggregateId: this.id, isActive: this._isActive },
+      });
     }
 
     this._isActive = false;

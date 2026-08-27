@@ -36,12 +36,7 @@ export class PurchasingRepository {
     const [row] = await executor
       .select()
       .from(suppliers)
-      .where(
-        and(
-          eq(suppliers.id, supplierId),
-          eq(suppliers.organizationId, organizationId),
-        ),
-      )
+      .where(and(eq(suppliers.id, supplierId), eq(suppliers.organizationId, organizationId)))
       .limit(1);
 
     return (row as SupplierRow | undefined) ?? null;
@@ -55,12 +50,7 @@ export class PurchasingRepository {
     const [row] = await executor
       .select()
       .from(suppliers)
-      .where(
-        and(
-          eq(suppliers.organizationId, organizationId),
-          eq(suppliers.code, code),
-        ),
-      )
+      .where(and(eq(suppliers.organizationId, organizationId), eq(suppliers.code, code)))
       .limit(1);
 
     return (row as SupplierRow | undefined) ?? null;
@@ -170,12 +160,7 @@ export class PurchasingRepository {
     const [row] = await executor
       .select()
       .from(purchaseOrders)
-      .where(
-        and(
-          eq(purchaseOrders.id, poId),
-          eq(purchaseOrders.organizationId, organizationId),
-        ),
-      )
+      .where(and(eq(purchaseOrders.id, poId), eq(purchaseOrders.organizationId, organizationId)))
       .limit(1);
 
     return (row as PurchaseOrderRow | undefined) ?? null;
@@ -353,9 +338,7 @@ export class PurchasingRepository {
     const updated = await executor
       .update(purchaseOrderItems)
       .set({
-        ...(data.receivedQuantity !== undefined
-          ? { receivedQuantity: data.receivedQuantity }
-          : {}),
+        ...(data.receivedQuantity !== undefined ? { receivedQuantity: data.receivedQuantity } : {}),
         updatedAt: new Date(),
       })
       .where(
@@ -381,12 +364,7 @@ export class PurchasingRepository {
     const [row] = await executor
       .select()
       .from(goodsReceipts)
-      .where(
-        and(
-          eq(goodsReceipts.id, grId),
-          eq(goodsReceipts.organizationId, organizationId),
-        ),
-      )
+      .where(and(eq(goodsReceipts.id, grId), eq(goodsReceipts.organizationId, organizationId)))
       .limit(1);
 
     return (row as GoodsReceiptRow | undefined) ?? null;
@@ -459,12 +437,8 @@ export class PurchasingRepository {
       .update(goodsReceipts)
       .set({
         ...(data.status !== undefined ? { status: data.status } : {}),
-        ...(data.confirmedAt !== undefined
-          ? { confirmedAt: data.confirmedAt }
-          : {}),
-        ...(data.confirmedBy !== undefined
-          ? { confirmedBy: data.confirmedBy }
-          : {}),
+        ...(data.confirmedAt !== undefined ? { confirmedAt: data.confirmedAt } : {}),
+        ...(data.confirmedBy !== undefined ? { confirmedBy: data.confirmedBy } : {}),
         updatedAt: new Date(),
         version: version + 1,
       })
@@ -645,12 +619,7 @@ export class PurchasingRepository {
     const [existing] = await executor
       .select()
       .from(idempotencyOutcomes)
-      .where(
-        and(
-          eq(idempotencyOutcomes.idempotencyKey, key),
-          eq(idempotencyOutcomes.scope, scope),
-        ),
-      )
+      .where(and(eq(idempotencyOutcomes.idempotencyKey, key), eq(idempotencyOutcomes.scope, scope)))
       .limit(1);
 
     if (existing) {

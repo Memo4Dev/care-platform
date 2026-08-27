@@ -15,8 +15,6 @@ import {
   products,
   productVariants,
   unitDefinitions,
-  stockTransferItems,
-  stockPositions,
 } from '@commerce-platform/database';
 import { createTestDatabase, type TestDatabase } from '@commerce-platform/testing';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -512,7 +510,15 @@ describe('Purchasing HTTP boundary', () => {
         payload: {
           purchaseOrderId: 'bad',
           warehouseId: 'bad',
-          items: [{ purchaseOrderItemId: 'x', variantId: 'y', quantityReceived: '', quantityAccepted: '', unitCost: '' }],
+          items: [
+            {
+              purchaseOrderItemId: 'x',
+              variantId: 'y',
+              quantityReceived: '',
+              quantityAccepted: '',
+              unitCost: '',
+            },
+          ],
         },
       });
       expect(response.statusCode).toBe(422);

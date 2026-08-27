@@ -1,7 +1,16 @@
 import { ERROR_CODES, PlatformError } from '@commerce-platform/contracts';
 
-import { validateGRStatusTransition, validateNonNegativeQuantity, validatePositiveQuantity, validateReceiptCompleteness } from './invariants';
-import type { GoodsReceiptCostEventData, GoodsReceiptItemEventData, PurchasingDomainEvent } from './events';
+import {
+  validateGRStatusTransition,
+  validateNonNegativeQuantity,
+  validatePositiveQuantity,
+  validateReceiptCompleteness,
+} from './invariants';
+import type {
+  GoodsReceiptCostEventData,
+  GoodsReceiptItemEventData,
+  PurchasingDomainEvent,
+} from './events';
 
 /**
  * Goods Receipt status values and type (docs/architecture/16-purchasing.md).
@@ -142,9 +151,13 @@ export class GoodsReceipt {
       });
     }
     if (!input.items || input.items.length === 0) {
-      throw PlatformError.of(ERROR_CODES.VALIDATION_FAILED, 'Goods receipt must have at least one item.', {
-        details: { itemCount: input.items?.length ?? 0 },
-      });
+      throw PlatformError.of(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Goods receipt must have at least one item.',
+        {
+          details: { itemCount: input.items?.length ?? 0 },
+        },
+      );
     }
 
     const clockFn = options.clock ?? (() => new Date());
@@ -379,14 +392,22 @@ export class GoodsReceipt {
       });
     }
     if (!input.purchaseOrderItemId || input.purchaseOrderItemId.trim().length === 0) {
-      throw PlatformError.of(ERROR_CODES.VALIDATION_FAILED, `Item[${index}] purchaseOrderItemId is mandatory.`, {
-        details: { index },
-      });
+      throw PlatformError.of(
+        ERROR_CODES.VALIDATION_FAILED,
+        `Item[${index}] purchaseOrderItemId is mandatory.`,
+        {
+          details: { index },
+        },
+      );
     }
     if (!input.variantId || input.variantId.trim().length === 0) {
-      throw PlatformError.of(ERROR_CODES.VALIDATION_FAILED, `Item[${index}] variantId is mandatory.`, {
-        details: { index },
-      });
+      throw PlatformError.of(
+        ERROR_CODES.VALIDATION_FAILED,
+        `Item[${index}] variantId is mandatory.`,
+        {
+          details: { index },
+        },
+      );
     }
 
     const quantityRejected = input.quantityRejected ?? 0;
@@ -415,9 +436,13 @@ export class GoodsReceipt {
       });
     }
     if (!PURCHASE_COST_TYPES.includes(input.costType)) {
-      throw PlatformError.of(ERROR_CODES.VALIDATION_FAILED, `Cost[${index}] has an unsupported cost type: ${input.costType}.`, {
-        details: { index, costType: input.costType },
-      });
+      throw PlatformError.of(
+        ERROR_CODES.VALIDATION_FAILED,
+        `Cost[${index}] has an unsupported cost type: ${input.costType}.`,
+        {
+          details: { index, costType: input.costType },
+        },
+      );
     }
     validatePositiveQuantity(input.amount, `costs[${index}].amount`);
 

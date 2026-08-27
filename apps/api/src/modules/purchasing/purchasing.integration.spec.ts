@@ -21,10 +21,7 @@ import { PurchasingService } from './application/purchasing.service';
 import { PurchasingRepository } from './infrastructure/purchasing.repository';
 import { InventoryService } from '../inventory/application/inventory.service';
 import { InventoryRepository } from '../inventory/infrastructure/inventory.repository';
-import type {
-  InventoryContracts,
-  ReceiveStockInput,
-} from '../inventory/contracts';
+import type { InventoryContracts, ReceiveStockInput } from '../inventory/contracts';
 
 // ---------------------------------------------------------------------------
 // Conditional describe: skip when no PostgreSQL is reachable
@@ -72,10 +69,10 @@ describeIfDb('Purchasing Integration', () => {
 
   async function seedOrg(): Promise<string> {
     const id = crypto.randomUUID();
-    await pool.query(
-      `INSERT INTO organization.organizations (id, name) VALUES ($1, $2)`,
-      [id, `Purch Test Org ${id.slice(0, 8)}`],
-    );
+    await pool.query(`INSERT INTO organization.organizations (id, name) VALUES ($1, $2)`, [
+      id,
+      `Purch Test Org ${id.slice(0, 8)}`,
+    ]);
     return id;
   }
 
@@ -167,24 +164,14 @@ describeIfDb('Purchasing Integration', () => {
       actor,
     );
 
-    const submitted = await service.submitPO(
-      orgId,
-      po.id,
-      `idem-${crypto.randomUUID()}`,
-      actor,
-    );
+    const submitted = await service.submitPO(orgId, po.id, `idem-${crypto.randomUUID()}`, actor);
     const approved = await service.approvePO(
       orgId,
       submitted.id,
       `idem-${crypto.randomUUID()}`,
       actor,
     );
-    const sent = await service.sendPO(
-      orgId,
-      approved.id,
-      `idem-${crypto.randomUUID()}`,
-      actor,
-    );
+    const sent = await service.sendPO(orgId, approved.id, `idem-${crypto.randomUUID()}`, actor);
 
     const items = await service.getPOItems(orgId, sent.id);
     return { po: sent, items };
@@ -267,9 +254,7 @@ describeIfDb('Purchasing Integration', () => {
         {
           supplierId,
           warehouseId,
-          items: [
-            { variantId, quantity: '100', unitCost: '5.00' },
-          ],
+          items: [{ variantId, quantity: '100', unitCost: '5.00' }],
         },
         `idem-${crypto.randomUUID()}`,
         actor,
@@ -427,14 +412,7 @@ describeIfDb('Purchasing Integration', () => {
       const supplierId = await seedSupplier(orgId);
 
       // Create PO for 100 units
-      const { po, items } = await createSentPO(
-        orgId,
-        supplierId,
-        warehouseId,
-        variantId,
-        100,
-        5.0,
-      );
+      const { po, items } = await createSentPO(orgId, supplierId, warehouseId, variantId, 100, 5.0);
 
       const poItem = items[0];
 
@@ -459,12 +437,7 @@ describeIfDb('Purchasing Integration', () => {
       );
 
       // Confirm the GR
-      await service.confirmGR(
-        orgId,
-        gr.id,
-        `idem-${crypto.randomUUID()}`,
-        actor,
-      );
+      await service.confirmGR(orgId, gr.id, `idem-${crypto.randomUUID()}`, actor);
 
       // Verify PO item received_quantity was updated
       const { rows } = await pool.query(
@@ -491,14 +464,7 @@ describeIfDb('Purchasing Integration', () => {
       const variantId = await seedVariant(orgId);
       const supplierId = await seedSupplier(orgId);
 
-      const { po, items } = await createSentPO(
-        orgId,
-        supplierId,
-        warehouseId,
-        variantId,
-        100,
-        5.0,
-      );
+      const { po, items } = await createSentPO(orgId, supplierId, warehouseId, variantId, 100, 5.0);
 
       const poItem = items[0];
 
@@ -547,14 +513,7 @@ describeIfDb('Purchasing Integration', () => {
       const supplierId = await seedSupplier(orgId);
 
       // Create PO for 100 units
-      const { po, items } = await createSentPO(
-        orgId,
-        supplierId,
-        warehouseId,
-        variantId,
-        100,
-        5.0,
-      );
+      const { po, items } = await createSentPO(orgId, supplierId, warehouseId, variantId, 100, 5.0);
 
       const poItem = items[0];
 
@@ -579,12 +538,7 @@ describeIfDb('Purchasing Integration', () => {
       );
 
       // Confirm — over-receipt is persisted at the service level
-      await service.confirmGR(
-        orgId,
-        gr.id,
-        `idem-${crypto.randomUUID()}`,
-        actor,
-      );
+      await service.confirmGR(orgId, gr.id, `idem-${crypto.randomUUID()}`, actor);
 
       // PO item received_quantity reflects over-receipt
       const { rows } = await pool.query(
@@ -601,9 +555,7 @@ describeIfDb('Purchasing Integration', () => {
         [gr.id, orgId],
       );
       expect(grItems).toHaveLength(1);
-      expect(
-        dec((grItems[0] as Record<string, unknown>).quantity_accepted as string),
-      ).toBe('120');
+      expect(dec((grItems[0] as Record<string, unknown>).quantity_accepted as string)).toBe('120');
     });
 
     it('confirmed receipt cannot be silently edited — update CONFIRMED GR fails', async () => {
@@ -613,14 +565,7 @@ describeIfDb('Purchasing Integration', () => {
       const variantId = await seedVariant(orgId);
       const supplierId = await seedSupplier(orgId);
 
-      const { po, items } = await createSentPO(
-        orgId,
-        supplierId,
-        warehouseId,
-        variantId,
-        100,
-        5.0,
-      );
+      const { po, items } = await createSentPO(orgId, supplierId, warehouseId, variantId, 100, 5.0);
 
       const gr = await service.createGR(
         orgId,
@@ -642,24 +587,14 @@ describeIfDb('Purchasing Integration', () => {
       );
 
       // Confirm the GR
-      const confirmed = await service.confirmGR(
-        orgId,
-        gr.id,
-        `idem-${crypto.randomUUID()}`,
-        actor,
-      );
+      const confirmed = await service.confirmGR(orgId, gr.id, `idem-${crypto.randomUUID()}`, actor);
 
       expect(confirmed.status).toBe('CONFIRMED');
 
       // Attempt to confirm again (status transition PENDING → CONFIRMED is invalid on CONFIRMED)
       let error: unknown = null;
       try {
-        await service.confirmGR(
-          orgId,
-          gr.id,
-          `idem-${crypto.randomUUID()}`,
-          actor,
-        );
+        await service.confirmGR(orgId, gr.id, `idem-${crypto.randomUUID()}`, actor);
       } catch (caught) {
         error = caught;
       }
@@ -693,16 +628,10 @@ describeIfDb('Purchasing Integration', () => {
 
       return {
         async getAvailability(orgId, warehouseId, variantId) {
-          const pos = await invService.getStockPosition(
-            orgId,
-            warehouseId,
-            variantId,
-          );
+          const pos = await invService.getStockPosition(orgId, warehouseId, variantId);
           if (!pos) return null;
           const avail =
-            parseFloat(pos.onHand) -
-            parseFloat(pos.reserved) -
-            parseFloat(pos.allocated);
+            parseFloat(pos.onHand) - parseFloat(pos.reserved) - parseFloat(pos.allocated);
           return {
             stockPositionId: pos.id,
             organizationId: pos.organizationId,
@@ -733,11 +662,7 @@ describeIfDb('Purchasing Integration', () => {
 
     it('receiving creates correct Inventory receipt effect — stock_positions on_hand', async () => {
       const realAdapter = createRealInventoryAdapter(testdb.db);
-      const realService = new PurchasingService(
-        testdb.db,
-        repository,
-        realAdapter,
-      );
+      const realService = new PurchasingService(testdb.db, repository, realAdapter);
 
       const orgId = await seedOrg();
       const branchId = await seedBranch(orgId);
@@ -777,12 +702,7 @@ describeIfDb('Purchasing Integration', () => {
       );
 
       // Confirm GR — this triggers inventory receiveStock
-      await realService.confirmGR(
-        orgId,
-        gr.id,
-        `idem-${crypto.randomUUID()}`,
-        actor,
-      );
+      await realService.confirmGR(orgId, gr.id, `idem-${crypto.randomUUID()}`, actor);
 
       // Verify inventory.stock_positions has correct on_hand
       const { rows } = await pool.query(
@@ -802,11 +722,7 @@ describeIfDb('Purchasing Integration', () => {
 
     it('FIFO layers reflect actual received quantity/cost', async () => {
       const realAdapter = createRealInventoryAdapter(testdb.db);
-      const realService = new PurchasingService(
-        testdb.db,
-        repository,
-        realAdapter,
-      );
+      const realService = new PurchasingService(testdb.db, repository, realAdapter);
 
       const orgId = await seedOrg();
       const branchId = await seedBranch(orgId);
@@ -843,12 +759,7 @@ describeIfDb('Purchasing Integration', () => {
         actor,
       );
 
-      await realService.confirmGR(
-        orgId,
-        gr.id,
-        `idem-${crypto.randomUUID()}`,
-        actor,
-      );
+      await realService.confirmGR(orgId, gr.id, `idem-${crypto.randomUUID()}`, actor);
 
       // Verify FIFO layer has correct quantity and unit_cost
       // fifo_layers links to stock_positions for warehouse/variant filtering
@@ -870,11 +781,7 @@ describeIfDb('Purchasing Integration', () => {
 
     it('additional cost allocation is correct — landed cost = unitCost + additionalCosts / totalAcceptedQty', async () => {
       const realAdapter = createRealInventoryAdapter(testdb.db);
-      const realService = new PurchasingService(
-        testdb.db,
-        repository,
-        realAdapter,
-      );
+      const realService = new PurchasingService(testdb.db, repository, realAdapter);
 
       const orgId = await seedOrg();
       const branchId = await seedBranch(orgId);
@@ -921,12 +828,7 @@ describeIfDb('Purchasing Integration', () => {
         actor,
       );
 
-      await realService.confirmGR(
-        orgId,
-        gr.id,
-        `idem-${crypto.randomUUID()}`,
-        actor,
-      );
+      await realService.confirmGR(orgId, gr.id, `idem-${crypto.randomUUID()}`, actor);
 
       // Verify additional costs were persisted
       const { rows: costRows } = await pool.query(
@@ -964,9 +866,9 @@ describeIfDb('Purchasing Integration', () => {
     it('duplicate idempotent request replays — same key returns same result', async () => {
       const orgId = await seedOrg();
       const branchId = await seedBranch(orgId);
-      const warehouseId = await seedWarehouse(orgId, branchId);
-      const variantId = await seedVariant(orgId);
-      const supplierId = await seedSupplier(orgId);
+      await seedWarehouse(orgId, branchId);
+      await seedVariant(orgId);
+      await seedSupplier(orgId);
 
       const idemKey = `idem-${crypto.randomUUID()}`;
 
@@ -1006,14 +908,7 @@ describeIfDb('Purchasing Integration', () => {
       const variantId = await seedVariant(orgId);
       const supplierId = await seedSupplier(orgId);
 
-      const { po, items } = await createSentPO(
-        orgId,
-        supplierId,
-        warehouseId,
-        variantId,
-        100,
-        5.0,
-      );
+      const { po, items } = await createSentPO(orgId, supplierId, warehouseId, variantId, 100, 5.0);
 
       const idemKey = `idem-${crypto.randomUUID()}`;
 
@@ -1088,14 +983,7 @@ describeIfDb('Purchasing Integration', () => {
       const variantId = await seedVariant(orgId);
       const supplierId = await seedSupplier(orgId);
 
-      const { po, items } = await createSentPO(
-        orgId,
-        supplierId,
-        warehouseId,
-        variantId,
-        100,
-        5.0,
-      );
+      const { po, items } = await createSentPO(orgId, supplierId, warehouseId, variantId, 100, 5.0);
 
       const gr = await service.createGR(
         orgId,
@@ -1117,12 +1005,7 @@ describeIfDb('Purchasing Integration', () => {
       );
 
       // Confirm GR via service with mock adapter
-      await service.confirmGR(
-        orgId,
-        gr.id,
-        `idem-${crypto.randomUUID()}`,
-        actor,
-      );
+      await service.confirmGR(orgId, gr.id, `idem-${crypto.randomUUID()}`, actor);
 
       // Verify receiveStock was called exactly once via the contract
       expect(inventoryReceipts).toHaveLength(1);
@@ -1149,9 +1032,7 @@ describeIfDb('Purchasing Integration', () => {
       expect(outboxRows.length).toBeGreaterThanOrEqual(1);
       expect(
         outboxRows.some(
-          (r) =>
-            (r as Record<string, unknown>).event_type ===
-            'purchasing.goods-receipt-confirmed',
+          (r) => (r as Record<string, unknown>).event_type === 'purchasing.goods-receipt-confirmed',
         ),
       ).toBe(true);
     });
@@ -1171,14 +1052,7 @@ describeIfDb('Purchasing Integration', () => {
       const supplierA = await seedSupplier(orgA, 'SUP-IS1');
 
       // Create PO + GR in org A
-      const { po, items } = await createSentPO(
-        orgA,
-        supplierA,
-        warehouseA,
-        variantA,
-        100,
-        5.0,
-      );
+      const { po, items } = await createSentPO(orgA, supplierA, warehouseA, variantA, 100, 5.0);
 
       const gr = await service.createGR(
         orgA,
@@ -1246,9 +1120,7 @@ describeIfDb('Purchasing Integration', () => {
         [supplier.id],
       );
       expect(rows).toHaveLength(1);
-      expect((rows[0] as Record<string, unknown>).event_type).toBe(
-        'purchasing.supplier-created',
-      );
+      expect((rows[0] as Record<string, unknown>).event_type).toBe('purchasing.supplier-created');
       expect((rows[0] as Record<string, unknown>).aggregate_type).toBe('Purchasing');
     });
 
@@ -1275,7 +1147,11 @@ describeIfDb('Purchasing Integration', () => {
          WHERE aggregate_id = $1 ORDER BY created_at`,
         [po.id],
       );
-      expect(rows.some((r) => (r as Record<string, unknown>).event_type === 'purchasing.purchase-order-created')).toBe(true);
+      expect(
+        rows.some(
+          (r) => (r as Record<string, unknown>).event_type === 'purchasing.purchase-order-created',
+        ),
+      ).toBe(true);
     });
 
     it('GR creation writes outbox event', async () => {
@@ -1285,14 +1161,7 @@ describeIfDb('Purchasing Integration', () => {
       const variantId = await seedVariant(orgId);
       const supplierId = await seedSupplier(orgId);
 
-      const { po, items } = await createSentPO(
-        orgId,
-        supplierId,
-        warehouseId,
-        variantId,
-        100,
-        5.0,
-      );
+      const { po, items } = await createSentPO(orgId, supplierId, warehouseId, variantId, 100, 5.0);
 
       const gr = await service.createGR(
         orgId,
@@ -1320,9 +1189,7 @@ describeIfDb('Purchasing Integration', () => {
       );
       expect(
         rows.some(
-          (r) =>
-            (r as Record<string, unknown>).event_type ===
-            'purchasing.goods-receipt-created',
+          (r) => (r as Record<string, unknown>).event_type === 'purchasing.goods-receipt-created',
         ),
       ).toBe(true);
     });
@@ -1358,24 +1225,9 @@ describeIfDb('Purchasing Integration', () => {
       actor,
     );
 
-    const submitted = await svc.submitPO(
-      orgId,
-      po.id,
-      `idem-${crypto.randomUUID()}`,
-      actor,
-    );
-    const approved = await svc.approvePO(
-      orgId,
-      submitted.id,
-      `idem-${crypto.randomUUID()}`,
-      actor,
-    );
-    const sent = await svc.sendPO(
-      orgId,
-      approved.id,
-      `idem-${crypto.randomUUID()}`,
-      actor,
-    );
+    const submitted = await svc.submitPO(orgId, po.id, `idem-${crypto.randomUUID()}`, actor);
+    const approved = await svc.approvePO(orgId, submitted.id, `idem-${crypto.randomUUID()}`, actor);
+    const sent = await svc.sendPO(orgId, approved.id, `idem-${crypto.randomUUID()}`, actor);
 
     const items = await svc.getPOItems(orgId, sent.id);
     return { po: sent, items };

@@ -11,19 +11,10 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { z } from 'zod';
 import { PlatformError } from '@commerce-platform/contracts';
-import {
-  TenantBearerGuard,
-  type AuthenticatedRequest,
-} from '../../common/auth/http-auth.guards';
+import { TenantBearerGuard, type AuthenticatedRequest } from '../../common/auth/http-auth.guards';
 import type { OrganizationUserPrincipal } from '../../common/auth/authenticated-principal';
 import { correlationIdFor } from '../../common/http/correlation';
 import { IDENTITY_CONTRACTS, type IdentityContracts } from '../identity/contracts';
@@ -219,10 +210,7 @@ export class PurchasingAdminController {
   @ApiResponse({ status: 403, description: 'Permission denied' })
   @ApiResponse({ status: 409, description: 'Idempotency key conflict' })
   @ApiResponse({ status: 422, description: 'Validation error' })
-  async createSupplier(
-    @Req() request: AuthenticatedRequest,
-    @Body() body: unknown,
-  ) {
+  async createSupplier(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const principal = this.principal(request);
     await this.require(principal, request, 'purchasing.write');
     const idempotencyKey = this.requireIdempotencyKey(request);
@@ -327,25 +315,16 @@ export class PurchasingAdminController {
   @ApiResponse({ status: 200, description: 'Purchase order found' })
   @ApiResponse({ status: 403, description: 'Permission denied' })
   @ApiResponse({ status: 404, description: 'Purchase order not found' })
-  async getPurchaseOrder(
-    @Req() request: AuthenticatedRequest,
-    @Param('id') poId: string,
-  ) {
+  async getPurchaseOrder(@Req() request: AuthenticatedRequest, @Param('id') poId: string) {
     const principal = this.principal(request);
     await this.require(principal, request, 'purchasing.read');
-    const po = await this.purchasingService.getPOById(
-      principal.organizationId,
-      poId,
-    );
+    const po = await this.purchasingService.getPOById(principal.organizationId, poId);
     if (!po) {
       throw PlatformError.notFound(`Purchase order ${poId} not found.`, {
         details: { poId },
       });
     }
-    const items = await this.purchasingService.getPOItems(
-      principal.organizationId,
-      poId,
-    );
+    const items = await this.purchasingService.getPOItems(principal.organizationId, poId);
     return toJsonPOWithItems(po, items);
   }
 
@@ -359,10 +338,7 @@ export class PurchasingAdminController {
   @ApiResponse({ status: 403, description: 'Permission denied' })
   @ApiResponse({ status: 409, description: 'Idempotency key conflict' })
   @ApiResponse({ status: 422, description: 'Validation error' })
-  async createPurchaseOrder(
-    @Req() request: AuthenticatedRequest,
-    @Body() body: unknown,
-  ) {
+  async createPurchaseOrder(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const principal = this.principal(request);
     await this.require(principal, request, 'purchasing.write');
     const idempotencyKey = this.requireIdempotencyKey(request);
@@ -433,10 +409,7 @@ export class PurchasingAdminController {
   @ApiResponse({ status: 403, description: 'Permission denied' })
   @ApiResponse({ status: 404, description: 'Purchase order not found' })
   @ApiResponse({ status: 409, description: 'Idempotency key conflict' })
-  async submitPurchaseOrder(
-    @Req() request: AuthenticatedRequest,
-    @Param('id') poId: string,
-  ) {
+  async submitPurchaseOrder(@Req() request: AuthenticatedRequest, @Param('id') poId: string) {
     const principal = this.principal(request);
     await this.require(principal, request, 'purchasing.write');
     const idempotencyKey = this.requireIdempotencyKey(request);
@@ -456,10 +429,7 @@ export class PurchasingAdminController {
   @ApiResponse({ status: 403, description: 'Permission denied' })
   @ApiResponse({ status: 404, description: 'Purchase order not found' })
   @ApiResponse({ status: 409, description: 'Idempotency key conflict' })
-  async approvePurchaseOrder(
-    @Req() request: AuthenticatedRequest,
-    @Param('id') poId: string,
-  ) {
+  async approvePurchaseOrder(@Req() request: AuthenticatedRequest, @Param('id') poId: string) {
     const principal = this.principal(request);
     await this.require(principal, request, 'purchasing.approve');
     const idempotencyKey = this.requireIdempotencyKey(request);
@@ -506,10 +476,7 @@ export class PurchasingAdminController {
   @ApiResponse({ status: 403, description: 'Permission denied' })
   @ApiResponse({ status: 404, description: 'Purchase order not found' })
   @ApiResponse({ status: 409, description: 'Idempotency key conflict' })
-  async sendPurchaseOrder(
-    @Req() request: AuthenticatedRequest,
-    @Param('id') poId: string,
-  ) {
+  async sendPurchaseOrder(@Req() request: AuthenticatedRequest, @Param('id') poId: string) {
     const principal = this.principal(request);
     await this.require(principal, request, 'purchasing.write');
     const idempotencyKey = this.requireIdempotencyKey(request);
@@ -597,29 +564,17 @@ export class PurchasingAdminController {
   @ApiResponse({ status: 200, description: 'Goods receipt found' })
   @ApiResponse({ status: 403, description: 'Permission denied' })
   @ApiResponse({ status: 404, description: 'Goods receipt not found' })
-  async getGoodsReceipt(
-    @Req() request: AuthenticatedRequest,
-    @Param('id') grId: string,
-  ) {
+  async getGoodsReceipt(@Req() request: AuthenticatedRequest, @Param('id') grId: string) {
     const principal = this.principal(request);
     await this.require(principal, request, 'purchasing.read');
-    const gr = await this.purchasingService.getGRById(
-      principal.organizationId,
-      grId,
-    );
+    const gr = await this.purchasingService.getGRById(principal.organizationId, grId);
     if (!gr) {
       throw PlatformError.notFound(`Goods receipt ${grId} not found.`, {
         details: { grId },
       });
     }
-    const items = await this.purchasingService.getGRItems(
-      principal.organizationId,
-      grId,
-    );
-    const costs = await this.purchasingService.getGRCosts(
-      principal.organizationId,
-      grId,
-    );
+    const items = await this.purchasingService.getGRItems(principal.organizationId, grId);
+    const costs = await this.purchasingService.getGRCosts(principal.organizationId, grId);
     return toJsonGRWithDetails(gr, items, costs);
   }
 
@@ -633,10 +588,7 @@ export class PurchasingAdminController {
   @ApiResponse({ status: 403, description: 'Permission denied' })
   @ApiResponse({ status: 409, description: 'Idempotency key conflict' })
   @ApiResponse({ status: 422, description: 'Validation error' })
-  async createGoodsReceipt(
-    @Req() request: AuthenticatedRequest,
-    @Body() body: unknown,
-  ) {
+  async createGoodsReceipt(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const principal = this.principal(request);
     await this.require(principal, request, 'purchasing.receive');
     const idempotencyKey = this.requireIdempotencyKey(request);
@@ -646,9 +598,7 @@ export class PurchasingAdminController {
       {
         purchaseOrderId: input.purchaseOrderId,
         warehouseId: input.warehouseId,
-        receivedDate: input.receivedDate
-          ? new Date(input.receivedDate)
-          : undefined,
+        receivedDate: input.receivedDate ? new Date(input.receivedDate) : undefined,
         notes: input.notes ?? undefined,
         items: input.items.map((item) => ({
           purchaseOrderItemId: item.purchaseOrderItemId,
@@ -674,17 +624,13 @@ export class PurchasingAdminController {
   @Post('goods-receipts/:id/confirm')
   @HttpCode(200)
   @ApiOperation({
-    summary:
-      'Confirm a goods receipt (PENDING → CONFIRMED, triggers inventory receipt)',
+    summary: 'Confirm a goods receipt (PENDING → CONFIRMED, triggers inventory receipt)',
   })
   @ApiResponse({ status: 200, description: 'Goods receipt confirmed' })
   @ApiResponse({ status: 403, description: 'Permission denied' })
   @ApiResponse({ status: 404, description: 'Goods receipt not found' })
   @ApiResponse({ status: 409, description: 'Idempotency key conflict' })
-  async confirmGoodsReceipt(
-    @Req() request: AuthenticatedRequest,
-    @Param('id') grId: string,
-  ) {
+  async confirmGoodsReceipt(@Req() request: AuthenticatedRequest, @Param('id') grId: string) {
     const principal = this.principal(request);
     await this.require(principal, request, 'purchasing.receive');
     const idempotencyKey = this.requireIdempotencyKey(request);
@@ -754,10 +700,9 @@ export class PurchasingAdminController {
   private requireIdempotencyKey(request: AuthenticatedRequest): string {
     const key = request.headers['idempotency-key'];
     if (typeof key !== 'string' || !key.trim() || key.length > 255)
-      throw PlatformError.validationFailed(
-        'Idempotency-Key is required for mutation requests.',
-        { details: { field: 'Idempotency-Key' } },
-      );
+      throw PlatformError.validationFailed('Idempotency-Key is required for mutation requests.', {
+        details: { field: 'Idempotency-Key' },
+      });
     return key;
   }
 }
@@ -818,10 +763,7 @@ function toJsonPOItem(item: PurchaseOrderItemRow) {
   };
 }
 
-function toJsonPOWithItems(
-  row: PurchaseOrderRow,
-  items: PurchaseOrderItemRow[],
-) {
+function toJsonPOWithItems(row: PurchaseOrderRow, items: PurchaseOrderItemRow[]) {
   return {
     ...toJsonPO(row),
     items: items.map(toJsonPOItem),

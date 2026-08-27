@@ -20,8 +20,19 @@ const ACTOR_ID = '01980000-0000-7000-8000-0000000000E1';
 const CLOCK = () => new Date('2025-06-15T10:00:00Z');
 
 function createValidGR(overrides?: {
-  items?: Array<{ id: string; purchaseOrderItemId: string; variantId: string; quantityReceived: number; quantityAccepted: number; unitCost: number }>;
-  costs?: Array<{ id: string; costType: 'SHIPPING' | 'CUSTOMS' | 'HANDLING' | 'OTHER'; amount: number }>;
+  items?: Array<{
+    id: string;
+    purchaseOrderItemId: string;
+    variantId: string;
+    quantityReceived: number;
+    quantityAccepted: number;
+    unitCost: number;
+  }>;
+  costs?: Array<{
+    id: string;
+    costType: 'SHIPPING' | 'CUSTOMS' | 'HANDLING' | 'OTHER';
+    amount: number;
+  }>;
 }): GoodsReceipt {
   return GoodsReceipt.create(
     {
@@ -30,7 +41,14 @@ function createValidGR(overrides?: {
       purchaseOrderId: PO_ID,
       warehouseId: WH_ID,
       items: overrides?.items ?? [
-        { id: GR_ITEM_ID_1, purchaseOrderItemId: PO_ITEM_ID_1, variantId: VAR_ID_1, quantityReceived: 10, quantityAccepted: 10, unitCost: 5.0 },
+        {
+          id: GR_ITEM_ID_1,
+          purchaseOrderItemId: PO_ITEM_ID_1,
+          variantId: VAR_ID_1,
+          quantityReceived: 10,
+          quantityAccepted: 10,
+          unitCost: 5.0,
+        },
       ],
       costs: overrides?.costs,
     },
@@ -88,7 +106,15 @@ describe('GoodsReceipt', () => {
           purchaseOrderId: PO_ID,
           warehouseId: WH_ID,
           items: [
-            { id: GR_ITEM_ID_1, purchaseOrderItemId: PO_ITEM_ID_1, variantId: VAR_ID_1, quantityReceived: 10, quantityAccepted: 8, quantityRejected: 0, unitCost: 5.0 },
+            {
+              id: GR_ITEM_ID_1,
+              purchaseOrderItemId: PO_ITEM_ID_1,
+              variantId: VAR_ID_1,
+              quantityReceived: 10,
+              quantityAccepted: 8,
+              quantityRejected: 0,
+              unitCost: 5.0,
+            },
           ],
         });
       } catch (caught) {
@@ -108,7 +134,14 @@ describe('GoodsReceipt', () => {
           purchaseOrderId: PO_ID,
           warehouseId: WH_ID,
           items: [
-            { id: GR_ITEM_ID_1, purchaseOrderItemId: PO_ITEM_ID_1, variantId: VAR_ID_1, quantityReceived: 0, quantityAccepted: 0, unitCost: 5.0 },
+            {
+              id: GR_ITEM_ID_1,
+              purchaseOrderItemId: PO_ITEM_ID_1,
+              variantId: VAR_ID_1,
+              quantityReceived: 0,
+              quantityAccepted: 0,
+              unitCost: 5.0,
+            },
           ],
         });
       } catch (caught) {
@@ -155,7 +188,16 @@ describe('GoodsReceipt', () => {
         status: 'PENDING',
         receivedDate: new Date('2025-06-15T10:00:00Z'),
         items: [
-          { id: GR_ITEM_ID_1, purchaseOrderItemId: PO_ITEM_ID_1, variantId: VAR_ID_1, quantityReceived: 10, quantityAccepted: 0, quantityRejected: 10, unitCost: 5.0, notes: null },
+          {
+            id: GR_ITEM_ID_1,
+            purchaseOrderItemId: PO_ITEM_ID_1,
+            variantId: VAR_ID_1,
+            quantityReceived: 10,
+            quantityAccepted: 0,
+            quantityRejected: 10,
+            unitCost: 5.0,
+            notes: null,
+          },
         ],
         costs: [],
         version: 1,
@@ -256,7 +298,15 @@ describe('GoodsReceipt', () => {
           purchaseOrderId: PO_ID,
           warehouseId: WH_ID,
           items: [
-            { id: GR_ITEM_ID_1, purchaseOrderItemId: PO_ITEM_ID_1, variantId: VAR_ID_1, quantityReceived: 10, quantityAccepted: 8, quantityRejected: 2, unitCost: 5.0 },
+            {
+              id: GR_ITEM_ID_1,
+              purchaseOrderItemId: PO_ITEM_ID_1,
+              variantId: VAR_ID_1,
+              quantityReceived: 10,
+              quantityAccepted: 8,
+              quantityRejected: 2,
+              unitCost: 5.0,
+            },
           ],
         },
         { clock: CLOCK },
@@ -272,7 +322,16 @@ describe('GoodsReceipt', () => {
   describe('reconstitute', () => {
     it('given reconstituted GR when querying then state matches', () => {
       const items: GoodsReceiptItem[] = [
-        { id: GR_ITEM_ID_1, purchaseOrderItemId: PO_ITEM_ID_1, variantId: VAR_ID_1, quantityReceived: 10, quantityAccepted: 8, quantityRejected: 2, unitCost: 5.0, notes: null },
+        {
+          id: GR_ITEM_ID_1,
+          purchaseOrderItemId: PO_ITEM_ID_1,
+          variantId: VAR_ID_1,
+          quantityReceived: 10,
+          quantityAccepted: 8,
+          quantityRejected: 2,
+          unitCost: 5.0,
+          notes: null,
+        },
       ];
       const costs: GoodsReceiptCost[] = [
         { id: COST_ID_1, costType: 'SHIPPING', amount: 100.0, description: null },

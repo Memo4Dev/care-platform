@@ -18,15 +18,8 @@ export class PurchasingContractProvider implements PurchasingContracts {
     private readonly repository: PurchasingRepository,
   ) {}
 
-  async getSupplier(
-    organizationId: string,
-    supplierId: string,
-  ): Promise<SupplierView | null> {
-    const row = await this.repository.findSupplierById(
-      this.db,
-      organizationId,
-      supplierId,
-    );
+  async getSupplier(organizationId: string, supplierId: string): Promise<SupplierView | null> {
+    const row = await this.repository.findSupplierById(this.db, organizationId, supplierId);
 
     if (!row) return null;
 

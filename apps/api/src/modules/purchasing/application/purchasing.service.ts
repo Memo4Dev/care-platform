@@ -66,11 +66,7 @@ export class PurchasingService {
 
     const result = await this.db.transaction(async (tx) => {
       // Idempotency check
-      const claim = await this.repository.claimIdempotency(
-        tx,
-        idempotencyKey,
-        scope,
-      );
+      const claim = await this.repository.claimIdempotency(tx, idempotencyKey, scope);
 
       if (claim.kind === 'existing') {
         if (claim.status === 'COMPLETED' && claim.responseJson) {
@@ -82,11 +78,7 @@ export class PurchasingService {
       }
 
       // Validate name/code unique within org
-      const existingByName = await this.repository.findSupplierByCode(
-        tx,
-        orgId,
-        data.code,
-      );
+      const existingByName = await this.repository.findSupplierByCode(tx, orgId, data.code);
       if (existingByName) {
         throw PlatformError.of(
           ERROR_CODES.VALIDATION_FAILED,
@@ -151,7 +143,12 @@ export class PurchasingService {
       }
 
       // Record idempotency outcome
-      await this.repository.writeOutcome(tx, claim.claimId, 'COMPLETED', row as unknown as Record<string, unknown>);
+      await this.repository.writeOutcome(
+        tx,
+        claim.claimId,
+        'COMPLETED',
+        row as unknown as Record<string, unknown>,
+      );
 
       return row;
     });
@@ -176,11 +173,7 @@ export class PurchasingService {
     const scope = `purchasing:updateSupplier:${orgId}`;
 
     const result = await this.db.transaction(async (tx) => {
-      const claim = await this.repository.claimIdempotency(
-        tx,
-        idempotencyKey,
-        scope,
-      );
+      const claim = await this.repository.claimIdempotency(tx, idempotencyKey, scope);
 
       if (claim.kind === 'existing') {
         if (claim.status === 'COMPLETED' && claim.responseJson) {
@@ -192,11 +185,7 @@ export class PurchasingService {
       }
 
       // Load supplier
-      const existing = await this.repository.findSupplierById(
-        tx,
-        orgId,
-        supplierId,
-      );
+      const existing = await this.repository.findSupplierById(tx, orgId, supplierId);
       if (!existing) {
         throw PlatformError.notFound(`Supplier ${supplierId} not found.`, {
           details: { supplierId, organizationId: orgId },
@@ -267,7 +256,12 @@ export class PurchasingService {
         }
       }
 
-      await this.repository.writeOutcome(tx, claim.claimId, 'COMPLETED', updated as unknown as Record<string, unknown>);
+      await this.repository.writeOutcome(
+        tx,
+        claim.claimId,
+        'COMPLETED',
+        updated as unknown as Record<string, unknown>,
+      );
 
       return updated;
     });
@@ -284,11 +278,7 @@ export class PurchasingService {
     const scope = `purchasing:deactivateSupplier:${orgId}`;
 
     await this.db.transaction(async (tx) => {
-      const claim = await this.repository.claimIdempotency(
-        tx,
-        idempotencyKey,
-        scope,
-      );
+      const claim = await this.repository.claimIdempotency(tx, idempotencyKey, scope);
 
       if (claim.kind === 'existing') {
         if (claim.status === 'COMPLETED') return;
@@ -297,11 +287,7 @@ export class PurchasingService {
         });
       }
 
-      const existing = await this.repository.findSupplierById(
-        tx,
-        orgId,
-        supplierId,
-      );
+      const existing = await this.repository.findSupplierById(tx, orgId, supplierId);
       if (!existing) {
         throw PlatformError.notFound(`Supplier ${supplierId} not found.`, {
           details: { supplierId, organizationId: orgId },
@@ -371,18 +357,11 @@ export class PurchasingService {
   // Supplier Queries
   // ===========================================================================
 
-  async listSuppliers(
-    orgId: string,
-    limit?: number,
-    offset?: number,
-  ): Promise<SupplierRow[]> {
+  async listSuppliers(orgId: string, limit?: number, offset?: number): Promise<SupplierRow[]> {
     return this.repository.listSuppliers(this.db, orgId, limit, offset);
   }
 
-  async getSupplierById(
-    orgId: string,
-    supplierId: string,
-  ): Promise<SupplierRow | null> {
+  async getSupplierById(orgId: string, supplierId: string): Promise<SupplierRow | null> {
     return this.repository.findSupplierById(this.db, orgId, supplierId);
   }
 
@@ -403,11 +382,7 @@ export class PurchasingService {
     const scope = `purchasing:updatePO:${orgId}`;
 
     const result = await this.db.transaction(async (tx) => {
-      const claim = await this.repository.claimIdempotency(
-        tx,
-        idempotencyKey,
-        scope,
-      );
+      const claim = await this.repository.claimIdempotency(tx, idempotencyKey, scope);
 
       if (claim.kind === 'existing') {
         if (claim.status === 'COMPLETED' && claim.responseJson) {
@@ -468,7 +443,12 @@ export class PurchasingService {
         ),
       );
 
-      await this.repository.writeOutcome(tx, claim.claimId, 'COMPLETED', updated as unknown as Record<string, unknown>);
+      await this.repository.writeOutcome(
+        tx,
+        claim.claimId,
+        'COMPLETED',
+        updated as unknown as Record<string, unknown>,
+      );
 
       return updated;
     });
@@ -500,11 +480,7 @@ export class PurchasingService {
     const scope = `purchasing:createPO:${orgId}`;
 
     const result = await this.db.transaction(async (tx) => {
-      const claim = await this.repository.claimIdempotency(
-        tx,
-        idempotencyKey,
-        scope,
-      );
+      const claim = await this.repository.claimIdempotency(tx, idempotencyKey, scope);
 
       if (claim.kind === 'existing') {
         if (claim.status === 'COMPLETED' && claim.responseJson) {
@@ -516,16 +492,11 @@ export class PurchasingService {
       }
 
       // Validate supplier exists and is active
-      const supplier = await this.repository.findSupplierById(
-        tx,
-        orgId,
-        data.supplierId,
-      );
+      const supplier = await this.repository.findSupplierById(tx, orgId, data.supplierId);
       if (!supplier) {
-        throw PlatformError.notFound(
-          `Supplier ${data.supplierId} not found.`,
-          { details: { supplierId: data.supplierId, organizationId: orgId } },
-        );
+        throw PlatformError.notFound(`Supplier ${data.supplierId} not found.`, {
+          details: { supplierId: data.supplierId, organizationId: orgId },
+        });
       }
       if (!supplier.isActive) {
         throw PlatformError.of(
@@ -566,9 +537,7 @@ export class PurchasingService {
           quantity: parseFloat(item.quantity),
           unitCost: parseFloat(item.unitCost),
           packagingUnit: item.packagingUnit,
-          packagingQuantity: item.packagingQuantity
-            ? parseFloat(item.packagingQuantity)
-            : null,
+          packagingQuantity: item.packagingQuantity ? parseFloat(item.packagingQuantity) : null,
           packagingConversion: item.packagingConversion
             ? parseFloat(item.packagingConversion)
             : null,
@@ -598,12 +567,8 @@ export class PurchasingService {
           quantity: String(item.quantity),
           unitCost: String(item.unitCost),
           packagingUnit: item.packagingUnit,
-          packagingQuantity: item.packagingQuantity
-            ? String(item.packagingQuantity)
-            : null,
-          packagingConversion: item.packagingConversion
-            ? String(item.packagingConversion)
-            : null,
+          packagingQuantity: item.packagingQuantity ? String(item.packagingQuantity) : null,
+          packagingConversion: item.packagingConversion ? String(item.packagingConversion) : null,
           notes: item.notes,
         });
       }
@@ -635,7 +600,12 @@ export class PurchasingService {
         }
       }
 
-      await this.repository.writeOutcome(tx, claim.claimId, 'COMPLETED', poRow as unknown as Record<string, unknown>);
+      await this.repository.writeOutcome(
+        tx,
+        claim.claimId,
+        'COMPLETED',
+        poRow as unknown as Record<string, unknown>,
+      );
 
       return poRow;
     });
@@ -685,11 +655,7 @@ export class PurchasingService {
     const scope = `purchasing:rejectPO:${orgId}`;
 
     const result = await this.db.transaction(async (tx) => {
-      const claim = await this.repository.claimIdempotency(
-        tx,
-        idempotencyKey,
-        scope,
-      );
+      const claim = await this.repository.claimIdempotency(tx, idempotencyKey, scope);
 
       if (claim.kind === 'existing') {
         if (claim.status === 'COMPLETED' && claim.responseJson) {
@@ -740,7 +706,12 @@ export class PurchasingService {
         ),
       );
 
-      await this.repository.writeOutcome(tx, claim.claimId, 'COMPLETED', updated as unknown as Record<string, unknown>);
+      await this.repository.writeOutcome(
+        tx,
+        claim.claimId,
+        'COMPLETED',
+        updated as unknown as Record<string, unknown>,
+      );
 
       return updated;
     });
@@ -774,11 +745,7 @@ export class PurchasingService {
     const scope = `purchasing:cancelPO:${orgId}`;
 
     const result = await this.db.transaction(async (tx) => {
-      const claim = await this.repository.claimIdempotency(
-        tx,
-        idempotencyKey,
-        scope,
-      );
+      const claim = await this.repository.claimIdempotency(tx, idempotencyKey, scope);
 
       if (claim.kind === 'existing') {
         if (claim.status === 'COMPLETED' && claim.responseJson) {
@@ -829,7 +796,12 @@ export class PurchasingService {
         ),
       );
 
-      await this.repository.writeOutcome(tx, claim.claimId, 'COMPLETED', updated as unknown as Record<string, unknown>);
+      await this.repository.writeOutcome(
+        tx,
+        claim.claimId,
+        'COMPLETED',
+        updated as unknown as Record<string, unknown>,
+      );
 
       return updated;
     });
@@ -850,17 +822,11 @@ export class PurchasingService {
     return this.repository.listPOs(this.db, orgId, status, limit, offset);
   }
 
-  async getPOById(
-    orgId: string,
-    poId: string,
-  ): Promise<PurchaseOrderRow | null> {
+  async getPOById(orgId: string, poId: string): Promise<PurchaseOrderRow | null> {
     return this.repository.findPOById(this.db, orgId, poId);
   }
 
-  async getPOItems(
-    orgId: string,
-    poId: string,
-  ): Promise<PurchaseOrderItemRow[]> {
+  async getPOItems(orgId: string, poId: string): Promise<PurchaseOrderItemRow[]> {
     return this.repository.findPOItems(this.db, orgId, poId);
   }
 
@@ -896,11 +862,7 @@ export class PurchasingService {
     const scope = `purchasing:createGR:${orgId}`;
 
     const result = await this.db.transaction(async (tx) => {
-      const claim = await this.repository.claimIdempotency(
-        tx,
-        idempotencyKey,
-        scope,
-      );
+      const claim = await this.repository.claimIdempotency(tx, idempotencyKey, scope);
 
       if (claim.kind === 'existing') {
         if (claim.status === 'COMPLETED' && claim.responseJson) {
@@ -912,21 +874,14 @@ export class PurchasingService {
       }
 
       // Validate PO exists
-      const po = await this.repository.findPOById(
-        tx,
-        orgId,
-        data.purchaseOrderId,
-      );
+      const po = await this.repository.findPOById(tx, orgId, data.purchaseOrderId);
       if (!po) {
-        throw PlatformError.notFound(
-          `Purchase order ${data.purchaseOrderId} not found.`,
-          {
-            details: {
-              purchaseOrderId: data.purchaseOrderId,
-              organizationId: orgId,
-            },
+        throw PlatformError.notFound(`Purchase order ${data.purchaseOrderId} not found.`, {
+          details: {
+            purchaseOrderId: data.purchaseOrderId,
+            organizationId: orgId,
           },
-        );
+        });
       }
 
       // Validate PO status is SENT or PARTIALLY_RECEIVED
@@ -962,11 +917,7 @@ export class PurchasingService {
       }
 
       for (const item of data.items) {
-        const poItem = await this.repository.findPOItemById(
-          tx,
-          orgId,
-          item.purchaseOrderItemId,
-        );
+        const poItem = await this.repository.findPOItemById(tx, orgId, item.purchaseOrderItemId);
         if (!poItem || poItem.purchaseOrderId !== po.id) {
           throw PlatformError.of(
             ERROR_CODES.VALIDATION_FAILED,
@@ -999,19 +950,13 @@ export class PurchasingService {
           variantId: item.variantId,
           quantityReceived: parseFloat(item.quantityReceived),
           quantityAccepted: parseFloat(item.quantityAccepted),
-          quantityRejected: item.quantityRejected
-            ? parseFloat(item.quantityRejected)
-            : undefined,
+          quantityRejected: item.quantityRejected ? parseFloat(item.quantityRejected) : undefined,
           unitCost: parseFloat(item.unitCost),
           notes: item.notes,
         })),
         costs: (data.costs ?? []).map((cost) => ({
           id: newId(),
-          costType: cost.costType as
-            | 'SHIPPING'
-            | 'CUSTOMS'
-            | 'HANDLING'
-            | 'OTHER',
+          costType: cost.costType as 'SHIPPING' | 'CUSTOMS' | 'HANDLING' | 'OTHER',
           amount: parseFloat(cost.amount),
           description: cost.description,
         })),
@@ -1083,7 +1028,12 @@ export class PurchasingService {
         }
       }
 
-      await this.repository.writeOutcome(tx, claim.claimId, 'COMPLETED', grRow as unknown as Record<string, unknown>);
+      await this.repository.writeOutcome(
+        tx,
+        claim.claimId,
+        'COMPLETED',
+        grRow as unknown as Record<string, unknown>,
+      );
 
       return grRow;
     });
@@ -1112,11 +1062,7 @@ export class PurchasingService {
     const scope = `purchasing:confirmGR:${orgId}`;
 
     const result = await this.db.transaction(async (tx) => {
-      const claim = await this.repository.claimIdempotency(
-        tx,
-        idempotencyKey,
-        scope,
-      );
+      const claim = await this.repository.claimIdempotency(tx, idempotencyKey, scope);
 
       if (claim.kind === 'existing') {
         if (claim.status === 'COMPLETED' && claim.responseJson) {
@@ -1176,10 +1122,7 @@ export class PurchasingService {
         (sum, item) => sum + parseFloat(item.quantityAccepted),
         0,
       );
-      const totalAdditionalCosts = grCosts.reduce(
-        (sum, cost) => sum + parseFloat(cost.amount),
-        0,
-      );
+      const totalAdditionalCosts = grCosts.reduce((sum, cost) => sum + parseFloat(cost.amount), 0);
 
       // For each GR item with quantityAccepted > 0:
       for (const grItem of grItems) {
@@ -1205,31 +1148,20 @@ export class PurchasingService {
         });
 
         // Update PO item received_quantity (add quantityAccepted)
-        const poItem = await this.repository.findPOItemById(
-          tx,
-          orgId,
-          grItem.purchaseOrderItemId,
-        );
+        const poItem = await this.repository.findPOItemById(tx, orgId, grItem.purchaseOrderItemId);
 
         if (poItem) {
           const currentReceived = parseFloat(poItem.receivedQuantity);
           const newReceived = currentReceived + acceptedQty;
-          await this.repository.updatePOItem(
-            tx,
-            orgId,
-            grItem.purchaseOrderItemId,
-            { receivedQuantity: String(newReceived) },
-          );
+          await this.repository.updatePOItem(tx, orgId, grItem.purchaseOrderItemId, {
+            receivedQuantity: String(newReceived),
+          });
         }
       }
 
       // Update PO status
       // Check if all PO items are fully received
-      const poItems = await this.repository.findPOItems(
-        tx,
-        orgId,
-        gr.purchaseOrderId,
-      );
+      const poItems = await this.repository.findPOItems(tx, orgId, gr.purchaseOrderId);
 
       const allFullyReceived = poItems.every((item) => {
         const ordered = parseFloat(item.quantity);
@@ -1238,11 +1170,7 @@ export class PurchasingService {
       });
 
       // Re-read PO to get current version after any updates
-      const currentPO = await this.repository.findPOById(
-        tx,
-        orgId,
-        gr.purchaseOrderId,
-      );
+      const currentPO = await this.repository.findPOById(tx, orgId, gr.purchaseOrderId);
 
       if (currentPO) {
         let newPOStatus: string;
@@ -1285,7 +1213,12 @@ export class PurchasingService {
         ),
       );
 
-      await this.repository.writeOutcome(tx, claim.claimId, 'COMPLETED', updatedGR as unknown as Record<string, unknown>);
+      await this.repository.writeOutcome(
+        tx,
+        claim.claimId,
+        'COMPLETED',
+        updatedGR as unknown as Record<string, unknown>,
+      );
 
       return updatedGR;
     });
@@ -1303,11 +1236,7 @@ export class PurchasingService {
     const scope = `purchasing:cancelGR:${orgId}`;
 
     const result = await this.db.transaction(async (tx) => {
-      const claim = await this.repository.claimIdempotency(
-        tx,
-        idempotencyKey,
-        scope,
-      );
+      const claim = await this.repository.claimIdempotency(tx, idempotencyKey, scope);
 
       if (claim.kind === 'existing') {
         if (claim.status === 'COMPLETED' && claim.responseJson) {
@@ -1364,7 +1293,12 @@ export class PurchasingService {
         ),
       );
 
-      await this.repository.writeOutcome(tx, claim.claimId, 'COMPLETED', updated as unknown as Record<string, unknown>);
+      await this.repository.writeOutcome(
+        tx,
+        claim.claimId,
+        'COMPLETED',
+        updated as unknown as Record<string, unknown>,
+      );
 
       return updated;
     });
@@ -1385,24 +1319,15 @@ export class PurchasingService {
     return this.repository.listGRs(this.db, orgId, poId, limit, offset);
   }
 
-  async getGRById(
-    orgId: string,
-    grId: string,
-  ): Promise<GoodsReceiptRow | null> {
+  async getGRById(orgId: string, grId: string): Promise<GoodsReceiptRow | null> {
     return this.repository.findGRById(this.db, orgId, grId);
   }
 
-  async getGRItems(
-    orgId: string,
-    grId: string,
-  ): Promise<GoodsReceiptItemRow[]> {
+  async getGRItems(orgId: string, grId: string): Promise<GoodsReceiptItemRow[]> {
     return this.repository.findGRItems(this.db, orgId, grId);
   }
 
-  async getGRCosts(
-    orgId: string,
-    grId: string,
-  ): Promise<PurchaseCostRow[]> {
+  async getGRCosts(orgId: string, grId: string): Promise<PurchaseCostRow[]> {
     return this.repository.findGRCosts(this.db, orgId, grId);
   }
 
@@ -1425,11 +1350,7 @@ export class PurchasingService {
     const scope = `purchasing:transitionPO:${targetStatus}:${orgId}`;
 
     const result = await this.db.transaction(async (tx) => {
-      const claim = await this.repository.claimIdempotency(
-        tx,
-        idempotencyKey,
-        scope,
-      );
+      const claim = await this.repository.claimIdempotency(tx, idempotencyKey, scope);
 
       if (claim.kind === 'existing') {
         if (claim.status === 'COMPLETED' && claim.responseJson) {
@@ -1480,7 +1401,12 @@ export class PurchasingService {
         ),
       );
 
-      await this.repository.writeOutcome(tx, claim.claimId, 'COMPLETED', updated as unknown as Record<string, unknown>);
+      await this.repository.writeOutcome(
+        tx,
+        claim.claimId,
+        'COMPLETED',
+        updated as unknown as Record<string, unknown>,
+      );
 
       return updated;
     });

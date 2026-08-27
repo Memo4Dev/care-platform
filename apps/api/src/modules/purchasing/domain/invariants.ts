@@ -23,9 +23,13 @@ export function validatePositiveQuantity(value: number, fieldName: string): void
     });
   }
   if (value <= 0) {
-    throw PlatformError.of(ERROR_CODES.VALIDATION_FAILED, `${fieldName} must be greater than zero.`, {
-      details: { field: fieldName, value },
-    });
+    throw PlatformError.of(
+      ERROR_CODES.VALIDATION_FAILED,
+      `${fieldName} must be greater than zero.`,
+      {
+        details: { field: fieldName, value },
+      },
+    );
   }
 }
 
@@ -202,7 +206,14 @@ export function validateOverReceiptPolicy(
       throw PlatformError.of(
         ERROR_CODES.POLICY_VIOLATION,
         `Over-receipt exceeds maximum allowed (${policy.maxOverReceiptPercent}%): received ${receivedQty} exceeds cap ${cap} for ordered ${orderedQty}.`,
-        { details: { orderedQty, receivedQty, maxOverReceiptPercent: policy.maxOverReceiptPercent, cap } },
+        {
+          details: {
+            orderedQty,
+            receivedQty,
+            maxOverReceiptPercent: policy.maxOverReceiptPercent,
+            cap,
+          },
+        },
       );
     }
   }

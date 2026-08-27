@@ -145,9 +145,13 @@ export class PurchaseOrder {
       });
     }
     if (!input.items || input.items.length === 0) {
-      throw PlatformError.of(ERROR_CODES.VALIDATION_FAILED, 'Purchase order must have at least one item.', {
-        details: { itemCount: input.items?.length ?? 0 },
-      });
+      throw PlatformError.of(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Purchase order must have at least one item.',
+        {
+          details: { itemCount: input.items?.length ?? 0 },
+        },
+      );
     }
 
     const clockFn = options.clock ?? (() => new Date());
@@ -409,9 +413,13 @@ export class PurchaseOrder {
     this.assertDraft();
     const index = this._items.findIndex((i) => i.id === itemId);
     if (index === -1) {
-      throw PlatformError.of(ERROR_CODES.RESOURCE_NOT_FOUND, `Purchase order item not found: ${itemId}.`, {
-        details: { itemId },
-      });
+      throw PlatformError.of(
+        ERROR_CODES.RESOURCE_NOT_FOUND,
+        `Purchase order item not found: ${itemId}.`,
+        {
+          details: { itemId },
+        },
+      );
     }
     if (this._items.length <= 1) {
       throw PlatformError.of(
@@ -469,9 +477,13 @@ export class PurchaseOrder {
   private findItem(itemId: string): MutablePurchaseOrderItem {
     const item = this._items.find((i) => i.id === itemId);
     if (!item) {
-      throw PlatformError.of(ERROR_CODES.RESOURCE_NOT_FOUND, `Purchase order item not found: ${itemId}.`, {
-        details: { itemId },
-      });
+      throw PlatformError.of(
+        ERROR_CODES.RESOURCE_NOT_FOUND,
+        `Purchase order item not found: ${itemId}.`,
+        {
+          details: { itemId },
+        },
+      );
     }
     return item;
   }
@@ -487,9 +499,13 @@ export class PurchaseOrder {
       });
     }
     if (!input.variantId || input.variantId.trim().length === 0) {
-      throw PlatformError.of(ERROR_CODES.VALIDATION_FAILED, `Item[${index}] variantId is mandatory.`, {
-        details: { index },
-      });
+      throw PlatformError.of(
+        ERROR_CODES.VALIDATION_FAILED,
+        `Item[${index}] variantId is mandatory.`,
+        {
+          details: { index },
+        },
+      );
     }
     validatePositiveQuantity(input.quantity, `items[${index}].quantity`);
     validatePositiveQuantity(input.unitCost, `items[${index}].unitCost`);

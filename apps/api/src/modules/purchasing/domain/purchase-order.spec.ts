@@ -17,7 +17,9 @@ const ITEM_ID_1 = '01980000-0000-7000-8000-0000000000A1';
 const ITEM_ID_2 = '01980000-0000-7000-8000-0000000000A2';
 const CLOCK = () => new Date('2025-06-15T10:00:00Z');
 
-function createValidPO(overrides?: { items?: Array<{ id: string; variantId: string; quantity: number; unitCost: number }> }): PurchaseOrder {
+function createValidPO(overrides?: {
+  items?: Array<{ id: string; variantId: string; quantity: number; unitCost: number }>;
+}): PurchaseOrder {
   return PurchaseOrder.create(
     {
       id: PO_ID,
@@ -376,7 +378,16 @@ describe('PurchaseOrder', () => {
   describe('reconstitute', () => {
     it('given reconstituted PO when querying status then matches', () => {
       const items: PurchaseOrderItem[] = [
-        { id: ITEM_ID_1, variantId: VAR_ID_1, quantity: 10, unitCost: 5.0, packagingUnit: null, packagingQuantity: null, packagingConversion: null, notes: null },
+        {
+          id: ITEM_ID_1,
+          variantId: VAR_ID_1,
+          quantity: 10,
+          unitCost: 5.0,
+          packagingUnit: null,
+          packagingQuantity: null,
+          packagingConversion: null,
+          notes: null,
+        },
       ];
 
       const po = PurchaseOrder.reconstitute({
