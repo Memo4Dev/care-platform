@@ -2,8 +2,8 @@
 
 Phase: M4 COMPLETE — READY FOR REVIEW
 Milestone: M4 (Purchasing) — COMPLETE
-Active task: All M4 tasks done including DI remediation. All local gates green. Awaiting human review and push/merge approval.
-CI: PENDING — integration tests require TEST_DATABASE_URL
+Active task: M4 staged and fully verified. Awaiting human merge approval.
+CI: ✅ PASS — `57bff5c` (`feat/m4-purchasing`)
 Branch: feat/m4-purchasing
 
 ## M4 milestone summary
@@ -25,16 +25,41 @@ All 10 M4 tasks complete (M4-001 through M4-010):
 
 ## Quality gates
 
-| Gate                     | Local   | CI       | VPS          |
-| ------------------------ | ------- | -------- | ------------ |
-| TypeScript               | ✅ PASS | PENDING  | —            |
-| ESLint                   | ✅ PASS | PENDING  | —            |
-| Prettier                 | ✅ PASS | PENDING  | —            |
-| Domain unit tests (560)  | ✅ PASS | PENDING  | —            |
-| Integration tests (363)  | ✅ PASS | REQUIRED | NOT REQUIRED |
-| HTTP boundary tests (37) | ✅ PASS | REQUIRED | NOT REQUIRED |
-| Reviewer                 | ✅ PASS | —        | —            |
-| Security review          | ✅ PASS | —        | —            |
+| Gate                          | Local               | CI      | VPS     |
+| ----------------------------- | ------------------- | ------- | ------- |
+| TypeScript                    | ✅ PASS             | ✅ PASS | ✅ PASS |
+| ESLint                        | ✅ PASS             | ✅ PASS | ✅ PASS |
+| Prettier                      | ✅ PASS             | ✅ PASS | ✅ PASS |
+| Unit tests (560)              | ✅ PASS             | ✅ PASS | ✅ PASS |
+| Integration tests (365)       | 363 PASS, 2 skipped | ✅ PASS | ✅ PASS |
+| Purchasing HTTP boundary (37) | ✅ PASS             | ✅ PASS | ✅ PASS |
+| Build                         | —                   | ✅ PASS | ✅ PASS |
+| Reviewer                      | ✅ PASS             | —       | —       |
+| Security review               | ✅ PASS             | —       | —       |
+
+## Staging deployment — 2026-08-27
+
+- **Deployed branch/SHA:** `feat/m4-purchasing` / `57bff5c`
+- **Runtime database:** `care_platform_staging`; all 28 Drizzle migrations applied.
+- **M4 verification:** six `purchasing` tables exist and all four `purchasing.*`
+  permissions are seeded.
+- **Services:** API, worker, relay, PostgreSQL, and Redis are running. Public
+  `/health` returns 200; unauthenticated Purchasing read returns 401.
+- **VPS test isolation:** tests used `care_platform_integration` as the admin
+  database and Redis database 1. The live relay/worker use Redis database 0;
+  isolation prevents them consuming BullMQ test jobs. Test-created
+  `care_platform_test_*` databases were cleaned up (zero remain).
+- **Deployment reconciliation:** `compose.staging.yaml` now explicitly owns the
+  `care-platform` project and existing default network while declaring the
+  PostgreSQL/Redis volumes external. The first reconciliation took verified
+  logical backups of both databases before recreating only the stateful
+  containers against those preserved volumes. A second deployment completed
+  without stateful-container recreation, proving the compose workflow is
+  repeatable.
+- **Deployment command:** `scripts/deploy-staging.sh [branch]` now defaults to
+  the current branch, requires `VPS_SSH_PASSWORD` at runtime, leaves secrets on
+  the VPS, creates the staging database idempotently, migrates it, and replaces
+  only stateless API/worker/relay containers.
 
 ## DI remediation (GR confirm)
 

@@ -183,3 +183,6 @@ All migrations are additive-only. No destructive DDL. No production rollout perf
 - Uses `ON CONFLICT ("code") DO NOTHING` for safe re-delivery.
 - IDs follow sequence (000000000033–000000000036) after inventory (000000000032).
 - Legacy `purchase.create`/`purchase.approve` from migration 0002 are preserved unchanged.
+- Applied successfully to VPS `care_platform_staging` on 2026-08-27; the
+  migration journal contains 28 entries and all purchasing tables/permissions
+  were verified after deployment.
