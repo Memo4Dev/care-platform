@@ -23,16 +23,19 @@
   "variable": [
     { "key": "baseUrl", "value": "https://api.care-systems.site" },
     { "key": "metricsToken", "value": "w9MqY6C5sTatgG_DqPuGlt9uMSQEe6G-pfIodKWHKpI" },
-    { "key": "platformToken", "value": "PASTE_FRESH_JWT_HERE" },
-    { "key": "tenantToken", "value": "PASTE_FRESH_TENANT_JWT_HERE" },
-    { "key": "tenantId", "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8" },
+    { "key": "platformToken", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwbGF0Zm9ybS1vd25lci05NDgyZTU2MyIsImF1ZCI6ImF1dGhlbnRpY2F0ZWQiLCJpc3MiOiJodHRwczovL3Jia2p6eGFobHh3c2Z0d2drd3p0LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJleHAiOjE3ODc4ODE3NDYsImlhdCI6MTc4Nzc5NTM0NiwiZW1haWwiOiJwbGF0Zm9ybS1vd25lci05NDgyZTU2M0BkZXYiLCJhcHBfbWV0YWRhdGEiOnt9LCJ1c2VyX21ldGFkYXRhIjp7fSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQifQ.OaSzWuZ491r07NGTrjQZbyHnv1pxnCJf_nupOuafPCg" },
+    { "key": "tenantToken", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZW5hbnQtb3duZXItYWVkMTEyYTkiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiaXNzIjoiaHR0cHM6Ly9yYmtqenhhaGx4d3NmdHdna3d6dC5zdXBhYmFzZS5jby9hdXRoL3YxIiwiZXhwIjoxNzg3ODgxNzQ2LCJpYXQiOjE3ODc3OTUzNDYsImVtYWlsIjoidGVuYW50LW93bmVyLWFlZDExMmE5QGRldiIsImFwcF9tZXRhZGF0YSI6e30sInVzZXJfbWV0YWRhdGEiOnt9LCJyb2xlIjoiYXV0aGVudGljYXRlZCJ9.c9_ks3KwjKhfjMjMPwsv2s1MiNCWLukr6mHjAWI5N8M" },
+    { "key": "tenantId", "value": "926b7e97-0492-48d6-afe6-64c2bf3afc8d" },
+    { "key": "tenantOrgId", "value": "926b7e97-0492-48d6-afe6-64c2bf3afc8d" },
+    { "key": "tenantBranchId", "value": "d33ea40c-b3c5-42f9-9451-affbbbdb1e88" },
+    { "key": "tenantUserId", "value": "aed112a9-87c5-41be-b1a1-7282ea1be961" },
     { "key": "planId", "value": "01a0396d-fa03-7457-948e-a602bbaa8a8a" },
-    { "key": "stockPositionId", "value": "Stock position ID" },
-    { "key": "reservationId", "value": "Reservation ID" },
-    { "key": "allocationId", "value": "Allocation ID" },
-    { "key": "transferId", "value": "Transfer ID" },
-    { "key": "warehouseId", "value": "Warehouse ID" },
-    { "key": "variantId", "value": "Variant ID" }
+    { "key": "stockPositionId", "value": "Stock position ID (auto-set after receive)" },
+    { "key": "reservationId", "value": "Reservation ID (auto-set after create)" },
+    { "key": "allocationId", "value": "Allocation ID (auto-set after create)" },
+    { "key": "transferId", "value": "Transfer ID (auto-set after create)" },
+    { "key": "warehouseId", "value": "d68ce259-db38-480e-a845-f3a849015d50" },
+    { "key": "variantId", "value": "Variant ID (create via catalog first)" }
   ],
   "item": [
     {
