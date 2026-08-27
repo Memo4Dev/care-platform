@@ -78,6 +78,18 @@ None
 
 ---
 
+## M4 purchasing
+
+- M4-001 Purchasing persistence: migration `0026_purchasing_core.sql` — `purchasing` schema (suppliers, purchase_orders, purchase_order_items, goods_receipts, goods_receipt_items, purchase_costs) with composite tenant FKs, decimal(14,4), IF NOT EXISTS idempotency.
+- M4-002 Purchasing domain layer: aggregates (supplier, purchase-order, goods-receipt), events, invariants (status transitions, receipt completeness, landed cost, over-receipt policy).
+- M4-003 Purchasing application layer: PurchasingService + repository + contracts provider + module; InventoryContract.receiveStock expansion for GR confirmation.
+- M4-004 Purchasing HTTP controller: `purchasing-admin.controller.ts` registered in `api.module.ts` with Swagger tag "Purchasing"; Zod validation, idempotency enforcement, authorization via purchasing.read/write/approve/receive.
+- M4-005 Purchasing domain unit tests: supplier/purchase-order/goods-receipt/invariants default suites.
+- M4-006 Purchasing integration tests: `purchasing.integration.spec.ts` (20 tests, native PG) — supplier/PO/GR lifecycle, idempotency, inventory integration, tenant isolation, outbox events.
+- M4-007 Purchasing HTTP boundary tests: `purchasing.http.integration.spec.ts` (38 tests) — authentication (401), validation (422), authorization (403), idempotency (422/replay/409), supplier CRUD, PO lifecycle (create/list/get/update/submit/approve/reject/send/cancel), goods receipt (create/list/get/confirm/cancel), cross-tenant isolation, not-found (404). Re-applies `0026_purchasing_core.sql` during setup. Requires TEST_DATABASE_URL.
+
+---
+
 ## M1 milestone closure
 
 **Closed:** 2026-08-26

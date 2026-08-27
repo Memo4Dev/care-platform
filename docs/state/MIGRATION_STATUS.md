@@ -129,6 +129,7 @@ No application or database migration work performed in M0-001 through M0-005.
 | 0021 | `0021_outbox_bullmq_delivery.sql`             | Integration              | Outbox relay publication/lease + Inbox lease                                                                      |
 | 0024 | `0024_inventory_core.sql`                     | Inventory                | Inventory schema: stock_positions, fifo_layers, ledger_entries, reservations, allocations, transfers, adjustments |
 | 0025 | `0025_add_inventory_permissions.sql`          | Identity/Inventory       | Seeds `inventory.create` permission code into identity.permissions                                                |
+| 0026 | `0026_purchasing_core.sql`                    | Purchasing               | Purchasing schema: suppliers, purchase_orders, purchase_order_items, goods_receipts, goods_receipt_items, purchase_costs |
 
 All migrations are additive-only. No destructive DDL. No production rollout performed (test harness applied).
 
@@ -157,3 +158,18 @@ All migrations are additive-only. No destructive DDL. No production rollout perf
 - Inserts `inventory.create` into `identity.permissions` with ON CONFLICT DO NOTHING.
 - Combined with pre-existing `inventory.view`, `inventory.adjust`, and `inventory.transfer` from M1 migration `0002_dark_shard.sql`.
 - OWNER and ADMIN get full inventory permissions; SALES and WAREHOUSE get read-only (`inventory.view`).
+
+## M4-001: Purchasing Core Persistence
+
+`0026_purchasing_core.sql` — Purchasing schema and core tables.
+
+- Creates logical schema `purchasing`.
+- Creates tables:
+  - `purchasing.suppliers` — External vendor identity, `(organization_id, code)` unique, `(id, organization_id)` tenant-scope unique for child FKs.
+  - `purchasing.purchase_orders` — Aggregate identity with lifecycle (DRAFT/SUBMITTED/APPROVED/REJECTED/SENT/PARTIALLY_RECEIVED/RECEIVED/CANCELLED), composite tenant FKs to suppliers and warehouses, optimistic version.
+  - `purchasing.purchase_order_items` — Line items with decimal(14,4) quantity/received_quantity/unit_cost, composite tenant FKs to PO and product_variants.
+  - `purchasing.goods_receipts` — Receiving aggregate (PENDING/CONFIRMED/CANCELLED), composite tenant FKs to PO and warehouse, confirmed_at/by audit, optimistic version.
+  - `purchasing.goods_receipt_items` — Receiving line items with received/accepted/rejected quantities, composite tenant FKs.
+  - `purchasing.purchase_costs` — Additional costs (shipping/customs/handling/other) feeding landed cost and FIFO.
+- All DDL is idempotent (IF NOT EXISTS).
+- Drizzle schema: `packages/database/src/schema/purchasing.ts`.

@@ -29,6 +29,26 @@ All 10 M3 tasks complete (M3-001 through M3-010):
 **Prettier:** all files formatted
 **Security:** No open security blockers
 
+## M4 purchasing — HTTP boundary tests
+
+Added `apps/api/src/modules/purchasing/purchasing.http.integration.spec.ts`,
+following the exact `inventory.http.integration.spec.ts` pattern
+(createTestDatabase + re-applying `0026_purchasing_core.sql`, JWT creation, full
+NestJS/Fastify boot with TenantBearerGuard, org/branch/warehouse/variant/owner
+provisioning, org-scoped role grants).
+
+Covers all PurchasingAdminController endpoints across 38 test cases:
+authentication (401), validation (422), authorization (403), idempotency
+(422/replay/409), supplier CRUD, PO lifecycle (create/list/get/update/submit/
+approve/reject/send/cancel), goods receipt (create/list/get/confirm/cancel),
+cross-tenant isolation (foreign org sees empty data), and not-found (404).
+
+Compile verification:
+- `npx tsc --noEmit -p apps/api/tsconfig.json` → exit 0
+- spec file type-checked with a temporary config including the spec → exit 0
+
+Requires `TEST_DATABASE_URL` (native PG or CI service container) to execute.
+
 ## M1 milestone summary
 
 All 10 M1 tasks complete (M1-001 through M1-010):
