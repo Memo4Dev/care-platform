@@ -1,10 +1,10 @@
 # Project State
 
-Phase: M4 COMPLETE — READY FOR REVIEW
-Milestone: M4 (Purchasing) — COMPLETE
-Active task: M4 staged and fully verified. Awaiting human merge approval.
-CI: ✅ PASS — `57bff5c` (`feat/m4-purchasing`)
-Branch: feat/m4-purchasing
+Phase: M5 IN PROGRESS
+Milestone: M5 (Sales & POS Core)
+Active task: M5-002 — approved Cart/Sale/Customer boundaries recorded before implementation.
+CI: M4 main CI in progress after merge `05d9292`.
+Branch: feat/m5-sales-pos-core
 
 ## M4 milestone summary
 

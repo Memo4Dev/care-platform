@@ -77,6 +77,18 @@ ConfirmGoodsReceipt
 
 Publishes stock receipt requests instead of directly editing Inventory tables.
 
+## Customers
+
+Provides:
+
+```text
+CreateBusinessCustomer
+GetBusinessCustomer
+SearchBusinessCustomers
+```
+
+Sales consumes only customer references/views, never Customer persistence.
+
 ## Cart
 
 Provides:
@@ -107,6 +119,7 @@ Provides:
 ```text
 CreateSale
 CompleteSale
+CompleteSaleAfterPayment
 GetSaleForReturn
 IssueInvoice
 ```

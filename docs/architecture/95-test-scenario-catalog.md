@@ -15,6 +15,11 @@ INV-005 adjustment requires configured approval
 ## POS / Offline
 
 ```text
+POS-001 normal Draft Cart does not reserve inventory
+POS-002 held Cart creates one TTL-bound reservation
+POS-003 expired held Cart rechecks availability on resume
+POS-004 sale completion consumes Inventory/FIFO exactly once
+POS-005 cancelled PENDING_PAYMENT Sale releases reservation/allocation
 OFF-001 offline sale within allocation syncs successfully
 OFF-002 duplicate operation does not duplicate sale
 OFF-003 allocation overflow becomes pending verification

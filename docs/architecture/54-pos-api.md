@@ -94,7 +94,8 @@ POST   /carts/{cartId}/items
 PATCH  /carts/{cartId}/items/{itemId}
 DELETE /carts/{cartId}/items/{itemId}
 POST   /carts/{cartId}/save
-POST   /carts/{cartId}/reopen
+POST   /carts/{cartId}/hold
+POST   /carts/{cartId}/resume
 POST   /carts/{cartId}/cancel
 ```
 
@@ -131,12 +132,14 @@ override requirements if any
 ```text
 POST /sales
 GET  /sales/{saleId}
-POST /sales/{saleId}/confirm
 POST /sales/{saleId}/complete
 POST /sales/{saleId}/cancel
 ```
 
-`POST /sales/{saleId}/complete` requires `Idempotency-Key`.
+Cart is the editable draft. Creating a Sale establishes `PENDING_PAYMENT` facts;
+it does not consume final Inventory. `POST /sales/{saleId}/complete` is an
+internal/future-Payments completion boundary, requires `Idempotency-Key`, and is
+not a public assertion that a payment succeeded.
 
 ## Payments
 

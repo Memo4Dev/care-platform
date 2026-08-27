@@ -10,6 +10,7 @@ None
 
 ## Done
 
+- M5-002 Sales/POS architecture decision recording: accepted ADR-0009 documents hold-only Cart reservation (15-minute configurable TTL), `PENDING_PAYMENT → COMPLETED | CANCELLED` Sale lifecycle, future Payments completion boundary, and minimal Customers baseline. Relevant architecture/state docs updated before implementation.
 - Architecture design
 - Technology decision
 - Agent orchestration design
