@@ -11,6 +11,17 @@ export class PlatformErrorFilter extends BaseExceptionFilter {
     const request = context.getRequest<RequestWithCorrelation>();
     const reply = context.getResponse<{ code(status: number): { send(body: unknown): void } }>();
     const correlationId = correlationIdFor(request);
+    if (
+      !isPlatformError(exception) &&
+      !(exception instanceof HttpException) &&
+      !(exception instanceof ZodError)
+    ) {
+      console.error(
+        '[PlatformErrorFilter] UNHANDLED:',
+        exception?.constructor?.name,
+        String(exception),
+      );
+    }
     const error = isPlatformError(exception)
       ? exception
       : exception instanceof HttpException || exception instanceof ZodError

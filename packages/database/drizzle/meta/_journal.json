@@ -176,6 +176,13 @@
       "when": 1787801000000,
       "tag": "0024_inventory_core",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787802000000,
+      "tag": "0025_add_inventory_permissions",
+      "breakpoints": true
     }
   ]
 }

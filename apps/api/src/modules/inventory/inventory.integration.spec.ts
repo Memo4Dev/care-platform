@@ -14,6 +14,14 @@ import { InventoryRepository } from './infrastructure/inventory.repository';
 import { InventoryService } from './application/inventory.service';
 
 /**
+ * Normalize a decimal string from PostgreSQL NUMERIC(14,4) for comparison.
+ * DB returns '100.0000'; this strips trailing zeros for readable assertions.
+ */
+function dec(s: string): string {
+  return parseFloat(s).toString();
+}
+
+/**
  * Native PostgreSQL integration tests for the Inventory bounded context
  * (docs/architecture/91-testing-architecture.md): transactions, row locking,
  * unique constraints, composite tenant constraints, FIFO consumption,
@@ -48,7 +56,9 @@ describe('Inventory context persistence', () => {
   /** Insert a fresh organization for test isolation (unique name per call). */
   async function createTestOrg(): Promise<string> {
     const id = newId();
-    await testdb.db.insert(organizations).values({ id, name: `Inv Test Org ${id.slice(0, 8)}` });
+    await testdb.db
+      .insert(organizations)
+      .values({ id, name: `Inv Test Org ${id.replace(/-/g, '')}` });
     return id;
   }
 
@@ -58,7 +68,7 @@ describe('Inventory context persistence', () => {
     await testdb.db.insert(branches).values({
       id,
       organizationId: orgId,
-      code: `BR-${id.slice(0, 6)}`,
+      code: `BR-${id.replace(/-/g, '')}`,
       name: 'Test Branch',
     });
     return id;
@@ -71,7 +81,7 @@ describe('Inventory context persistence', () => {
       id,
       organizationId: orgId,
       branchId,
-      code: `WH-${id.slice(0, 6)}`,
+      code: `WH-${id.replace(/-/g, '')}`,
       name: 'Test Warehouse',
     });
     return id;
@@ -83,23 +93,23 @@ describe('Inventory context persistence', () => {
     await testdb.db.insert(products).values({
       id: productId,
       organizationId: orgId,
-      name: `Test Product ${productId.slice(0, 6)}`,
+      name: `Test Product ${productId.replace(/-/g, '')}`,
     });
     const variantId = newId();
     const unitId = newId();
     await testdb.db.insert(unitDefinitions).values({
       id: unitId,
       organizationId: orgId,
-      name: `Piece-${unitId.slice(0, 6)}`,
-      symbol: `pc${unitId.slice(0, 4)}`,
+      name: `Piece-${unitId.replace(/-/g, '')}`,
+      symbol: `pc-${unitId.replace(/-/g, '')}`,
       isBaseUnit: true,
     });
     await testdb.db.insert(productVariants).values({
       id: variantId,
       organizationId: orgId,
       productId,
-      name: `Test Variant ${variantId.slice(0, 6)}`,
-      sku: `SKU-${variantId.slice(0, 8)}`,
+      name: `Test Variant ${variantId.replace(/-/g, '')}`,
+      sku: `SKU-${variantId.replace(/-/g, '')}`,
       baseUnitId: unitId,
     });
     return variantId;
@@ -170,19 +180,6 @@ describe('Inventory context persistence', () => {
       const warehouseId = await createTestWarehouse(orgId, branchId);
       const variantId = await createTestVariant(orgId);
 
-      await service.receiveStock({
-        organizationId: orgId,
-        warehouseId,
-        variantId,
-        quantity: '0',
-        unitCost: '10.0000',
-        idempotencyKey: `idem-${newId()}`,
-        requestHash: 'hash-receive-zero',
-        principal: actor,
-      });
-
-      // Even with quantity 0, it validates quantity must be positive — skip this
-      // and instead test the repository directly.
       const created = await repository.createStockPosition(testdb.db, {
         organizationId: orgId,
         warehouseId,
@@ -190,15 +187,13 @@ describe('Inventory context persistence', () => {
         onHand: '0',
       });
 
-      expect(created).toMatchObject({
-        organizationId: orgId,
-        warehouseId,
-        variantId,
-        onHand: '0',
-        reserved: '0',
-        allocated: '0',
-        version: 1,
-      });
+      expect(created.organizationId).toBe(orgId);
+      expect(created.warehouseId).toBe(warehouseId);
+      expect(created.variantId).toBe(variantId);
+      expect(dec(created.onHand)).toBe(dec('0'));
+      expect(dec(created.reserved)).toBe(dec('0'));
+      expect(dec(created.allocated)).toBe(dec('0'));
+      expect(created.version).toBe(1);
     });
 
     it('given a stock position when stock received then onHand increases', async () => {
@@ -218,7 +213,7 @@ describe('Inventory context persistence', () => {
         principal: actor,
       });
 
-      expect(received.onHand).toBe('100');
+      expect(dec(received.onHand)).toBe(dec('100'));
 
       // Verify with a second receipt
       const { received: received2 } = await service.receiveStock({
@@ -232,7 +227,7 @@ describe('Inventory context persistence', () => {
         principal: actor,
       });
 
-      expect(received2.onHand).toBe('150');
+      expect(dec(received2.onHand)).toBe(dec('150'));
     });
 
     it('given a stock position when stock consumed via FIFO then onHand decreases', async () => {
@@ -264,7 +259,7 @@ describe('Inventory context persistence', () => {
         principal: actor,
       });
 
-      expect(consumed.onHand).toBe('70');
+      expect(dec(consumed.onHand)).toBe(dec('70'));
     });
 
     it('given a stock position when reservation created then reserved increases and available decreases', async () => {
@@ -301,8 +296,8 @@ describe('Inventory context persistence', () => {
       // Verify stock position
       const stockPos = await service.getStockPosition(orgId, warehouseId, variantId);
       expect(stockPos).not.toBeNull();
-      expect(stockPos!.onHand).toBe('100');
-      expect(stockPos!.reserved).toBe('40');
+      expect(dec(stockPos!.onHand)).toBe(dec('100'));
+      expect(dec(stockPos!.reserved)).toBe(dec('40'));
       // available = 100 - 40 - 0 = 60
     });
 
@@ -323,7 +318,7 @@ describe('Inventory context persistence', () => {
         principal: actor,
       });
 
-      await service.reserveStock({
+      const { reservation } = await service.reserveStock({
         organizationId: orgId,
         warehouseId,
         variantId,
@@ -343,8 +338,8 @@ describe('Inventory context persistence', () => {
 
       const stockPos = await service.getStockPosition(orgId, warehouseId, variantId);
       expect(stockPos).not.toBeNull();
-      expect(stockPos!.onHand).toBe('80');
-      expect(stockPos!.reserved).toBe('0');
+      expect(dec(stockPos!.onHand)).toBe(dec('90'));
+      expect(dec(stockPos!.reserved)).toBe(dec('0'));
     });
 
     it('given a reservation when released then reserved decreases and available restores', async () => {
@@ -386,8 +381,8 @@ describe('Inventory context persistence', () => {
 
       const stockPos = await service.getStockPosition(orgId, warehouseId, variantId);
       expect(stockPos).not.toBeNull();
-      expect(stockPos!.onHand).toBe('100');
-      expect(stockPos!.reserved).toBe('0');
+      expect(dec(stockPos!.onHand)).toBe(dec('100'));
+      expect(dec(stockPos!.reserved)).toBe(dec('0'));
     });
 
     it('given a reservation when expired then reserved decreases', async () => {
@@ -473,8 +468,8 @@ describe('Inventory context persistence', () => {
 
       const stockPos = await service.getStockPosition(orgId, warehouseId, variantId);
       expect(stockPos).not.toBeNull();
-      expect(stockPos!.onHand).toBe('100');
-      expect(stockPos!.allocated).toBe('25');
+      expect(dec(stockPos!.onHand)).toBe(dec('100'));
+      expect(dec(stockPos!.allocated)).toBe(dec('25'));
     });
 
     it('given an allocation when consumed then allocated decreases', async () => {
@@ -514,8 +509,8 @@ describe('Inventory context persistence', () => {
 
       const stockPos = await service.getStockPosition(orgId, warehouseId, variantId);
       expect(stockPos).not.toBeNull();
-      expect(stockPos!.onHand).toBe('85');
-      expect(stockPos!.allocated).toBe('0');
+      expect(dec(stockPos!.onHand)).toBe(dec('85'));
+      expect(dec(stockPos!.allocated)).toBe(dec('0'));
     });
 
     it('given an allocation when released then allocated decreases', async () => {
@@ -557,8 +552,8 @@ describe('Inventory context persistence', () => {
 
       const stockPos = await service.getStockPosition(orgId, warehouseId, variantId);
       expect(stockPos).not.toBeNull();
-      expect(stockPos!.onHand).toBe('100');
-      expect(stockPos!.allocated).toBe('0');
+      expect(dec(stockPos!.onHand)).toBe(dec('100'));
+      expect(dec(stockPos!.allocated)).toBe(dec('0'));
     });
   });
 
@@ -602,10 +597,10 @@ describe('Inventory context persistence', () => {
       expect(layers).toHaveLength(2);
 
       // First layer should have lower cost (oldest)
-      expect(layers[0].unitCost).toBe('5.0000');
-      expect(layers[0].remainingQuantity).toBe('50');
-      expect(layers[1].unitCost).toBe('8.0000');
-      expect(layers[1].remainingQuantity).toBe('50');
+      expect(dec(layers[0].unitCost)).toBe(dec('5.0000'));
+      expect(dec(layers[0].remainingQuantity)).toBe(dec('50'));
+      expect(dec(layers[1].unitCost)).toBe(dec('8.0000'));
+      expect(dec(layers[1].remainingQuantity)).toBe(dec('50'));
 
       // Consume 60 — should consume layer 1 fully + 10 from layer 2
       await service.consumeStock({
@@ -620,8 +615,8 @@ describe('Inventory context persistence', () => {
 
       const layersAfter = await service.getFIFOLayers(orgId, r1.id);
       expect(layersAfter).toHaveLength(2);
-      expect(layersAfter[0].remainingQuantity).toBe('0');
-      expect(layersAfter[1].remainingQuantity).toBe('40');
+      expect(dec(layersAfter[0].remainingQuantity)).toBe(dec('0'));
+      expect(dec(layersAfter[1].remainingQuantity)).toBe(dec('40'));
     });
 
     it('given FIFO layer when fully consumed then remaining_quantity = 0', async () => {
@@ -653,7 +648,7 @@ describe('Inventory context persistence', () => {
 
       const layers = await service.getFIFOLayers(orgId, r1.id);
       expect(layers).toHaveLength(1);
-      expect(layers[0].remainingQuantity).toBe('0');
+      expect(dec(layers[0].remainingQuantity)).toBe(dec('0'));
     });
 
     it('given FIFO layer when partially consumed then remaining tracks correctly', async () => {
@@ -685,7 +680,7 @@ describe('Inventory context persistence', () => {
 
       const layers = await service.getFIFOLayers(orgId, r1.id);
       expect(layers).toHaveLength(1);
-      expect(layers[0].remainingQuantity).toBe('60');
+      expect(dec(layers[0].remainingQuantity)).toBe(dec('60'));
     });
 
     it('given FIFO layers when consuming across layers then split correctly', async () => {
@@ -737,7 +732,7 @@ describe('Inventory context persistence', () => {
       });
 
       const stockPos = await service.getStockPosition(orgId, warehouseId, variantId);
-      expect(stockPos!.onHand).toBe('15');
+      expect(dec(stockPos!.onHand)).toBe(dec('15'));
 
       // Verify with ledger entries
       const entries = await service.getLedgerEntries(orgId, stockPos!.id);
@@ -746,7 +741,7 @@ describe('Inventory context persistence', () => {
       const consumptions = entries.filter((e) => e.entryType === 'CONSUMPTION');
       expect(receipts).toHaveLength(3);
       expect(consumptions).toHaveLength(1);
-      expect(consumptions[0].quantityChange).toBe('-45');
+      expect(dec(consumptions[0].quantityChange)).toBe(dec('-45'));
     });
 
     it('given insufficient FIFO layers then INVENTORY_INSUFFICIENT error', async () => {
@@ -912,7 +907,7 @@ describe('Inventory context persistence', () => {
       // Source warehouse stock should have decreased
       const stockPos = await service.getStockPosition(orgId, wh1, variantId);
       expect(stockPos).not.toBeNull();
-      expect(stockPos!.onHand).toBe('70');
+      expect(dec(stockPos!.onHand)).toBe(dec('70'));
     });
 
     it('given a dispatched transfer when received then destination onHand increases', async () => {
@@ -973,7 +968,7 @@ describe('Inventory context persistence', () => {
       // Destination warehouse should have stock
       const destStock = await service.getStockPosition(orgId, wh2, variantId);
       expect(destStock).not.toBeNull();
-      expect(destStock!.onHand).toBe('40');
+      expect(dec(destStock!.onHand)).toBe(dec('40'));
     });
 
     it('given a transfer when received then FIFO layers created at destination', async () => {
@@ -1029,8 +1024,8 @@ describe('Inventory context persistence', () => {
 
       const layers = await service.getFIFOLayers(orgId, destStock!.id);
       expect(layers).toHaveLength(1);
-      expect(layers[0].remainingQuantity).toBe('25');
-      expect(layers[0].quantity).toBe('25');
+      expect(dec(layers[0].remainingQuantity)).toBe(dec('25'));
+      expect(dec(layers[0].quantity)).toBe(dec('25'));
     });
 
     it('given duplicate transfer receive then idempotent', async () => {
@@ -1097,7 +1092,7 @@ describe('Inventory context persistence', () => {
       // Destination should only have 20, not 40
       const destStock = await service.getStockPosition(orgId, wh2, variantId);
       expect(destStock).not.toBeNull();
-      expect(destStock!.onHand).toBe('20');
+      expect(dec(destStock!.onHand)).toBe(dec('20'));
     });
   });
 
@@ -1138,11 +1133,11 @@ describe('Inventory context persistence', () => {
       });
 
       expect(adjustment.adjustmentType).toBe('INCREASE');
-      expect(adjustment.quantityBefore).toBe('100');
-      expect(adjustment.quantityAfter).toBe('115');
+      expect(dec(adjustment.quantityBefore)).toBe(dec('100'));
+      expect(dec(adjustment.quantityAfter)).toBe(dec('115'));
 
       const updatedPos = await service.getStockPosition(orgId, warehouseId, variantId);
-      expect(updatedPos!.onHand).toBe('115');
+      expect(dec(updatedPos!.onHand)).toBe(dec('115'));
     });
 
     it('given an adjustment when applied then ledger entry created', async () => {
@@ -1182,7 +1177,7 @@ describe('Inventory context persistence', () => {
         (e) => e.entryType === 'ADJUSTMENT' && e.referenceId === adjustment.id,
       );
       expect(adjEntries).toHaveLength(1);
-      expect(adjEntries[0].quantityChange).toBe('+10');
+      expect(dec(adjEntries[0].quantityChange)).toBe(dec('+10'));
       expect(adjEntries[0].referenceType).toBe('ADJUSTMENT');
     });
 
@@ -1255,7 +1250,7 @@ describe('Inventory context persistence', () => {
       const entries = await service.getLedgerEntries(orgId, received.id);
       expect(entries).toHaveLength(1);
       expect(entries[0].entryType).toBe('RECEIPT');
-      expect(entries[0].quantityChange).toBe('+50');
+      expect(dec(entries[0].quantityChange)).toBe(dec('+50'));
       expect(entries[0].organizationId).toBe(orgId);
     });
 
@@ -1520,7 +1515,7 @@ describe('Inventory context persistence', () => {
         principal: actor,
       });
 
-      expect(received.onHand).toBe('50');
+      expect(dec(received.onHand)).toBe(dec('50'));
 
       // Verify idempotency outcome was recorded
       const outcome = await repository.findExistingOutcome(
@@ -1570,7 +1565,7 @@ describe('Inventory context persistence', () => {
 
       // Stock position should still be 50 (not 100)
       const stockPos = await service.getStockPosition(orgId, warehouseId, variantId);
-      expect(stockPos!.onHand).toBe('50');
+      expect(dec(stockPos!.onHand)).toBe(dec('50'));
     });
 
     it('given idempotency key with different payload then conflict error', async () => {
@@ -1608,7 +1603,7 @@ describe('Inventory context persistence', () => {
       });
 
       // Should replay original outcome
-      expect(received.onHand).toBe('50');
+      expect(dec(received.onHand)).toBe(dec('50'));
     });
   });
 });

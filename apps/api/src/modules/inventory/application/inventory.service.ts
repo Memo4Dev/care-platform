@@ -39,7 +39,7 @@ import type { DbExecutor } from '../infrastructure/db-executor';
 export class InventoryService {
   constructor(
     @Inject(DATABASE) private readonly db: DatabaseClient,
-    private readonly repository: InventoryRepository,
+    @Inject(InventoryRepository) private readonly repository: InventoryRepository,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -1587,6 +1587,14 @@ export class InventoryService {
       expiresAt: opts.expiresAt,
       referenceType: opts.referenceType,
       referenceId: opts.referenceId,
+    });
+
+    // Create reservation item (needed by releaseReservation/consumeReservation)
+    await this.repository.createReservationItem(tx, {
+      organizationId,
+      reservationId: reservation.id,
+      variantId,
+      quantity,
     });
 
     // Ledger entry

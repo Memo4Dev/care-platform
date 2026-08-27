@@ -15,6 +15,10 @@ import { eq, and } from 'drizzle-orm';
 import { InventoryRepository } from './infrastructure/inventory.repository';
 import { InventoryService } from './application/inventory.service';
 
+function dec(s: string): string {
+  return parseFloat(s).toString();
+}
+
 /**
  * Concurrency-specific integration tests for the Inventory bounded context.
  *
@@ -44,7 +48,9 @@ describe('Inventory concurrency control', () => {
   /** Insert a fresh organization for test isolation. */
   async function createTestOrg(): Promise<string> {
     const id = newId();
-    await testdb.db.insert(organizations).values({ id, name: `Conc Test Org ${id.slice(0, 8)}` });
+    await testdb.db
+      .insert(organizations)
+      .values({ id, name: `Conc Test Org ${id.replace(/-/g, '')}` });
     return id;
   }
 
@@ -54,7 +60,7 @@ describe('Inventory concurrency control', () => {
     await testdb.db.insert(branches).values({
       id,
       organizationId: orgId,
-      code: `BR-${id.slice(0, 6)}`,
+      code: `BR-${id.replace(/-/g, '')}`,
       name: 'Test Branch',
     });
     return id;
@@ -67,7 +73,7 @@ describe('Inventory concurrency control', () => {
       id,
       organizationId: orgId,
       branchId,
-      code: `WH-${id.slice(0, 6)}`,
+      code: `WH-${id.replace(/-/g, '')}`,
       name: 'Test Warehouse',
     });
     return id;
@@ -79,23 +85,23 @@ describe('Inventory concurrency control', () => {
     await testdb.db.insert(products).values({
       id: productId,
       organizationId: orgId,
-      name: `Conc Product ${productId.slice(0, 6)}`,
+      name: `Conc Product ${productId.replace(/-/g, '')}`,
     });
     const variantId = newId();
     const unitId = newId();
     await testdb.db.insert(unitDefinitions).values({
       id: unitId,
       organizationId: orgId,
-      name: `Piece-${unitId.slice(0, 6)}`,
-      symbol: `pc${unitId.slice(0, 4)}`,
+      name: `Piece-${unitId.replace(/-/g, '')}`,
+      symbol: `pc-${unitId.replace(/-/g, '')}`,
       isBaseUnit: true,
     });
     await testdb.db.insert(productVariants).values({
       id: variantId,
       organizationId: orgId,
       productId,
-      name: `Conc Variant ${variantId.slice(0, 6)}`,
-      sku: `SKU-${variantId.slice(0, 8)}`,
+      name: `Conc Variant ${variantId.replace(/-/g, '')}`,
+      sku: `SKU-${variantId.replace(/-/g, '')}`,
       baseUnitId: unitId,
     });
     return variantId;
@@ -445,12 +451,12 @@ describe('Inventory concurrency control', () => {
       expect(layers).toHaveLength(2);
 
       // Layer 1 (oldest) should be fully consumed
-      expect(layers[0].remainingQuantity).toBe('0');
-      expect(layers[0].unitCost).toBe('5.00');
+      expect(dec(layers[0].remainingQuantity)).toBe('0');
+      expect(dec(layers[0].unitCost)).toBe('5');
 
       // Layer 2 should have 2 remaining (5 - 3 = 2)
-      expect(layers[1].remainingQuantity).toBe('2');
-      expect(layers[1].unitCost).toBe('8.00');
+      expect(dec(layers[1].remainingQuantity)).toBe('2');
+      expect(dec(layers[1].unitCost)).toBe('8');
 
       // Verify stock position
       const pos = await service.getStockPosition(orgId, warehouseId, variantId);
@@ -513,11 +519,11 @@ describe('Inventory concurrency control', () => {
       expect(layers).toHaveLength(3);
 
       // Layer 1: fully consumed
-      expect(layers[0].remainingQuantity).toBe('0');
+      expect(dec(layers[0].remainingQuantity)).toBe('0');
       // Layer 2: fully consumed
-      expect(layers[1].remainingQuantity).toBe('0');
+      expect(dec(layers[1].remainingQuantity)).toBe('0');
       // Layer 3: untouched
-      expect(layers[2].remainingQuantity).toBe('3');
+      expect(dec(layers[2].remainingQuantity)).toBe('3');
 
       const pos = await service.getStockPosition(orgId, warehouseId, variantId);
       expect(parseFloat(pos!.onHand)).toBe(3);
@@ -1248,8 +1254,8 @@ describe('Inventory concurrency control', () => {
       });
 
       expect(adjustment.adjustmentType).toBe('INCREASE');
-      expect(adjustment.quantityBefore).toBe('10');
-      expect(adjustment.quantityAfter).toBe('15');
+      expect(dec(adjustment.quantityBefore)).toBe('10');
+      expect(dec(adjustment.quantityAfter)).toBe('15');
 
       const updatedPos = await service.getStockPosition(orgId, warehouseId, variantId);
       expect(parseFloat(updatedPos!.onHand)).toBe(15);
@@ -1322,7 +1328,7 @@ describe('Inventory concurrency control', () => {
       const entries = await service.getLedgerEntries(orgId, received.id);
       expect(entries).toHaveLength(1);
       expect(entries[0].entryType).toBe('RECEIPT');
-      expect(entries[0].quantityChange).toBe('+50');
+      expect(dec(entries[0].quantityChange)).toBe('50');
       expect(entries[0].organizationId).toBe(orgId);
 
       const originalId = entries[0].id;
@@ -1353,7 +1359,7 @@ describe('Inventory concurrency control', () => {
       expect(rows).toHaveLength(1);
       // The application never produces this state — this test documents
       // that the invariant is enforced at the application layer, not the DB.
-      expect(rows[0].quantity_change).toBe('+999'); // Direct SQL did update
+      expect(rows[0].quantity_change).toBe('999.0000'); // Direct SQL did update
     });
 
     it('given multiple ledger entries then ordering matches insertion order', async () => {
@@ -1410,7 +1416,7 @@ describe('Inventory concurrency control', () => {
       );
       expect(resEntry).toBeDefined();
       expect(resEntry!.referenceType).toBe('RESERVATION');
-      expect(resEntry!.quantityChange).toBe('15');
+      expect(dec(resEntry!.quantityChange)).toBe('15');
     });
 
     it('given ledger entries across operations then all entries are append-only', async () => {

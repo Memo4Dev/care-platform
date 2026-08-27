@@ -61,6 +61,10 @@ CREATE TABLE IF NOT EXISTS inventory.stock_positions (
 CREATE UNIQUE INDEX IF NOT EXISTS stock_positions_org_warehouse_variant_unique
     ON inventory.stock_positions (organization_id, warehouse_id, variant_id);
 
+-- Tenant-scope unique for FK references from child tables
+CREATE UNIQUE INDEX IF NOT EXISTS stock_positions_tenant_scope_unique
+    ON inventory.stock_positions (id, organization_id);
+
 CREATE INDEX IF NOT EXISTS stock_positions_organization_id_idx
     ON inventory.stock_positions (organization_id);
 
@@ -159,6 +163,10 @@ CREATE INDEX IF NOT EXISTS reservations_stock_position_id_idx
 CREATE INDEX IF NOT EXISTS reservations_status_idx
     ON inventory.reservations (status);
 
+-- Tenant-scope unique for FK references from child tables (reservation_items)
+CREATE UNIQUE INDEX IF NOT EXISTS reservations_tenant_scope_unique
+    ON inventory.reservations (id, organization_id);
+
 -- ============================================================================
 -- reservation_items — Line Items Within a Reservation
 -- ============================================================================
@@ -250,6 +258,10 @@ CREATE INDEX IF NOT EXISTS stock_transfers_destination_warehouse_id_idx
 
 CREATE INDEX IF NOT EXISTS stock_transfers_status_idx
     ON inventory.stock_transfers (status);
+
+-- Tenant-scope unique for FK references from child tables (stock_transfer_items)
+CREATE UNIQUE INDEX IF NOT EXISTS stock_transfers_tenant_scope_unique
+    ON inventory.stock_transfers (id, organization_id);
 
 -- ============================================================================
 -- stock_transfer_items — Line Items in a Transfer

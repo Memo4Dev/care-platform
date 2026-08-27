@@ -67,6 +67,8 @@ export const stockPositions = inventorySchema.table(
       table.warehouseId,
       table.variantId,
     ),
+    // Tenant-scope unique for FK references from child tables (fifo_layers, ledger_entries, etc.)
+    uniqueIndex('stock_positions_tenant_scope_unique').on(table.id, table.organizationId),
     index('stock_positions_organization_id_idx').on(table.organizationId),
     index('stock_positions_org_warehouse_idx').on(table.organizationId, table.warehouseId),
     // CHECK: on_hand >= 0
@@ -212,6 +214,8 @@ export const reservations = inventorySchema.table(
     index('reservations_organization_id_idx').on(table.organizationId),
     index('reservations_stock_position_id_idx').on(table.stockPositionId),
     index('reservations_status_idx').on(table.status),
+    // Tenant-scope unique for FK references from child tables (reservation_items)
+    uniqueIndex('reservations_tenant_scope_unique').on(table.id, table.organizationId),
     foreignKey({
       name: 'reservations_stock_position_tenant_fk',
       columns: [table.stockPositionId, table.organizationId],
@@ -329,6 +333,8 @@ export const stockTransfers = inventorySchema.table(
     index('stock_transfers_source_warehouse_id_idx').on(table.sourceWarehouseId),
     index('stock_transfers_destination_warehouse_id_idx').on(table.destinationWarehouseId),
     index('stock_transfers_status_idx').on(table.status),
+    // Tenant-scope unique for FK references from child tables (stock_transfer_items)
+    uniqueIndex('stock_transfers_tenant_scope_unique').on(table.id, table.organizationId),
     foreignKey({
       name: 'stock_transfers_source_warehouse_tenant_fk',
       columns: [table.sourceWarehouseId, table.organizationId],

@@ -1,6 +1,17 @@
 import { createHash } from 'node:crypto';
 
-import { Body, Controller, Get, Inject, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { z } from 'zod';
 import { PlatformError } from '@commerce-platform/contracts';
@@ -260,6 +271,7 @@ export class InventoryAdminController {
   }
 
   @Post('reservations/:id/consume')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Consume an active reservation (FIFO stock deduction)' })
   @ApiResponse({ status: 200, description: 'Reservation consumed' })
   @ApiResponse({ status: 403, description: 'Permission denied' })
@@ -282,6 +294,7 @@ export class InventoryAdminController {
   }
 
   @Post('reservations/:id/release')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Release an active reservation (returns reserved stock)' })
   @ApiResponse({ status: 200, description: 'Reservation released' })
   @ApiResponse({ status: 403, description: 'Permission denied' })
@@ -357,6 +370,7 @@ export class InventoryAdminController {
   }
 
   @Post('allocations/:id/consume')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Consume an active allocation (FIFO stock deduction)' })
   @ApiResponse({ status: 200, description: 'Allocation consumed' })
   @ApiResponse({ status: 403, description: 'Permission denied' })
@@ -376,6 +390,7 @@ export class InventoryAdminController {
   }
 
   @Post('allocations/:id/release')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Release an active allocation (returns allocated stock)' })
   @ApiResponse({ status: 200, description: 'Allocation released' })
   @ApiResponse({ status: 403, description: 'Permission denied' })
@@ -448,6 +463,7 @@ export class InventoryAdminController {
   }
 
   @Post('stock/consume')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Consume stock from a warehouse (FIFO deduction)' })
   @ApiResponse({ status: 200, description: 'Stock consumed' })
   @ApiResponse({ status: 403, description: 'Permission denied' })
@@ -500,6 +516,7 @@ export class InventoryAdminController {
   }
 
   @Post('transfers/:id/dispatch')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Dispatch a transfer (deduct source stock, move to IN_TRANSIT)' })
   @ApiResponse({ status: 200, description: 'Transfer dispatched' })
   @ApiResponse({ status: 403, description: 'Permission denied' })
@@ -519,6 +536,7 @@ export class InventoryAdminController {
   }
 
   @Post('transfers/:id/receive')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Receive a transfer (increase destination stock)' })
   @ApiResponse({ status: 200, description: 'Transfer received' })
   @ApiResponse({ status: 403, description: 'Permission denied' })

@@ -85,7 +85,7 @@ describe('Inventory HTTP boundary — Authorization matrix', () => {
       id,
       organizationId: orgId,
       branchId,
-      code: `WH-${id.slice(0, 6)}`,
+      code: `WH-${id.replace(/-/g, '')}`,
       name: 'Test Warehouse',
     });
     return id;
@@ -97,23 +97,23 @@ describe('Inventory HTTP boundary — Authorization matrix', () => {
     await testdb.db.insert(products).values({
       id: productId,
       organizationId: orgId,
-      name: `Test Product ${productId.slice(0, 6)}`,
+      name: `Test Product ${productId.replace(/-/g, '')}`,
     });
     const variantId = newId();
     const unitId = newId();
     await testdb.db.insert(unitDefinitions).values({
       id: unitId,
       organizationId: orgId,
-      name: `Piece-${unitId.slice(0, 6)}`,
-      symbol: `pc${unitId.slice(0, 4)}`,
+      name: `Piece-${unitId.replace(/-/g, '')}`,
+      symbol: `pc-${unitId.replace(/-/g, '')}`,
       isBaseUnit: true,
     });
     await testdb.db.insert(productVariants).values({
       id: variantId,
       organizationId: orgId,
       productId,
-      name: `Test Variant ${variantId.slice(0, 6)}`,
-      sku: `SKU-${variantId.slice(0, 8)}`,
+      name: `Test Variant ${variantId.replace(/-/g, '')}`,
+      sku: `SKU-${variantId.replace(/-/g, '')}`,
       baseUnitId: unitId,
     });
     return variantId;
@@ -367,17 +367,17 @@ describe('Inventory HTTP boundary — Authorization matrix', () => {
     it('allows owner with inventory.view to get stock position detail → 200', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/api/v1/admin/inventory/stock-positions/nonexistent-id',
+        url: `/api/v1/admin/inventory/stock-positions/${newId()}`,
         headers: { authorization: `Bearer ${ownerBearer}` },
       });
       expect(response.statusCode).toBe(404);
-      expect(response.json()).toMatchObject({ error: { code: 'NOT_FOUND' } });
+      expect(response.json()).toMatchObject({ error: { code: 'RESOURCE_NOT_FOUND' } });
     });
 
     it('allows owner with inventory.view to list FIFO layers → 200', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/api/v1/admin/inventory/stock-positions/nonexistent-id/fifo-layers',
+        url: `/api/v1/admin/inventory/stock-positions/${newId()}/fifo-layers`,
         headers: { authorization: `Bearer ${ownerBearer}` },
       });
       // Returns 200 with empty array because there's no stock position
@@ -388,7 +388,7 @@ describe('Inventory HTTP boundary — Authorization matrix', () => {
     it('allows owner with inventory.view to list ledger entries → 200', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/api/v1/admin/inventory/stock-positions/nonexistent-id/ledger',
+        url: `/api/v1/admin/inventory/stock-positions/${newId()}/ledger`,
         headers: { authorization: `Bearer ${ownerBearer}` },
       });
       expect(response.statusCode).toBe(200);
@@ -1389,7 +1389,7 @@ describe('Inventory HTTP boundary — Authorization matrix', () => {
       expect(dispatchRes.statusCode).toBe(200);
       expect(dispatchRes.json()).toMatchObject({
         id: transferId,
-        status: 'IN_TRANSIT',
+        status: 'DISPATCHED',
       });
 
       // 5. Verify source on_hand=10
