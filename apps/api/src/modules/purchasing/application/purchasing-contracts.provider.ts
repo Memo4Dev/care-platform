@@ -15,7 +15,7 @@ import { PurchasingRepository } from '../infrastructure/purchasing.repository';
 export class PurchasingContractProvider implements PurchasingContracts {
   constructor(
     @Inject(DATABASE) private readonly db: DatabaseClient,
-    private readonly repository: PurchasingRepository,
+    @Inject(PurchasingRepository) private readonly repository: PurchasingRepository,
   ) {}
 
   async getSupplier(organizationId: string, supplierId: string): Promise<SupplierView | null> {

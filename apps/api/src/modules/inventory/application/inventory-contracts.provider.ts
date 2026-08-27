@@ -22,7 +22,7 @@ import { inventoryEvent } from '../infrastructure/event-envelope';
 export class InventoryContractProvider implements InventoryContracts {
   constructor(
     @Inject(DATABASE) private readonly db: DatabaseClient,
-    private readonly repository: InventoryRepository,
+    @Inject(InventoryRepository) private readonly repository: InventoryRepository,
   ) {}
 
   async getAvailability(

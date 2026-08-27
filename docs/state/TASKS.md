@@ -81,8 +81,9 @@ None
 - M4-005+009 HTTP controller + Swagger + Postman: 16 endpoints for suppliers, POs, goods receipts; Zod validation; idempotency; permission checks; Swagger decorators; Postman collection updated.
 - M4-006 Domain unit tests: 79 tests across supplier (12), purchase-order (19), goods-receipt (13), invariants (22). All passing.
 - M4-007 Integration tests: 20 tests — supplier lifecycle, PO lifecycle, GR lifecycle, inventory integration (stock positions, FIFO, landed cost), idempotency, cross-tenant isolation, outbox events. Requires TEST_DATABASE_URL.
-- M4-008 HTTP boundary tests: 34 tests — authentication, validation, authorization, idempotency, CRUD, PO lifecycle, GR lifecycle, cross-tenant isolation, not-found. Requires TEST_DATABASE_URL.
+- M4-008 HTTP boundary tests: 37 tests — authentication, validation, authorization, idempotency, CRUD, PO lifecycle, GR lifecycle, cross-tenant isolation, not-found. Requires TEST_DATABASE_URL.
 - M4-010 State docs + quality gates: TypeScript zero errors, ESLint clean, Prettier clean, 79 unit tests passing.
+- M4-010 DI remediation: added explicit `@Inject(InventoryRepository)`/`@Inject(PurchasingRepository)` on the `repository` constructor params of `InventoryContractProvider` and `PurchasingContractProvider`. Under Vitest/Vite (esbuild) type-based (metadata) Nest injection silently yields `undefined`, so GR confirm (which calls `INVENTORY_CONTRACTS.receiveStock` → `findStockPosition`) returned `403 OPERATION_NOT_ALLOWED`. Explicit `@Inject` resolves it in both esbuild (tests) and tsc (production) emit. Full integration suite: 363 passed, 2 skipped (bullmq); unit: 560 passed; format/lint/typecheck green.
 - M4-010 Permission migration: `0027_add_purchasing_permissions.sql` — seeds purchasing.read/write/approve/receive into identity.permissions with ON CONFLICT DO NOTHING. Journal updated.
 
 ---
@@ -95,7 +96,7 @@ None
 - M4-004 Purchasing HTTP controller: `purchasing-admin.controller.ts` registered in `api.module.ts` with Swagger tag "Purchasing"; Zod validation, idempotency enforcement, authorization via purchasing.read/write/approve/receive.
 - M4-005 Purchasing domain unit tests: supplier/purchase-order/goods-receipt/invariants default suites.
 - M4-006 Purchasing integration tests: `purchasing.integration.spec.ts` (20 tests, native PG) — supplier/PO/GR lifecycle, idempotency, inventory integration, tenant isolation, outbox events.
-- M4-007 Purchasing HTTP boundary tests: `purchasing.http.integration.spec.ts` (34 tests) — authentication (401), validation (422), authorization (403), idempotency (422/replay/409), supplier CRUD, PO lifecycle (create/list/get/update/submit/approve/reject/send/cancel), goods receipt (create/list/get/confirm/cancel), cross-tenant isolation, not-found (404). Re-applies `0026_purchasing_core.sql` and `0027_add_purchasing_permissions.sql` during setup. Requires TEST_DATABASE_URL.
+- M4-007 Purchasing HTTP boundary tests: `purchasing.http.integration.spec.ts` (37 tests) — authentication (401), validation (422), authorization (403), idempotency (422/replay/409), supplier CRUD, PO lifecycle (create/list/get/update/submit/approve/reject/send/cancel), goods receipt (create/list/get/confirm/cancel), cross-tenant isolation, not-found (404). Re-applies `0026_purchasing_core.sql` and `0027_add_purchasing_permissions.sql` during setup. Requires TEST_DATABASE_URL.
 - M4-010 Permission migration: `0027_add_purchasing_permissions.sql` — seeds purchasing.read/write/approve/receive into identity.permissions with ON CONFLICT DO NOTHING. Journal updated at idx 27.
 
 ---

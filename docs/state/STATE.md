@@ -2,7 +2,7 @@
 
 Phase: M4 COMPLETE — READY FOR REVIEW
 Milestone: M4 (Purchasing) — COMPLETE
-Active task: All M4 tasks done. Awaiting human review and push/merge approval.
+Active task: All M4 tasks done including DI remediation. All local gates green. Awaiting human review and push/merge approval.
 CI: PENDING — integration tests require TEST_DATABASE_URL
 Branch: feat/m4-purchasing
 
@@ -19,22 +19,33 @@ All 10 M4 tasks complete (M4-001 through M4-010):
 | M4-005 | HTTP controller (16 endpoints) + Swagger             | DONE   |
 | M4-006 | Domain unit tests (79 tests)                         | DONE   |
 | M4-007 | Integration tests (20 tests, native PG)              | DONE   |
-| M4-008 | HTTP boundary tests (34 tests)                       | DONE   |
+| M4-008 | HTTP boundary tests (37 tests)                       | DONE   |
 | M4-009 | Postman collection + Swagger tag updates             | DONE   |
 | M4-010 | State docs + quality gates + permission migration    | DONE   |
 
 ## Quality gates
 
-| Gate                     | Local        | CI       | VPS          |
-| ------------------------ | ------------ | -------- | ------------ |
-| TypeScript               | ✅ PASS      | PENDING  | —            |
-| ESLint                   | ✅ PASS      | PENDING  | —            |
-| Prettier                 | ✅ PASS      | PENDING  | —            |
-| Domain unit tests (79)   | ✅ PASS      | PENDING  | —            |
-| Integration tests (20)   | NOT EXECUTED | REQUIRED | NOT REQUIRED |
-| HTTP boundary tests (34) | NOT EXECUTED | REQUIRED | NOT REQUIRED |
-| Reviewer                 | ✅ PASS      | —        | —            |
-| Security review          | ✅ PASS      | —        | —            |
+| Gate                     | Local   | CI       | VPS          |
+| ------------------------ | ------- | -------- | ------------ |
+| TypeScript               | ✅ PASS | PENDING  | —            |
+| ESLint                   | ✅ PASS | PENDING  | —            |
+| Prettier                 | ✅ PASS | PENDING  | —            |
+| Domain unit tests (560)  | ✅ PASS | PENDING  | —            |
+| Integration tests (363)  | ✅ PASS | REQUIRED | NOT REQUIRED |
+| HTTP boundary tests (37) | ✅ PASS | REQUIRED | NOT REQUIRED |
+| Reviewer                 | ✅ PASS | —        | —            |
+| Security review          | ✅ PASS | —        | —            |
+
+## DI remediation (GR confirm)
+
+Fixed the failing `confirms a PENDING goods receipt → 200` HTTP boundary test.
+Root cause: under Vitest/Vite (esbuild emit), type-based (constructor-metadata)
+Nest injection silently yields `undefined`, so `InventoryContractProvider.repository`
+was undefined and `INVENTORY_CONTRACTS.receiveStock()` → `this.repository.findStockPosition`
+threw `TypeError`, mapped by the error filter to `403 OPERATION_NOT_ALLOWED`.
+Resolution: explicit `@Inject(InventoryRepository)` on `InventoryContractProvider`
+and `@Inject(PurchasingRepository)` on `PurchasingContractProvider`. Works under
+both esbuild (tests) and tsc/`emitDecoratorMetadata` (production).
 
 ## Permission migration (0027)
 
