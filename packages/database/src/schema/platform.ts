@@ -120,11 +120,19 @@ export const platformTenants = platformSchema.table(
     suspendedReason: text('suspended_reason'),
     registrationReference: text('registration_reference').notNull().default('legacy'),
     registrationStatus: text('registration_status').notNull().default('LEGACY'),
-    registrationRequestedOrganizationName: text('registration_requested_organization_name').notNull().default('legacy'),
-    registrationOwnerSupabaseSubject: text('registration_owner_supabase_subject').notNull().default('legacy'),
+    registrationRequestedOrganizationName: text('registration_requested_organization_name')
+      .notNull()
+      .default('legacy'),
+    registrationOwnerSupabaseSubject: text('registration_owner_supabase_subject')
+      .notNull()
+      .default('legacy'),
     registrationOwnerEmail: text('registration_owner_email').notNull().default('legacy'),
-    registrationOwnerDisplayName: text('registration_owner_display_name').notNull().default('legacy'),
-    registrationVerifiedAt: timestamp('registration_verified_at', { withTimezone: true }).notNull().defaultNow(),
+    registrationOwnerDisplayName: text('registration_owner_display_name')
+      .notNull()
+      .default('legacy'),
+    registrationVerifiedAt: timestamp('registration_verified_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     ...timestamps,
     version: optimisticVersion,
   },
@@ -134,7 +142,9 @@ export const platformTenants = platformSchema.table(
     unique('platform_tenants_id_organization_unique').on(table.id, table.organizationId),
     uniqueIndex('platform_tenants_verified_registration_reference_unique')
       .on(table.registrationReference)
-      .where(sql`${table.registrationStatus} = 'VERIFIED' AND ${table.registrationReference} <> 'legacy'`),
+      .where(
+        sql`${table.registrationStatus} = 'VERIFIED' AND ${table.registrationReference} <> 'legacy'`,
+      ),
     foreignKey({
       name: 'platform_tenants_subscription_organization_fk',
       columns: [table.subscriptionId, table.organizationId],

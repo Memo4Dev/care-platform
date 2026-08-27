@@ -112,9 +112,7 @@ export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
  * Flat list of every catalog code; used by schema validation and guards.
  * Frozen so consumers cannot mutate the shared contract list at runtime.
  */
-export const ERROR_CODE_VALUES: readonly ErrorCode[] = Object.freeze(
-  Object.values(ERROR_CODES),
-);
+export const ERROR_CODE_VALUES: readonly ErrorCode[] = Object.freeze(Object.values(ERROR_CODES));
 
 /**
  * Mapping from each error code to its HTTP status.
@@ -249,9 +247,7 @@ export function httpStatusFor(code: string): number {
 
 /** Narrow an unknown value to {@link ErrorCode}. */
 export function isErrorCode(value: unknown): value is ErrorCode {
-  return (
-    typeof value === 'string' && ERROR_CODE_VALUES.includes(value as ErrorCode)
-  );
+  return typeof value === 'string' && ERROR_CODE_VALUES.includes(value as ErrorCode);
 }
 
 /** Options accepted by the {@link PlatformError} constructor. */
@@ -306,16 +302,11 @@ export class PlatformError extends Error {
       code: this.code,
       message: this.message,
       ...(this.details === undefined ? {} : { details: this.details }),
-      ...(this.correlationId === undefined
-        ? {}
-        : { correlationId: this.correlationId }),
+      ...(this.correlationId === undefined ? {} : { correlationId: this.correlationId }),
     };
   }
 
-  static validationFailed(
-    message: string,
-    options: PlatformErrorOptions = {},
-  ): PlatformError {
+  static validationFailed(message: string, options: PlatformErrorOptions = {}): PlatformError {
     return new PlatformError(ERROR_CODES.VALIDATION_FAILED, message, options);
   }
 
@@ -351,17 +342,11 @@ export class PlatformError extends Error {
     return new PlatformError(ERROR_CODES.BRANCH_ACCESS_DENIED, message, options);
   }
 
-  static featureNotEntitled(
-    message: string,
-    options: PlatformErrorOptions = {},
-  ): PlatformError {
+  static featureNotEntitled(message: string, options: PlatformErrorOptions = {}): PlatformError {
     return new PlatformError(ERROR_CODES.FEATURE_NOT_ENTITLED, message, options);
   }
 
-  static planLimitReached(
-    message: string,
-    options: PlatformErrorOptions = {},
-  ): PlatformError {
+  static planLimitReached(message: string, options: PlatformErrorOptions = {}): PlatformError {
     return new PlatformError(ERROR_CODES.PLAN_LIMIT_REACHED, message, options);
   }
 
@@ -372,17 +357,11 @@ export class PlatformError extends Error {
     return new PlatformError(ERROR_CODES.TENANT_SUSPENDED, message, options);
   }
 
-  static versionConflict(
-    message: string,
-    options: PlatformErrorOptions = {},
-  ): PlatformError {
+  static versionConflict(message: string, options: PlatformErrorOptions = {}): PlatformError {
     return new PlatformError(ERROR_CODES.RESOURCE_VERSION_CONFLICT, message, options);
   }
 
-  static idempotencyConflict(
-    message: string,
-    options: PlatformErrorOptions = {},
-  ): PlatformError {
+  static idempotencyConflict(message: string, options: PlatformErrorOptions = {}): PlatformError {
     return new PlatformError(ERROR_CODES.IDEMPOTENCY_CONFLICT, message, options);
   }
 

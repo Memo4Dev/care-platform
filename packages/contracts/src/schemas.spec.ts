@@ -66,9 +66,7 @@ describe('moneyAmountSchema', () => {
 describe('timestampSchema', () => {
   it('accepts canonical UTC ISO 8601 timestamps', () => {
     expect(timestampSchema.parse('2026-08-24T12:30:00Z')).toBe('2026-08-24T12:30:00Z');
-    expect(timestampSchema.parse('2026-08-24T12:30:00.123Z')).toBe(
-      '2026-08-24T12:30:00.123Z',
-    );
+    expect(timestampSchema.parse('2026-08-24T12:30:00.123Z')).toBe('2026-08-24T12:30:00.123Z');
   });
 
   it('rejects non-canonical forms so ordering stays deterministic', () => {

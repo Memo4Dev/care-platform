@@ -13,6 +13,8 @@ import { PlatformModule } from '../platform/platform.module';
 import { PlatformAdminController } from '../platform/platform-admin.controller';
 import { PricingModule } from '../pricing/pricing.module';
 import { PricingAdminController } from '../pricing/pricing-admin.controller';
+import { PurchasingModule } from '../purchasing/purchasing.module';
+import { PurchasingAdminController } from '../purchasing/purchasing-admin.controller';
 import { ProvisioningModule } from '../provisioning/provisioning.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 
@@ -28,6 +30,7 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
     CatalogModule,
     PricingModule,
     InventoryModule,
+    PurchasingModule,
     IdentityModule,
   ],
   controllers: [
@@ -36,6 +39,7 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
     CatalogAdminController,
     PricingAdminController,
     InventoryAdminController,
+    PurchasingAdminController,
   ],
 })
 export class ApiModule {}

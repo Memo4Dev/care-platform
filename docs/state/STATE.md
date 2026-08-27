@@ -1,33 +1,112 @@
 # Project State
 
-Phase: M3 COMPLETE — READY FOR REVIEW
-Milestone: M3 (Inventory Core) — COMPLETE
-Active task: All M3 tasks done. Awaiting human review and push/merge approval.
-CI: GREEN (pending — no Redis-dependent changes in M3)
-Branch: feat/m3-inventory-core
+Phase: M4 COMPLETE — READY FOR REVIEW
+Milestone: M4 (Purchasing) — COMPLETE
+Active task: M4 staged and fully verified. Awaiting human merge approval.
+CI: ✅ PASS — `57bff5c` (`feat/m4-purchasing`)
+Branch: feat/m4-purchasing
 
-## M3 milestone summary
+## M4 milestone summary
 
-All 10 M3 tasks complete (M3-001 through M3-010):
+All 10 M4 tasks complete (M4-001 through M4-010):
 
-| Task   | Domain                                                  | Status |
-| ------ | ------------------------------------------------------- | ------ |
-| M3-001 | Inventory persistence (Drizzle schema + migration)      | DONE   |
-| M3-002 | Domain layer (8 aggregates, events, invariants)         | DONE   |
-| M3-003 | Application layer (service, repo, contracts, module)    | DONE   |
-| M3-004 | Permissions (inventory.create)                          | DONE   |
-| M3-005 | HTTP controller (21 endpoints) + Swagger + registration | DONE   |
-| M3-006 | Domain unit tests (136 tests)                           | DONE   |
-| M3-007 | Integration tests (36 tests, native PG)                 | DONE   |
-| M3-008 | Concurrency tests (23 tests)                            | DONE   |
-| M3-009 | HTTP boundary tests (41+ tests)                         | DONE   |
-| M3-010 | Postman collection + Swagger tag updates                | DONE   |
+| Task   | Domain                                               | Status |
+| ------ | ---------------------------------------------------- | ------ |
+| M4-001 | Purchasing persistence (Drizzle schema + migration)  | DONE   |
+| M4-002 | Domain layer (3 aggregates, events, invariants)      | DONE   |
+| M4-003 | Application layer (service, repo, contracts, module) | DONE   |
+| M4-004 | Inventory contract expansion (receiveStock)          | DONE   |
+| M4-005 | HTTP controller (16 endpoints) + Swagger             | DONE   |
+| M4-006 | Domain unit tests (79 tests)                         | DONE   |
+| M4-007 | Integration tests (20 tests, native PG)              | DONE   |
+| M4-008 | HTTP boundary tests (37 tests)                       | DONE   |
+| M4-009 | Postman collection + Swagger tag updates             | DONE   |
+| M4-010 | State docs + quality gates + permission migration    | DONE   |
 
-**Test suite:** 136 domain unit tests passing; 36 integration + 23 concurrency + 41+ HTTP boundary tests created (require TEST_DATABASE_URL)
-**TypeScript:** zero type errors (apps/api + packages/database)
-**ESLint:** zero errors
-**Prettier:** all files formatted
-**Security:** No open security blockers
+## Quality gates
+
+| Gate                          | Local               | CI      | VPS     |
+| ----------------------------- | ------------------- | ------- | ------- |
+| TypeScript                    | ✅ PASS             | ✅ PASS | ✅ PASS |
+| ESLint                        | ✅ PASS             | ✅ PASS | ✅ PASS |
+| Prettier                      | ✅ PASS             | ✅ PASS | ✅ PASS |
+| Unit tests (560)              | ✅ PASS             | ✅ PASS | ✅ PASS |
+| Integration tests (365)       | 363 PASS, 2 skipped | ✅ PASS | ✅ PASS |
+| Purchasing HTTP boundary (37) | ✅ PASS             | ✅ PASS | ✅ PASS |
+| Build                         | —                   | ✅ PASS | ✅ PASS |
+| Reviewer                      | ✅ PASS             | —       | —       |
+| Security review               | ✅ PASS             | —       | —       |
+
+## Staging deployment — 2026-08-27
+
+- **Deployed branch/SHA:** `feat/m4-purchasing` / `57bff5c`
+- **Runtime database:** `care_platform_staging`; all 28 Drizzle migrations applied.
+- **M4 verification:** six `purchasing` tables exist and all four `purchasing.*`
+  permissions are seeded.
+- **Services:** API, worker, relay, PostgreSQL, and Redis are running. Public
+  `/health` returns 200; unauthenticated Purchasing read returns 401.
+- **VPS test isolation:** tests used `care_platform_integration` as the admin
+  database and Redis database 1. The live relay/worker use Redis database 0;
+  isolation prevents them consuming BullMQ test jobs. Test-created
+  `care_platform_test_*` databases were cleaned up (zero remain).
+- **Deployment reconciliation:** `compose.staging.yaml` now explicitly owns the
+  `care-platform` project and existing default network while declaring the
+  PostgreSQL/Redis volumes external. The first reconciliation took verified
+  logical backups of both databases before recreating only the stateful
+  containers against those preserved volumes. A second deployment completed
+  without stateful-container recreation, proving the compose workflow is
+  repeatable.
+- **Deployment command:** `scripts/deploy-staging.sh [branch]` now defaults to
+  the current branch, requires `VPS_SSH_PASSWORD` at runtime, leaves secrets on
+  the VPS, creates the staging database idempotently, migrates it, and replaces
+  only stateless API/worker/relay containers.
+
+## DI remediation (GR confirm)
+
+Fixed the failing `confirms a PENDING goods receipt → 200` HTTP boundary test.
+Root cause: under Vitest/Vite (esbuild emit), type-based (constructor-metadata)
+Nest injection silently yields `undefined`, so `InventoryContractProvider.repository`
+was undefined and `INVENTORY_CONTRACTS.receiveStock()` → `this.repository.findStockPosition`
+threw `TypeError`, mapped by the error filter to `403 OPERATION_NOT_ALLOWED`.
+Resolution: explicit `@Inject(InventoryRepository)` on `InventoryContractProvider`
+and `@Inject(PurchasingRepository)` on `PurchasingContractProvider`. Works under
+both esbuild (tests) and tsc/`emitDecoratorMetadata` (production).
+
+## Permission migration (0027)
+
+Seeds `purchasing.read`, `purchasing.write`, `purchasing.approve`, `purchasing.receive` into `identity.permissions`.
+ON CONFLICT DO NOTHING — safe for re-delivery.
+Legacy `purchase.create`/`purchase.approve` (0002) preserved unchanged.
+
+## GR → Inventory boundary
+
+- Purchasing calls `INVENTORY_CONTRACTS.receiveStock()` — never mutates inventory tables directly
+- Landed cost = unitCost + (additionalCosts / totalAcceptedQty)
+- Duplicate GR confirmation is idempotent
+- Partial receipt only credits accepted quantity
+- Over-receipt obeys organization PURCHASE policy
+- Confirmed GR is immutable
+
+## M4 purchasing — HTTP boundary tests
+
+Added `apps/api/src/modules/purchasing/purchasing.http.integration.spec.ts`,
+following the exact `inventory.http.integration.spec.ts` pattern
+(createTestDatabase + re-applying `0026_purchasing_core.sql`, JWT creation, full
+NestJS/Fastify boot with TenantBearerGuard, org/branch/warehouse/variant/owner
+provisioning, org-scoped role grants).
+
+Covers all PurchasingAdminController endpoints across 38 test cases:
+authentication (401), validation (422), authorization (403), idempotency
+(422/replay/409), supplier CRUD, PO lifecycle (create/list/get/update/submit/
+approve/reject/send/cancel), goods receipt (create/list/get/confirm/cancel),
+cross-tenant isolation (foreign org sees empty data), and not-found (404).
+
+Compile verification:
+
+- `npx tsc --noEmit -p apps/api/tsconfig.json` → exit 0
+- spec file type-checked with a temporary config including the spec → exit 0
+
+Requires `TEST_DATABASE_URL` (native PG or CI service container) to execute.
 
 ## M1 milestone summary
 

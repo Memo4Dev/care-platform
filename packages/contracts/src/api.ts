@@ -7,10 +7,7 @@
  */
 import { z } from 'zod';
 
-import {
-  ERROR_CODE_VALUES,
-  type ErrorCode,
-} from './errors';
+import { ERROR_CODE_VALUES, type ErrorCode } from './errors';
 
 /* -------------------------------------------------------------------------- */
 /* Correlation identifiers                                                    */

@@ -165,10 +165,7 @@ export const organizationPolicies = organizationSchema.table(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    unique('organization_policies_org_version_unique').on(
-      table.organizationId,
-      table.version,
-    ),
+    unique('organization_policies_org_version_unique').on(table.organizationId, table.version),
     index('organization_policies_latest_idx').on(
       table.organizationId,
       table.policyType,

@@ -62,6 +62,10 @@ export const PERMISSION_CODES = [
   'inventory.transfer',
   'purchase.create',
   'purchase.approve',
+  'purchasing.read',
+  'purchasing.write',
+  'purchasing.approve',
+  'purchasing.receive',
   'credit.use',
   'credit.override',
   'offline.resolve',
@@ -100,6 +104,10 @@ export const PERMISSION_DESCRIPTIONS: Record<PermissionCode, string> = {
   'inventory.transfer': 'Create and move stock transfers between branches.',
   'purchase.create': 'Create purchase orders.',
   'purchase.approve': 'Approve purchase orders.',
+  'purchasing.read': 'Read purchasing data (suppliers, purchase orders, goods receipts).',
+  'purchasing.write': 'Create and modify purchasing data.',
+  'purchasing.approve': 'Approve purchase orders.',
+  'purchasing.receive': 'Confirm goods receipts.',
   'credit.use': 'Sell on customer credit accounts.',
   'credit.override': 'Override credit limits and holds.',
   'offline.resolve': 'Resolve offline sync conflicts.',
@@ -142,9 +150,7 @@ export const permissions = identitySchema.table(
     description: text('description').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [
-    unique('permissions_code_unique').on(table.code),
-  ],
+  (table) => [unique('permissions_code_unique').on(table.code)],
 );
 
 // ---------------------------------------------------------------------------
