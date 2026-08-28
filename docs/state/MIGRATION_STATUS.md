@@ -203,3 +203,23 @@ All migrations are additive-only. No destructive DDL. No production rollout perf
   emits a false full-schema 0029 diff because historical M1–M4 snapshots are
   sparse; that untracked artifact was discarded and the journal remains at the
   reviewed 0028 entry. No generated 0029 migration is part of M5-003.
+
+## M5-004: POS Cart Core Persistence
+
+`0029_cart_core.sql` — Additive Cart bounded-context migration.
+
+- Creates logical schema `cart` with `cart.carts` and `cart.cart_items`.
+- Persists only `POS`-slice editable `DRAFT` state; later Cart lifecycle states
+  remain additive. Normal Draft rows have no Inventory reservation FK or write.
+- Enforces positive `NUMERIC(14,8)` line quantities, one line per
+  organization/cart/variant/unit, branch tenant scope, and same-tenant Catalog
+  variant/unit references.
+- Adds organization, branch/created-time, status, cart, and variant indexes;
+  optional `customer_id` remains a Customers contract reference rather than a
+  cross-context FK.
+- The migration is reviewed/manual because historical Drizzle snapshots are
+  sparse. It is journaled as entry 0029, verified by 19 native PostgreSQL Cart
+  persistence tests and 25 canonical POS HTTP boundary tests, and is not applied
+  to staging.
+- `/save` adds no Cart column or status: it persists only the existing durable
+  HTTP idempotency outcome while leaving the Draft Cart row unchanged.

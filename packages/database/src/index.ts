@@ -11,6 +11,7 @@ export * from './schema/entitlements';
 export * from './schema/organization';
 export * from './schema/catalog';
 export * from './schema/customers';
+export * from './schema/cart';
 export * from './schema/inventory';
 export * from './schema/purchasing';
 export * from './schema/pricing';

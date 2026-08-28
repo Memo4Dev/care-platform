@@ -16,6 +16,24 @@ export function assertTrustedPrincipal(value: unknown): asserts value is Authent
     throw new Error('Trusted authenticated principal required.');
   }
 }
+export function assertTrustedOrganizationUserPrincipal(
+  value: unknown,
+): asserts value is OrganizationUserPrincipal {
+  assertTrustedPrincipal(value);
+  if (
+    value.type !== 'ORGANIZATION_USER' ||
+    typeof value.subjectId !== 'string' ||
+    value.subjectId.length === 0 ||
+    !('organizationUserId' in value) ||
+    typeof value.organizationUserId !== 'string' ||
+    value.organizationUserId.length === 0 ||
+    !('organizationId' in value) ||
+    typeof value.organizationId !== 'string' ||
+    value.organizationId.length === 0
+  ) {
+    throw new Error('Trusted organization-user principal required.');
+  }
+}
 export interface PlatformUserPrincipal extends AuthenticatedPrincipal {
   readonly type: 'PLATFORM_USER';
   readonly platformUserId: string;

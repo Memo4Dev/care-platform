@@ -13,6 +13,8 @@ describe('SupabaseJwtService', () => {
     const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
     process.env.SUPABASE_JWKS_URL = 'https://auth.example.test/jwks';
     process.env.SUPABASE_JWT_ISSUER = 'https://auth.example.test';
+    process.env.SUPABASE_PLATFORM_AUDIENCE = 'platform';
+    process.env.SUPABASE_TENANT_AUDIENCE = 'tenant';
     vi.stubGlobal(
       'fetch',
       vi.fn(
@@ -29,6 +31,28 @@ describe('SupabaseJwtService', () => {
           sub: 'subject',
           iss: 'https://auth.example.test',
           aud: 'tenant',
+          exp: Math.floor(Date.now() / 1000) + 60,
+        }),
+        'tenant',
+      ),
+    ).resolves.toBe('subject');
+    await expect(
+      service.verify(
+        token(privateKey, {
+          sub: 'subject',
+          iss: 'https://auth.example.test',
+          aud: ['tenant', 'platform'],
+          exp: Math.floor(Date.now() / 1000) + 60,
+        }),
+        'tenant',
+      ),
+    ).rejects.toMatchObject({ code: 'INVALID_CREDENTIALS' });
+    await expect(
+      service.verify(
+        token(privateKey, {
+          sub: 'subject',
+          iss: 'https://auth.example.test',
+          aud: ['tenant', 'supplemental-service'],
           exp: Math.floor(Date.now() / 1000) + 60,
         }),
         'tenant',

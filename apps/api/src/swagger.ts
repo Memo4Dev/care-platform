@@ -5,7 +5,7 @@ export function setupSwagger(app: NestFastifyApplication): void {
   const config = new DocumentBuilder()
     .setTitle('Care Platform API')
     .setDescription(
-      'M1–M5 SaaS Foundation — Platform Admin, Tenant Admin, Identity, Subscriptions, Entitlements, Provisioning, Catalog, Pricing, Inventory, Purchasing, Customers',
+      'M1–M5 SaaS Foundation — Platform Admin, Tenant Admin, POS, Identity, Subscriptions, Entitlements, Provisioning, Catalog, Pricing, Inventory, Purchasing, Customers, Cart',
     )
     .setVersion('0.1.0')
     .addBearerAuth(
@@ -13,9 +13,19 @@ export function setupSwagger(app: NestFastifyApplication): void {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'Supabase JWT for platform or tenant authorization',
+        description: 'Supabase JWT for platform or tenant-admin authorization',
       },
       'platform-bearer',
+    )
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description:
+          'M5 transitional tenant JWT for an online POS organization user; POS device and Card/PIN identity are not implemented yet',
+      },
+      'tenant-bearer',
     )
     .addTag('Health', 'Liveness/readiness probes')
     .addTag('Platform Admin', 'Platform-wide tenant, plan, subscription management')
@@ -28,6 +38,7 @@ export function setupSwagger(app: NestFastifyApplication): void {
     )
     .addTag('Purchasing', 'Suppliers, purchase orders, goods receipts, purchasing costs')
     .addTag('Customers', 'Organization-scoped Individual and Business customers for POS sales')
+    .addTag('POS Cart', 'Organization and branch-scoped editable POS Draft Carts')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

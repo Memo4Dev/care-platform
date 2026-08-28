@@ -67,7 +67,23 @@ export class SupabaseJwtService {
     return claims.sub;
   }
   private matchesAudience(actual: JwtClaims['aud'], expected: string) {
-    return typeof actual === 'string' ? actual === expected : actual?.includes(expected) === true;
+    const platformAudience = process.env.SUPABASE_PLATFORM_AUDIENCE?.trim();
+    const tenantAudience = process.env.SUPABASE_TENANT_AUDIENCE?.trim();
+    if (
+      !platformAudience ||
+      !tenantAudience ||
+      platformAudience === tenantAudience ||
+      (expected !== platformAudience && expected !== tenantAudience)
+    )
+      return false;
+
+    const audiences = typeof actual === 'string' ? [actual] : actual;
+    if (!audiences?.includes(expected)) return false;
+
+    // A signed token must still identify one unambiguous application trust
+    // domain. Supabase permits aud arrays, but a token carrying both configured
+    // domains must never satisfy both the platform and tenant guards.
+    return !(audiences.includes(platformAudience) && audiences.includes(tenantAudience));
   }
   private async jwk(kid?: string): Promise<Jwk> {
     const url = process.env.SUPABASE_JWKS_URL;

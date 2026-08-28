@@ -2,8 +2,8 @@
 
 Phase: M5 IN PROGRESS
 Milestone: M5 (Sales & POS Core)
-Active task: M5-003 — Customer baseline complete locally; historical staging credential rotation remains a pre-push security follow-up.
-CI: M4 main CI run 38 for merge `05d9292` passed; M5 changes are unpushed and have no remote CI run yet.
+Active task: M5-005 hold/resume Cart reservation lifecycle is next. M5-004 canonical POS Cart persistence/API implementation is locally accepted and included in the current focused commit; it is not pushed or deployed.
+CI: M4 main CI run 38 for merge `05d9292` passed; M5 changes are unpushed and have no remote CI run yet. Historical staging credential rotation remains required before push.
 Branch: feat/m5-sales-pos-core
 
 ## M4 milestone summary
@@ -25,17 +25,17 @@ All 10 M4 tasks complete (M4-001 through M4-010):
 
 ## Quality gates
 
-| Gate                          | Local               | CI      | VPS     |
-| ----------------------------- | ------------------- | ------- | ------- |
-| TypeScript                    | ✅ PASS             | ✅ PASS | ✅ PASS |
-| ESLint                        | ✅ PASS             | ✅ PASS | ✅ PASS |
-| Prettier                      | ✅ PASS             | ✅ PASS | ✅ PASS |
-| Unit tests (560)              | ✅ PASS             | ✅ PASS | ✅ PASS |
-| Integration tests (365)       | 363 PASS, 2 skipped | ✅ PASS | ✅ PASS |
-| Purchasing HTTP boundary (37) | ✅ PASS             | ✅ PASS | ✅ PASS |
-| Build                         | —                   | ✅ PASS | ✅ PASS |
-| Reviewer                      | ✅ PASS             | —       | —       |
-| Security review               | ✅ PASS             | —       | —       |
+| Gate                     | Local                  | CI                   | VPS |
+| ------------------------ | ---------------------- | -------------------- | --- |
+| TypeScript               | ✅ full PASS           | pending              | —   |
+| ESLint                   | ✅ full PASS           | pending              | —   |
+| Prettier                 | ✅ full PASS           | pending              | —   |
+| Unit tests               | ✅ 597 PASS            | pending              | —   |
+| Integration tests        | ✅ 420 PASS, 2 skipped | Redis required in CI | —   |
+| POS Cart PostgreSQL/HTTP | ✅ 44 PASS             | pending              | —   |
+| Build                    | ✅ full PASS           | pending              | —   |
+| Reviewer                 | ✅ PASS                | pending              | —   |
+| Security review          | ✅ PASS                | pending              | —   |
 
 ## M5-003 current verification
 
@@ -48,6 +48,45 @@ All 10 M4 tasks complete (M4-001 through M4-010):
 - Full native PostgreSQL regression passed: 376 passed, 2 Redis-only tests
   skipped. Redis/BullMQ execution remains a CI-required gate.
 - The current M5 implementation is not deployed to staging.
+
+## M5-004 current verification
+
+- Cart persistence now includes `cart.carts` and `cart.cart_items` through the
+  reviewed additive migration `0029_cart_core.sql`.
+- The framework-independent Cart aggregate supports only editable POS Draft
+  carts, decimal-string quantities, repeated-line merging, line updates/removal,
+  optimistic versions, tenant-scoped outbox envelopes, and durable idempotent
+  HTTP outcomes.
+- The only Cart HTTP contract is now `/api/v1/pos/carts`, with canonical
+  `/items` resources and `POST /:cartId/save`; obsolete tenant-admin and
+  `/lines` routes return 404 and are absent from Swagger/Postman.
+- `PosOperatorGuard` uses the verified tenant JWT only as an explicit M5 online
+  transition. It resolves a trusted active `ORGANIZATION_USER` server-side and
+  still enforces `sales.create`, Organization scope, and branch access. It does
+  not claim POS Device, Employee Card/Barcode + PIN, Cash Session, or offline
+  identity support.
+- Save is a version-bound `LOCAL_ATOMIC` durable acknowledgement. It locks the
+  tenant Cart root, stores replayable HTTP outcome state, and changes no Cart
+  field/item or `updatedAt`; it emits no event and calls no Pricing, Inventory,
+  or Sales contract.
+- Final local verification passes: 597 unit tests and 420 native PostgreSQL
+  integration tests, with 2 Redis/BullMQ tests skipped locally and still
+  required in CI. Cart contributes 19 persistence and 25 full `app.inject`
+  HTTP tests (44 total). Full lint, format, typecheck, build, Drizzle schema
+  validation, and `git diff --check` pass.
+- Reviewer remediation serializes normalized no-op item updates by locking the
+  tenant-scoped Cart root before version validation and durable replay outcome
+  persistence; a real-PostgreSQL lock-contention test proves the behavior.
+- Security remediation rejects missing/equal platform and tenant JWT audiences
+  at API startup, rejects signed audience arrays spanning both trust domains,
+  limits unexpected-error logging and persistence error details, and adds tenant
+  lifecycle, suspended operator, foreign nested-reference, and
+  actor/organization idempotency-scope coverage.
+- The test harness emitted an existing `pg@9` deprecation warning about a
+  concurrent `client.query()` call; it did not affect test results.
+- The earlier POS/admin route, `/save`, concurrency, and security findings are
+  implemented and locally verified. Independent correctness and security
+  re-reviews pass. M5-004 is not deployed or pushed.
 
 ## Staging deployment — 2026-08-27
 

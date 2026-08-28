@@ -8,7 +8,7 @@ None
 
 - M5 — Sales & POS Core
   - [x] M5-003 Customer baseline: additive persistence, domain, transactional outbox/idempotency, tenant-admin HTTP boundary, narrow Customers contract, Swagger/Postman, and local review/gates complete. Previously committed staging credentials were removed from the collection; credential rotation remains a pre-push security follow-up.
-  - [ ] M5-004 Persisted POS Cart aggregate and APIs.
+  - [x] M5-004 Persisted POS Cart aggregate and canonical POS APIs (implementation, additive migration 0029, trusted transitional POS operator boundary, `/api/v1/pos/carts`, `/items`, idempotent `/save`, Swagger/Postman, and final local gates are green: 597 unit plus 420 native PostgreSQL tests, with 2 Redis/BullMQ tests still CI-required; independent correctness/security re-reviews pass; not deployed or pushed).
   - [ ] M5-005 Hold/resume Cart reservation lifecycle and configurable TTL policy through Inventory contracts.
   - [ ] M5-006 Barcode, availability, and Pricing quote integration for Cart lines.
   - [ ] M5-007 Checkout to immutable `PENDING_PAYMENT` Sale snapshot.
@@ -19,6 +19,7 @@ None
 
 ## Done
 
+- M5-004 POS Cart core: additive migration 0029; tenant/branch-scoped Draft Cart aggregate; canonical `/api/v1/pos/carts` with `/items` and bodyless `LOCAL_ATOMIC` `/save`; transitional trusted POS operator seam; strict JWT/RBAC/tenant/reference/idempotency/concurrency controls; Swagger/Postman and architecture updates; 597 unit and 420 native PostgreSQL tests pass locally (19 Cart persistence plus 25 Cart HTTP), with 2 Redis/BullMQ tests still CI-required; independent correctness and security reviews pass.
 - M5-003 Customer baseline: `customers.business_customers` persistence and migration 0028; Individual/Business aggregate; tenant-scoped create/get/search; atomic idempotency and Customers contract; strict HTTP validation/authentication/authorization/IDOR coverage; minimized event/response DTOs; Swagger/Postman updates; 567 unit and 376 native PostgreSQL integration tests pass locally. Redis/BullMQ remains CI-required, and staging credential rotation is required before push.
 - M5-002 Sales/POS architecture decision recording: accepted ADR-0009 documents hold-only Cart reservation (15-minute configurable TTL), `PENDING_PAYMENT → COMPLETED | CANCELLED` Sale lifecycle, future Payments completion boundary, and minimal Customers baseline. Relevant architecture/state docs updated before implementation.
 - Architecture design

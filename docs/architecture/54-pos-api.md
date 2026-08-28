@@ -7,10 +7,12 @@ Base path:
 ```
 
 POS API is optimized for low latency, branch scoping, device identity, and offline recovery.
+Device identity and offline recovery remain target architecture; they are not
+implicitly provided by the M5 Cart bearer transition below.
 
 ## POS Operator Authentication
 
-POS quick operator authentication uses Employee Card/Barcode + PIN.
+The target POS quick operator authentication uses Employee Card/Barcode + PIN.
 
 - Barcode/card alone is never sufficient.
 - Employee barcode/card identifiers are opaque; they do not encode
@@ -49,6 +51,17 @@ performedBy = active cashier
 approvedBy  = manager
 ```
 
+This endpoint and the device/Card/PIN session are not implemented by M5-004.
+
+### M5-004 transitional online credential
+
+The canonical online Cart routes temporarily use the tenant bearer JWT through
+`PosOperatorGuard`. It accepts only a trusted, server-resolved
+`ORGANIZATION_USER`, then evaluates `sales.create`, Organization scope, and branch
+access through application authorization. It does not establish POS Device,
+Card/PIN operator, Cash Session, or offline identity. Request bodies must not
+assert organization, user/operator, role/permission, or device authority.
+
 ## Device bootstrap
 
 ```text
@@ -84,7 +97,7 @@ GET /variants/{variantId}
 
 Prefer a compact response suitable for local caching.
 
-## Draft Carts
+## M5-004 online Draft Carts
 
 ```text
 POST   /carts
@@ -94,10 +107,29 @@ POST   /carts/{cartId}/items
 PATCH  /carts/{cartId}/items/{itemId}
 DELETE /carts/{cartId}/items/{itemId}
 POST   /carts/{cartId}/save
-POST   /carts/{cartId}/hold
-POST   /carts/{cartId}/resume
-POST   /carts/{cartId}/cancel
 ```
+
+The public Cart resource uses `items`; no line-oriented alias or tenant-admin
+Cart route is exposed.
+
+### Save contract
+
+`POST /carts/{cartId}/save` has no request body. It requires
+`Idempotency-Key` and `If-Match` and uses `LOCAL_ATOMIC` durability scoped to the
+canonical route, authenticated actor, and Organization.
+
+The transaction locks the tenant-scoped `POS` `DRAFT` Cart root before checking
+the expected version and loading the response snapshot. A matching replay
+returns that same stored Cart. A changed expected version under the same key
+returns `IDEMPOTENCY_CONFLICT`; a stale version under a distinct key returns
+`RESOURCE_VERSION_CONFLICT`.
+
+Save is a no-op on Cart business state: status, version, `updatedAt`, and items
+remain unchanged. Empty Drafts are valid. Save emits no domain or Outbox event,
+calls no Pricing, Inventory, or Sales contract, and creates no reservation,
+allocation, Sale, or price snapshot. Per Pricing architecture, only completed
+Orders/Sales store a price snapshot; later quote/reopen recalculates through
+Pricing in M5-006.
 
 ## Pricing quote
 

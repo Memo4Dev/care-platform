@@ -18,6 +18,7 @@ import { PurchasingAdminController } from '../purchasing/purchasing-admin.contro
 import { ProvisioningModule } from '../provisioning/provisioning.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { CustomersModule } from '../customers/customers.module';
+import { CartModule } from '../cart/cart.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { CustomersModule } from '../customers/customers.module';
     InventoryModule,
     PurchasingModule,
     CustomersModule,
+    CartModule,
     IdentityModule,
   ],
   controllers: [

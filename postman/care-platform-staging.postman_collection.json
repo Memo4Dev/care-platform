@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Care Platform API — Staging",
-    "description": "M1 + M2 + M3 + M4 + M5 (Catalog, Pricing, Inventory, Purchasing & Customers) staging environment collection.\n\nBase URL: https://api.care-systems.site\n\nAll endpoints require Bearer JWT unless noted.\n\nMutation requests (POST/PUT/PATCH/DELETE) automatically get an Idempotency-Key header.\n\nM3 adds Tenant Admin endpoints for Inventory management under /api/v1/admin/inventory/.\n\nM4 adds Tenant Admin endpoints for Purchasing management under /api/v1/admin/purchasing/ (suppliers, purchase orders, goods receipts).\n\nM5 adds Tenant Admin customer reference endpoints under /api/v1/admin/customers/.",
+    "description": "M1 + M2 + M3 + M4 + M5 (Catalog, Pricing, Inventory, Purchasing, Customers & POS Cart) staging environment collection.\n\nBase URL: https://api.care-systems.site\n\nAll endpoints require Bearer JWT unless noted.\n\nMutation requests (POST/PUT/PATCH/DELETE) automatically get an Idempotency-Key header.\n\nM3 adds Tenant Admin endpoints for Inventory management under /api/v1/admin/inventory/.\n\nM4 adds Tenant Admin endpoints for Purchasing management under /api/v1/admin/purchasing/ (suppliers, purchase orders, goods receipts).\n\nM5 adds Tenant Admin customer reference endpoints under /api/v1/admin/customers/ and canonical POS Draft Cart endpoints under /api/v1/pos/carts/. POS Cart temporarily uses a tenant JWT through PosOperatorGuard; device and Card/PIN identity are not implemented. Tracked credential variables remain blank.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -10,7 +10,7 @@
       "script": {
         "type": "text/javascript",
         "exec": [
-          "if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(pm.request.method)) {",
+          "if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(pm.request.method) && !pm.request.headers.has('Idempotency-Key')) {",
           "    pm.request.headers.add({",
           "        key: 'Idempotency-Key',",
           "        value: crypto.randomUUID()",
@@ -36,11 +36,16 @@
     { "key": "transferId", "value": "Transfer ID (auto-set after create)" },
     { "key": "warehouseId", "value": "d68ce259-db38-480e-a845-f3a849015d50" },
     { "key": "variantId", "value": "Variant ID (create via catalog first)" },
+    { "key": "unitId", "value": "Unit ID (create via catalog first)" },
     { "key": "supplierId", "value": "Supplier ID (auto-set after create)" },
     { "key": "purchaseOrderId", "value": "Purchase order ID (auto-set after create)" },
     { "key": "goodsReceiptId", "value": "Goods receipt ID (auto-set after create)" },
     { "key": "poItemId", "value": "PO line item ID (auto-set after create)" },
-    { "key": "customerId", "value": "Customer ID (auto-set after create)" }
+    { "key": "customerId", "value": "Customer ID (auto-set after create)" },
+    { "key": "cartId", "value": "Cart ID (auto-set after create)" },
+    { "key": "cartItemId", "value": "Cart item ID (auto-set after add)" },
+    { "key": "cartVersion", "value": "Cart version (auto-set after mutation)" },
+    { "key": "cartNextCursor", "value": "Next Cart cursor (auto-set after list)" }
   ],
   "item": [
     {
@@ -1057,6 +1062,221 @@
             "url": { "raw": "{{baseUrl}}/api/v1/admin/customers/{{customerId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "customers", "{{customerId}}"] },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
+        }
+      ]
+    },
+    {
+      "name": "POS — Cart",
+      "item": [
+        {
+          "name": "GET /carts (branch scoped)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts?branchId={{tenantBranchId}}&limit=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts"], "query": [{ "key": "branchId", "value": "{{tenantBranchId}}" }, { "key": "limit", "value": "50" }] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.page && body.page.nextCursor) pm.collectionVariables.set('cartNextCursor', body.page.nextCursor);",
+                  "    if (body.data && body.data[0]) {",
+                  "        pm.collectionVariables.set('cartId', body.data[0].id);",
+                  "        pm.collectionVariables.set('cartVersion', body.data[0].version);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /carts (next cursor)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts?branchId={{tenantBranchId}}&limit=50&after={{cartNextCursor}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts"], "query": [{ "key": "branchId", "value": "{{tenantBranchId}}" }, { "key": "limit", "value": "50" }, { "key": "after", "value": "{{cartNextCursor}}" }] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          }
+        },
+        {
+          "name": "POST /carts (create POS Draft)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": \"{{tenantBranchId}}\",\n  \"customerId\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.data) {",
+                  "        pm.collectionVariables.set('cartId', body.data.id);",
+                  "        pm.collectionVariables.set('cartVersion', body.data.version);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /carts/:cartId/items (add or merge)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/items", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts", "{{cartId}}", "items"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" },
+              { "key": "If-Match", "value": "{{cartVersion}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variantId\": \"{{variantId}}\",\n  \"unitId\": \"{{unitId}}\",\n  \"quantity\": \"1\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.data) {",
+                  "        pm.collectionVariables.set('cartVersion', body.data.version);",
+                  "        if (body.data.items && body.data.items[0]) pm.collectionVariables.set('cartItemId', body.data.items[0].id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /carts/:cartId",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts", "{{cartId}}"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.data) pm.collectionVariables.set('cartVersion', body.data.version);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /carts/:cartId/save (no body)",
+          "request": {
+            "description": "LOCAL_ATOMIC no-op save. Requires Idempotency-Key and If-Match; does not change Cart state, version, updatedAt, items, Inventory, Pricing, or Sales.",
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/save", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts", "{{cartId}}", "save"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{$guid}}" },
+              { "key": "If-Match", "value": "{{cartVersion}}" }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.data) pm.collectionVariables.set('cartVersion', body.data.version);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /carts/:cartId/items/:itemId",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/items/{{cartItemId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts", "{{cartId}}", "items", "{{cartItemId}}"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" },
+              { "key": "If-Match", "value": "{{cartVersion}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": \"2\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.data) pm.collectionVariables.set('cartVersion', body.data.version);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /carts/:cartId/items/:itemId",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/items/{{cartItemId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts", "{{cartId}}", "items", "{{cartItemId}}"] },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{$guid}}" },
+              { "key": "If-Match", "value": "{{cartVersion}}" }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.data) pm.collectionVariables.set('cartVersion', body.data.version);",
+                  "}"
+                ]
+              }
+            }
+          ]
         }
       ]
     },

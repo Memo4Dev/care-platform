@@ -3,6 +3,7 @@ import { ERROR_CODES, PlatformError } from '@commerce-platform/contracts';
 import { eq } from 'drizzle-orm';
 import { platformTenants, users, type DatabaseClient } from '@commerce-platform/database';
 import {
+  assertTrustedOrganizationUserPrincipal,
   trustPrincipal,
   type AuthenticatedPrincipal,
   type OrganizationUserPrincipal,
@@ -16,6 +17,7 @@ import {
 
 export interface AuthenticatedRequest {
   headers: Record<string, string | string[] | undefined>;
+  body?: unknown;
   principal?: AuthenticatedPrincipal;
   correlationId?: string;
 }
@@ -91,5 +93,24 @@ export class TenantBearerGuard extends BearerGuard {
       organizationId: user.organizationId,
     } as OrganizationUserPrincipal);
     return true;
+  }
+}
+
+/**
+ * M5 POS authentication seam.
+ *
+ * The current online path delegates authentication and tenant lifecycle checks
+ * to TenantBearerGuard, then requires its trusted organization-user principal.
+ * It deliberately proves no POS device, Card/PIN, or offline operator state.
+ */
+@Injectable()
+export class PosOperatorGuard {
+  constructor(@Inject(TenantBearerGuard) private readonly tenantBearerGuard: TenantBearerGuard) {}
+
+  async canActivate(context: ExecutionContext) {
+    const allowed = await this.tenantBearerGuard.canActivate(context);
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    assertTrustedOrganizationUserPrincipal(request.principal);
+    return allowed;
   }
 }

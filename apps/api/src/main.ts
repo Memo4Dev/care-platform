@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 
 import { AppModule } from './app.module';
+import { assertSeparatedBearerAudiences } from './common/auth/auth-config';
 import { readRuntimeRole } from './common/events/delivery-config';
 import { PlatformErrorFilter } from './common/http/platform-error.filter';
 import { correlationIdFor, type RequestWithCorrelation } from './common/http/correlation';
@@ -11,6 +12,7 @@ import { bootstrapRelay, bootstrapWorker } from './runtime';
 import { setupSwagger } from './swagger';
 
 export async function createApp(): Promise<NestFastifyApplication> {
+  assertSeparatedBearerAudiences();
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), {
     logger: false,
     abortOnError: false,

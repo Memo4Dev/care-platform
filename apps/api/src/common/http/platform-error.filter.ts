@@ -16,17 +16,24 @@ export class PlatformErrorFilter extends BaseExceptionFilter {
       !(exception instanceof HttpException) &&
       !(exception instanceof ZodError)
     ) {
-      console.error(
-        '[PlatformErrorFilter] UNHANDLED:',
-        exception?.constructor?.name,
-        String(exception),
-      );
+      console.error('[PlatformErrorFilter] UNHANDLED', {
+        name: exception?.constructor?.name ?? 'UnknownError',
+        code: errorCodeForLog(exception),
+        correlationId,
+      });
     }
     const error = isPlatformError(exception)
       ? exception
-      : exception instanceof HttpException || exception instanceof ZodError
-        ? PlatformError.validationFailed('Request validation failed.')
-        : PlatformError.of('OPERATION_NOT_ALLOWED', 'An unexpected error occurred.');
+      : exception instanceof HttpException && exception.getStatus() === 404
+        ? PlatformError.notFound('Route not found.')
+        : exception instanceof HttpException || exception instanceof ZodError
+          ? PlatformError.validationFailed('Request validation failed.')
+          : PlatformError.of('OPERATION_NOT_ALLOWED', 'An unexpected error occurred.');
     reply.code(error.httpStatus).send({ error: { ...error.toApiError(), correlationId } });
   }
+}
+
+function errorCodeForLog(exception: unknown): string | undefined {
+  if (!exception || typeof exception !== 'object' || !('code' in exception)) return undefined;
+  return typeof exception.code === 'string' ? exception.code : undefined;
 }
