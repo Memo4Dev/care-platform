@@ -7,10 +7,12 @@ import { DatabaseModule } from '../database/database.module';
 import { IdentityModule } from '../identity/identity.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { OrganizationModule } from '../organization/organization.module';
+import { PricingModule } from '../pricing/pricing.module';
 import { CartContractProvider } from './application/cart-contracts.provider';
 import { CartService } from './application/cart.service';
 import { CART_CONTRACTS } from './contracts';
 import { CartPosController } from './cart-pos.controller';
+import { PosProductController } from './pos-product.controller';
 import { CartRepository } from './infrastructure/cart.repository';
 
 @Module({
@@ -22,8 +24,9 @@ import { CartRepository } from './infrastructure/cart.repository';
     IdentityModule,
     InventoryModule,
     OrganizationModule,
+    PricingModule,
   ],
-  controllers: [CartPosController],
+  controllers: [CartPosController, PosProductController],
   providers: [
     CartRepository,
     CartService,

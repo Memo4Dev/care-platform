@@ -91,13 +91,18 @@ sync checkpoint
 
 ```text
 GET /products/search?q=
-GET /products/barcode/{barcode}
+GET /products/barcode/{barcode}   (POS)
 GET /variants/{variantId}
 ```
 
 Prefer a compact response suitable for local caching.
 
-## M5-004/M5-005 online Draft Carts
+The POS variant `GET /products/barcode/{barcode}` resolves to
+`/api/v1/pos/products/barcode/{barcode}?branchId=...`; it enforces
+`PosOperatorGuard`, `sales.create`, and branch access, resolving through the
+Catalog module contract and returning the sellable variant plus product context.
+
+## M5-004/M5-005/M5-006 online Draft Carts
 
 ```text
 POST   /carts
@@ -109,6 +114,8 @@ DELETE /carts/{cartId}/items/{itemId}
 POST   /carts/{cartId}/save
 POST   /carts/{cartId}/hold
 POST   /carts/{cartId}/resume
+POST   /carts/{cartId}/quote              (M5-006)
+POST   /carts/{cartId}/check-availability (M5-006)
 ```
 
 The public Cart resource uses `items`; no line-oriented alias or tenant-admin
@@ -156,33 +163,30 @@ reservation, and returns the Cart to editable Draft behavior. The command
 response includes the final released/expired hold state; later Cart reads omit a
 current hold.
 
-## Pricing quote
+### Quote and availability contract (M5-006)
 
-```text
-POST /pricing/quote
-```
+Both are read-only helpers for a POS operator building a Cart; they require the
+transitional tenant bearer, `sales.create`, Organization scope, and branch
+access. Reads do not require `Idempotency-Key` outcomes.
 
-Input:
+`POST /carts/{cartId}/quote` has optional body `{ priceType }` (default `CASH`).
+For each Cart line it calls the Pricing module contract
+(`getPriceQuote(orgId, { variantId, unitId, priceType, channel: 'POS', branchId })`)
+and returns live per-line `unitPrice` (Pricing 4-decimal amount), an 8-decimal
+`lineTotal = unitPrice × quantity`, and an 8-decimal grand `total`. Nothing is
+persisted and no version is advanced; pricing recalculates on every call (M5-006).
 
-```text
-branchId
-customerId?
-items[]
-paymentType?
-priceType?
-couponCode?
-```
+`POST /carts/{cartId}/check-availability` has body `{ warehouseId }`. It
+validates the warehouse belongs to the Cart's Organization and branch, then for
+each line calls Inventory `getAvailability` and returns per-line `available` and
+`shortage` at exact 8-decimal precision. The requested `quantity` is converted
+to the variant's base unit (the availability projection basis) and each line
+includes its `unitId`, so an explicit non-base-unit Cart line compares
+correctly and unambiguously against base-unit stock. No reservation or
+allocation is created.
 
-Output:
-
-```text
-line prices
-discounts
-taxes
-total
-applied price types
-override requirements if any
-```
+Cart arithmetic (line totals, availability, shortages) uses integer math at
+8-decimal scale; no floating-point values are used for money/quantity.
 
 ## Sales
 

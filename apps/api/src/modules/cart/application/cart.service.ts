@@ -9,7 +9,16 @@ import { CATALOG_CONTRACTS, type CatalogContracts } from '../../catalog/contract
 import { CUSTOMERS_CONTRACTS, type CustomersContracts } from '../../customers/contracts';
 import { INVENTORY_CONTRACTS, type InventoryContracts } from '../../inventory/contracts';
 import { ORGANIZATION_CONTRACTS, type OrganizationContracts } from '../../organization/contracts';
-import { normalizeCartView, type CartPage, type CartView } from '../contracts';
+import { PRICING_CONTRACTS, type PricingContracts } from '../../pricing/contracts';
+import {
+  normalizeCartView,
+  type CartAvailabilityLineView,
+  type CartAvailabilityView,
+  type CartPage,
+  type CartQuoteLineView,
+  type CartQuoteView,
+  type CartView,
+} from '../contracts';
 import { Cart } from '../domain/cart';
 import {
   CartRepository,
@@ -35,6 +44,7 @@ export class CartService {
     @Inject(CUSTOMERS_CONTRACTS) private readonly customers: CustomersContracts,
     @Inject(INVENTORY_CONTRACTS) private readonly inventory: InventoryContracts,
     @Inject(ORGANIZATION_CONTRACTS) private readonly organization: OrganizationContracts,
+    @Inject(PRICING_CONTRACTS) private readonly pricing: PricingContracts,
   ) {}
 
   async create(
@@ -93,6 +103,99 @@ export class CartService {
     if (!record) return null;
     const hold = await this.repository.findCurrentHold(this.db, organizationId, cartId);
     return toCartView(record, hold);
+  }
+
+  /**
+   * Live multi-line pricing quote for a POS Draft Cart.
+   *
+   * Recalculates each line's unit price and total through the Pricing module
+   * contract (channel POS, default CASH price type, Cart branch). The result is
+   * a read-only projection: it is never persisted and never freezes a price, so
+   * a later checkout recomputes through Pricing again. Consistent with the Cart
+   * architecture that save/quote never freeze prices.
+   */
+  async quote(
+    organizationId: string,
+    cartId: string,
+    priceType: 'CASH' | 'WHOLESALE' | 'CREDIT' | 'ONLINE' = 'CASH',
+  ): Promise<CartQuoteView> {
+    const record = await this.requireCart(this.db, organizationId, cartId);
+    const lines: CartQuoteLineView[] = [];
+    for (const line of record.lines) {
+      const quote = await this.pricing.getPriceQuote(organizationId, {
+        variantId: line.variantId,
+        unitId: line.unitId,
+        priceType,
+        channel: 'POS',
+        branchId: record.cart.branchId,
+      });
+      lines.push({
+        itemId: line.id,
+        variantId: line.variantId,
+        unitId: line.unitId,
+        quantity: line.quantity,
+        unitPrice: quote.amount,
+        lineTotal: mulDecimals(quote.amount, line.quantity),
+        priceType: priceType,
+        source: quote.source,
+      });
+    }
+    const total = lines.reduce((sum, line) => addDecimals(sum, line.lineTotal), '0.00');
+    return {
+      cartId: record.cart.id,
+      cartVersion: record.cart.version,
+      branchId: record.cart.branchId,
+      priceType,
+      lines,
+      total,
+    };
+  }
+
+  /**
+   * Non-mutating per-line availability for the Cart against a selected
+   * warehouse. Validates the warehouse belongs to the Cart's Organization and
+   * branch, then queries Inventory availability for each variant. No
+   * reservation or allocation is created.
+   */
+  async checkAvailability(
+    organizationId: string,
+    cartId: string,
+    warehouseId: string,
+  ): Promise<CartAvailabilityView> {
+    const record = await this.requireCart(this.db, organizationId, cartId);
+    await this.assertWarehouse(organizationId, record.cart.branchId, warehouseId);
+
+    // Convert each line's quantity to the variant's base unit (source of the
+    // availability projection) so the comparison and shortage are exact and
+    // consistent with the later hold's base-unit demands.
+    const demands = await this.resolveBaseDemands(organizationId, record.lines);
+
+    const lines: CartAvailabilityLineView[] = [];
+    for (let index = 0; index < record.lines.length; index++) {
+      const line = record.lines[index];
+      const availability = await this.inventory.getAvailability(
+        organizationId,
+        warehouseId,
+        line.variantId,
+      );
+      const available = availability ? availability.available : '0.00000000';
+      const requested = demands[index]?.quantity ?? line.quantity;
+      const shortage = deductDecimals(requested, available);
+      lines.push({
+        itemId: line.id,
+        variantId: line.variantId,
+        unitId: line.unitId,
+        quantity: requested,
+        available,
+        shortage,
+      });
+    }
+    return {
+      cartId: record.cart.id,
+      cartVersion: record.cart.version,
+      warehouseId,
+      lines,
+    };
   }
 
   async list(
@@ -807,4 +910,56 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isErrorCode(error: unknown, code: string): boolean {
   return isRecord(error) && error.code === code;
+}
+
+// ---------------------------------------------------------------------------
+// Money / quantity decimal arithmetic.
+//
+// Prices are stored as decimal strings (e.g. "12.3400"); line quantities use
+// the Cart NUMERIC(14,8) representation. Multiplication/addition/subtraction
+// below use integer core math on the 8-decimal scale so correctness-critical
+// money totals never pass through a floating-point value.
+// ---------------------------------------------------------------------------
+
+const MONEY_SCALE = 100_000_000n; // 8 fractional places used by Cart quantities
+
+/** multiply a price (≥0) by a positive quantity using integer math. */
+function mulDecimals(price: string, quantity: string): string {
+  const pScaled = toScaledNonNegative(price);
+  const qScaled = toScaledNonNegative(quantity);
+  const result = (pScaled * qScaled) / MONEY_SCALE;
+  return formatScaledNonNegative(result);
+}
+
+/** sum two non-negative decimal strings using integer math. */
+function addDecimals(left: string, right: string): string {
+  return formatScaledNonNegative(toScaledNonNegative(left) + toScaledNonNegative(right));
+}
+
+/** right subtracted from left, clamped at zero using integer math. */
+function deductDecimals(left: string, right: string): string {
+  const diff = toScaledNonNegative(left) - toScaledNonNegative(right);
+  return formatScaledNonNegative(diff > 0n ? diff : 0n);
+}
+
+function toScaledNonNegative(value: string): bigint {
+  const normalized = String(value).trim();
+  const [whole, fraction = ''] = normalized.split('.');
+  // Keep any sign embedded in the whole part so it is applied exactly once
+  // (a sign applied both here and via a separate multiplier would flip
+  // negatives into a positive corruption). The result is clamped to zero so
+  // the "non-negative" contract always holds.
+  const wholePart = whole === '' || whole === '-' ? '0' : whole;
+  const fractionSign = wholePart.startsWith('-') ? -1n : 1n;
+  const scaled =
+    BigInt(wholePart === '' ? '0' : wholePart) * MONEY_SCALE +
+    BigInt(fraction.padEnd(8, '0').slice(0, 8)) * fractionSign;
+  return scaled < 0n ? 0n : scaled;
+}
+
+function formatScaledNonNegative(value: bigint): string {
+  const safe = value < 0n ? 0n : value;
+  const whole = safe / MONEY_SCALE;
+  const fraction = (safe % MONEY_SCALE).toString().padStart(8, '0');
+  return `${whole}.${fraction}`;
 }

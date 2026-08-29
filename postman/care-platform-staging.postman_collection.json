@@ -36,6 +36,7 @@
     { "key": "transferId", "value": "Transfer ID (auto-set after create)" },
     { "key": "warehouseId", "value": "d68ce259-db38-480e-a845-f3a849015d50" },
     { "key": "variantId", "value": "Variant ID (create via catalog first)" },
+    { "key": "productBarcode", "value": "Barcode (create via catalog first)" },
     { "key": "unitId", "value": "Unit ID (create via catalog first)" },
     { "key": "supplierId", "value": "Supplier ID (auto-set after create)" },
     { "key": "purchaseOrderId", "value": "Purchase order ID (auto-set after create)" },
@@ -1827,6 +1828,67 @@
               }
             }
           ]
+        },
+        {
+          "name": "POST /carts/:cartId/quote",
+          "request": {
+            "description": "READ (M5-006). Live per-line Pricing quote for a POS Draft Cart. Optional body { priceType } default CASH. Returns unitPrice (Pricing 4-decimal) and 8-decimal lineTotal/total; never persists or freezes a price.",
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/quote",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pos", "carts", "{{cartId}}", "quote"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priceType\": \"CASH\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST /carts/:cartId/check-availability",
+          "request": {
+            "description": "READ (M5-006). Non-mutating per-line availability for Cart lines in one warehouse. Body { warehouseId }; returns exact 8-decimal available/shortage with no reservation.",
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/check-availability",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pos", "carts", "{{cartId}}", "check-availability"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"{{warehouseId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "GET /products/barcode/:barcode (POS scan)",
+          "request": {
+            "description": "READ (M5-006). Resolve a scanned barcode to a sellable variant for the POS. Query branchId must be authorized for this operator.",
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/products/barcode/{{productBarcode}}?branchId={{tenantBranchId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pos", "products", "barcode", "{{productBarcode}}"],
+              "query": [{ "key": "branchId", "value": "{{tenantBranchId}}" }]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            }
+          }
         },
         {
           "name": "PATCH /carts/:cartId/items/:itemId",

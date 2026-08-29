@@ -2,7 +2,7 @@
 
 Phase: M5 IN PROGRESS
 Milestone: M5 (Sales & POS Core)
-Active task: M5-005 hold/resume Cart reservation lifecycle. ADR-0010 is accepted and implementation is fully verified locally: Cart hold/resume APIs, Organization CART TTL policy, and Inventory multi-position reservation contracts/persistence pass all local gates (603 unit, 446 native PostgreSQL integration) and independent correctness/security reviews. M5-005 is committed locally but not pushed or deployed.
+Active task: M5-006 Barcode, availability, and Pricing quote integration for Cart lines. Cart now imports PricingModule, exposes `POST /api/v1/pos/carts/{cartId}/quote`, `POST /api/v1/pos/carts/{cartId}/check-availability`, and `GET /api/v1/pos/products/barcode/{barcode}` (PosProductController), and adds a Pricing `getPriceQuote` effective-date pre-filter fix. All local gates pass (537 unit, cart+pricing PG integration 108 tests, build/lint/typecheck/format) and the work is awaiting independent review and commit.
 CI: M4 main CI run 38 for merge `05d9292` passed; M5 changes are unpushed and have no remote CI run yet. Historical staging credential rotation remains required before push.
 Branch: feat/m5-sales-pos-core
 
@@ -32,7 +32,7 @@ All 10 M4 tasks complete (M4-001 through M4-010):
 | Prettier                 | ✅ full PASS           | pending              | —   |
 | Unit tests               | ✅ 603 PASS            | pending              | —   |
 | Integration tests        | ✅ 446 PASS, 2 skipped | Redis required in CI | —   |
-| POS Cart PostgreSQL/HTTP | ✅ 24 + 27 PASS        | pending              | —   |
+| POS Cart PostgreSQL/HTTP | ✅ 27 + 31 PASS        | pending              | — |
 | Build                    | ✅ full PASS           | pending              | —   |
 | Reviewer                 | ✅ PASS                | pending              | —   |
 | Security review          | ✅ PASS                | pending              | —   |
@@ -69,6 +69,40 @@ All 10 M4 tasks complete (M4-001 through M4-010):
   hold TTL policy is validated with 1–1440 integer bounds in the Organization
   domain. M5-005 is committed as `feat(m5): cart hold/resume reservation` on
   `feat/m5-sales-pos-core`; not pushed or deployed.
+
+## M5-006 current verification
+
+- Cart imports `PricingModule` and depends on `PRICING_CONTRACTS` +
+  `InventoryContracts`; cross-context reads only, no Pricing/Inventory table
+  access from Cart.
+- New POS surface: `POST /api/v1/pos/carts/{cartId}/quote` (optional `priceType`,
+  default `CASH`), `POST /api/v1/pos/carts/{cartId}/check-availability`
+  (`{ warehouseId }`), and `GET /api/v1/pos/products/barcode/{barcode}?branchId=`
+  via new `PosProductController`. All enforce `PosOperatorGuard`, `sales.create`,
+  Organization, and branch access.
+- `CartService.quote()` resolves live prices per line and computes 8-decimal
+  `lineTotal`/`total` via integer math; `checkAvailability()` validates the
+  warehouse belongs to the Cart's branch, converts each line's requested
+  quantity to the variant's base unit, and returns exact 8-decimal
+  available/shortage (including `unitId`) with no reservation.
+- Barcode scan `GET /api/v1/pos/products/barcode/{barcode}` resolves a variant
+  through Catalog and sets `sellable` only when both variant and product are
+  ACTIVE (non-ACTIVE variants return `sellable: false`).
+- Fixed a Pricing `getPriceQuote` effective-date pre-filter bug: the SQL
+  `effectiveFrom`/`effectiveTo` range is now `effectiveFrom <= date < effectiveTo`
+  (previously an inverted `effectiveFrom >= date` condition made normally-dated
+  entries unresolvable), matching the `resolvePriceQuote` domain contract.
+- Decimal helpers are integer-based at 8-decimal scale; the sign-parsing path
+  was hardened so negative inputs clamp to zero instead of corrupting to a
+  positive value (money-integrity safety for validated non-negative inputs).
+- New tests: 3 Cart service integration tests (quote, availability + shortage,
+  foreign-warehouse rejection) and 5 HTTP tests (quote, availability, foreign
+  warehouse/branch 403/404, barcode resolve + not-found, DRAFT barcode
+  `sellable:false`). Cart service now 27, Cart HTTP now 32.
+- Local gates: typecheck, lint, prettier, build PASS; 537 unit; cart+pricing
+  PostgreSQL/HTTP integration 108+ PASS. `git diff --check` clean. Independent
+  correctness (PASS with findings) and security (PASS) reviews complete;
+  correctness findings resolved. Pending commit.
 
 ## M5-003 current verification
 

@@ -41,6 +41,47 @@ export interface CartHoldView {
   readonly shortages: readonly CartHoldShortageView[];
 }
 
+/** One quoted Cart line (live Pricing recalc, never frozen by Cart). */
+export interface CartQuoteLineView {
+  readonly itemId: string;
+  readonly variantId: string;
+  readonly unitId: string;
+  readonly quantity: string;
+  readonly unitPrice: string;
+  readonly lineTotal: string;
+  readonly priceType: 'CASH' | 'WHOLESALE' | 'CREDIT' | 'ONLINE';
+  readonly source: 'BRANCH' | 'ORGANIZATIONAL';
+}
+
+/** Multi-line live pricing quote for a POS Draft Cart. */
+export interface CartQuoteView {
+  readonly cartId: string;
+  readonly cartVersion: number;
+  readonly branchId: string;
+  readonly priceType: 'CASH' | 'WHOLESALE' | 'CREDIT' | 'ONLINE';
+  readonly lines: readonly CartQuoteLineView[];
+  readonly total: string;
+}
+
+/** One Cart line availability against a selected warehouse (non-mutating). */
+export interface CartAvailabilityLineView {
+  readonly itemId: string;
+  readonly variantId: string;
+  readonly unitId: string;
+  /** Requested quantity in the variant's base unit (availability basis). */
+  readonly quantity: string;
+  readonly available: string;
+  readonly shortage: string;
+}
+
+/** Per-line availability against a warehouse; no reservation is created. */
+export interface CartAvailabilityView {
+  readonly cartId: string;
+  readonly cartVersion: number;
+  readonly warehouseId: string;
+  readonly lines: readonly CartAvailabilityLineView[];
+}
+
 export interface CartView {
   readonly id: string;
   readonly organizationId: string;

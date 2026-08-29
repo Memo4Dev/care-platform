@@ -20,6 +20,7 @@ import type { CatalogContracts, SellableVariantView } from '../catalog/contracts
 import type { CustomersContracts } from '../customers/contracts';
 import type { InventoryContracts } from '../inventory/contracts';
 import type { OrganizationContracts } from '../organization/contracts';
+import type { PricingContracts } from '../pricing/contracts';
 import { CartService, requestHash } from './application/cart.service';
 import { CartRepository } from './infrastructure/cart.repository';
 
@@ -37,6 +38,7 @@ describe('Cart persistence', () => {
   let warehouseA: string;
   let inventory: InventoryContracts;
   let organization: OrganizationContracts;
+  let pricing: PricingContracts;
 
   const actorId = newId();
 
@@ -236,6 +238,23 @@ describe('Cart persistence', () => {
         source: 'default',
       }),
     };
+    pricing = {
+      getPriceQuote: async (_organizationId, input) => ({
+        amount: '10.00000000',
+        priceType: input.priceType,
+        channel: 'POS',
+        source: 'ORGANIZATIONAL',
+      }),
+      validateCoupon: async () => {
+        throw new Error('not used');
+      },
+      evaluatePromotion: async () => {
+        throw new Error('not used');
+      },
+      calculateTaxPricingResult: async () => {
+        throw new Error('not used');
+      },
+    };
     service = new CartService(
       testdb.db,
       new CartRepository(),
@@ -243,6 +262,7 @@ describe('Cart persistence', () => {
       customers,
       inventory,
       organization,
+      pricing,
     );
   });
 
@@ -908,7 +928,15 @@ describe('Cart persistence', () => {
     const repository = new CartRepository();
     const catalog = { validateSellableVariant: vi.fn() } as unknown as CatalogContracts;
     const customers = { getCustomer: vi.fn() } as unknown as CustomersContracts;
-    const saveService = new CartService(testdb.db, repository, catalog, customers);
+    const saveService = new CartService(
+      testdb.db,
+      repository,
+      catalog,
+      customers,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+    );
     const cartId = await createRawCart();
     const item = await repository.createLine(testdb.db, {
       id: newId(),
@@ -1299,6 +1327,82 @@ describe('Cart persistence', () => {
     expect(createReservation).not.toHaveBeenCalled();
   });
 
+  it('quotes every Cart line with live per-line prices and a grand total without persisting', async () => {
+    const quote = vi.spyOn(pricing, 'getPriceQuote').mockResolvedValue({
+      amount: '12.50000000',
+      priceType: 'CASH',
+      channel: 'POS',
+      source: 'BRANCH',
+    });
+    const cartId = await createRawCart();
+    await insertRawLine(cartId, '2');
+    const result = await service.quote(orgA, cartId, 'CASH');
+    expect(quote).toHaveBeenCalledWith(
+      orgA,
+      expect.objectContaining({
+        variantId: variantA,
+        unitId: unitA,
+        priceType: 'CASH',
+        channel: 'POS',
+        branchId: branchA,
+      }),
+    );
+    expect(result).toMatchObject({
+      cartId,
+      cartVersion: 1,
+      branchId: branchA,
+      priceType: 'CASH',
+      total: '25.00000000',
+    });
+    expect(result.lines).toHaveLength(1);
+    expect(result.lines[0]).toMatchObject({
+      itemId: expect.any(String),
+      variantId: variantA,
+      unitId: unitA,
+      quantity: '2.00000000',
+      unitPrice: '12.50000000',
+      lineTotal: '25.00000000',
+      source: 'BRANCH',
+    });
+  });
+
+  it('reports per-line availability and shortage against a warehouse without reserving', async () => {
+    const availability = vi.spyOn(inventory, 'getAvailability');
+    availability
+      .mockResolvedValueOnce({
+        stockPositionId: newId(),
+        organizationId: orgA,
+        warehouseId: warehouseA,
+        variantId: variantA,
+        onHand: '10.00000000',
+        reserved: '0.00000000',
+        allocated: '0.00000000',
+        available: '10.00000000',
+      })
+      .mockResolvedValueOnce(null);
+    const cartId = await createRawCart();
+    await insertRawLine(cartId, '3');
+    const result = await service.checkAvailability(orgA, cartId, warehouseA);
+    expect(result.cartVersion).toBe(1);
+    expect(result.warehouseId).toBe(warehouseA);
+    expect(result.lines).toHaveLength(1);
+    expect(result.lines[0]).toMatchObject({
+      variantId: variantA,
+      quantity: '3.00000000',
+      available: '10.00000000',
+      shortage: '0.00000000',
+    });
+    expect(availability).toHaveBeenCalledWith(orgA, warehouseA, variantA);
+  });
+
+  it('rejects availability checks for a warehouse outside the Cart branch', async () => {
+    const cartId = await createRawCart();
+    await insertRawLine(cartId, '1');
+    await expect(service.checkAvailability(orgA, cartId, newId())).rejects.toMatchObject({
+      code: 'RESOURCE_NOT_FOUND',
+    });
+  });
+
   it('holds the tenant-scoped POS Draft root lock until the save outcome commits', async () => {
     const repository = new CartRepository();
     const originalFindForUpdate = repository.findCartForUpdate.bind(repository);
@@ -1323,6 +1427,9 @@ describe('Cart persistence', () => {
       repository,
       {} as CatalogContracts,
       {} as CustomersContracts,
+      undefined as never,
+      undefined as never,
+      undefined as never,
     );
     const cartId = await createRawCart();
     const savePromise = saveService.save(
@@ -1376,6 +1483,9 @@ describe('Cart persistence', () => {
       repository,
       {} as CatalogContracts,
       {} as CustomersContracts,
+      undefined as never,
+      undefined as never,
+      undefined as never,
     );
     const cartId = await createRawCart();
     const item = await repository.createLine(testdb.db, {
@@ -1630,6 +1740,9 @@ describe('Cart persistence', () => {
         new CartRepository(),
         catalog,
         customers,
+        undefined as never,
+        undefined as never,
+        undefined as never,
       );
       const smallContext = (key: string, payload: unknown) => ({
         organizationId,

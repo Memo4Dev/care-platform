@@ -56,6 +56,12 @@ const holdCart = z.object({ warehouseId: uuid }).strict();
 
 const noBody = z.undefined();
 
+const cartQuote = z
+  .object({ priceType: z.enum(['CASH', 'WHOLESALE', 'CREDIT', 'ONLINE']).default('CASH') })
+  .strict();
+
+const checkAvailability = z.object({ warehouseId: uuid }).strict();
+
 const listCarts = z.object({ branchId: uuid }).merge(cursorPageRequestSchema).strict();
 
 /** OpenAPI documents the same positive, bounded decimal accepted by the domain. */
@@ -243,6 +249,67 @@ const cartPageResponse = {
         hasMore: { type: 'boolean' },
       },
     },
+  },
+};
+
+const cartQuoteLineResponse = {
+  type: 'object',
+  required: [
+    'itemId',
+    'variantId',
+    'unitId',
+    'quantity',
+    'unitPrice',
+    'lineTotal',
+    'priceType',
+    'source',
+  ],
+  properties: {
+    itemId: { type: 'string', format: 'uuid' },
+    variantId: { type: 'string', format: 'uuid' },
+    unitId: { type: 'string', format: 'uuid' },
+    quantity: CART_QUANTITY_RESPONSE_SCHEMA,
+    unitPrice: { type: 'string', description: 'Unit price (8 decimal places)' },
+    lineTotal: { type: 'string', description: 'Line total (8 decimal places)' },
+    priceType: { type: 'string', enum: ['CASH', 'WHOLESALE', 'CREDIT', 'ONLINE'] },
+    source: { type: 'string', enum: ['BRANCH', 'ORGANIZATIONAL'] },
+  },
+};
+
+const cartQuoteResponse = {
+  type: 'object',
+  required: ['cartId', 'cartVersion', 'branchId', 'priceType', 'lines', 'total'],
+  properties: {
+    cartId: { type: 'string', format: 'uuid' },
+    cartVersion: { type: 'integer', minimum: 1 },
+    branchId: { type: 'string', format: 'uuid' },
+    priceType: { type: 'string', enum: ['CASH', 'WHOLESALE', 'CREDIT', 'ONLINE'] },
+    lines: { type: 'array', items: cartQuoteLineResponse },
+    total: { type: 'string', description: 'Grand total (8 decimal places)' },
+  },
+};
+
+const cartAvailabilityLineResponse = {
+  type: 'object',
+  required: ['itemId', 'variantId', 'unitId', 'quantity', 'available', 'shortage'],
+  properties: {
+    itemId: { type: 'string', format: 'uuid' },
+    variantId: { type: 'string', format: 'uuid' },
+    unitId: { type: 'string', format: 'uuid', description: 'Base unit of the requested quantity' },
+    quantity: { ...CART_QUANTITY_RESPONSE_SCHEMA, description: 'Requested quantity in base unit' },
+    available: CART_QUANTITY_RESPONSE_SCHEMA,
+    shortage: CART_QUANTITY_RESPONSE_SCHEMA,
+  },
+};
+
+const cartAvailabilityResponse = {
+  type: 'object',
+  required: ['cartId', 'cartVersion', 'warehouseId', 'lines'],
+  properties: {
+    cartId: { type: 'string', format: 'uuid' },
+    cartVersion: { type: 'integer', minimum: 1 },
+    warehouseId: { type: 'string', format: 'uuid' },
+    lines: { type: 'array', items: cartAvailabilityLineResponse },
   },
 };
 
@@ -730,6 +797,98 @@ export class CartPosController {
         idempotencyKey,
         requestHash({ cartId: cartIdValue, expectedVersion }),
       ),
+    );
+    return { data: result };
+  }
+
+  /** Reads are NOT_REQUIRED for idempotency; the Cart is tenant and branch scoped. */
+  @Post(':cartId/quote')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Live multi-line Pricing quote for the POS Draft Cart',
+  })
+  @ApiParam({ name: 'cartId', type: String, format: 'uuid' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        priceType: {
+          type: 'string',
+          enum: ['CASH', 'WHOLESALE', 'CREDIT', 'ONLINE'],
+          default: 'CASH',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Live quoted line prices, line totals, and grand total (never frozen)',
+    schema: { type: 'object', required: ['data'], properties: { data: cartQuoteResponse } },
+  })
+  @ApiResponse({ status: 401, description: 'Authentication required', schema: errorEnvelope })
+  @ApiResponse({
+    status: 403,
+    description: 'sales.create permission or branch access required',
+    schema: errorEnvelope,
+  })
+  @ApiResponse({ status: 404, description: 'Cart or price not available', schema: errorEnvelope })
+  @ApiResponse({ status: 422, description: 'Invalid body or Cart ID', schema: errorEnvelope })
+  async quote(
+    @Req() request: AuthenticatedRequest,
+    @Param('cartId') cartId: string,
+    @Body() body: unknown,
+  ) {
+    const principal = this.principal(request);
+    const id = uuid.parse(cartId);
+    const cart = await this.requireCart(principal, id);
+    await this.requireBranch(principal, request, cart.branchId);
+    const input = cartQuote.parse(body);
+    const result = await this.carts.quote(principal.organizationId, id, input.priceType);
+    return { data: result };
+  }
+
+  /** Reads are NOT_REQUIRED for idempotency; the Cart is tenant and branch scoped. */
+  @Post(':cartId/check-availability')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Non-mutating availability check for Cart lines in one warehouse',
+  })
+  @ApiParam({ name: 'cartId', type: String, format: 'uuid' })
+  @ApiBody({
+    schema: holdCartRequest,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Per-line available quantity and shortage; no reservation created',
+    schema: { type: 'object', required: ['data'], properties: { data: cartAvailabilityResponse } },
+  })
+  @ApiResponse({ status: 401, description: 'Authentication required', schema: errorEnvelope })
+  @ApiResponse({
+    status: 403,
+    description: 'sales.create permission or branch access required',
+    schema: errorEnvelope,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cart or warehouse not found in tenant/branch',
+    schema: errorEnvelope,
+  })
+  @ApiResponse({ status: 422, description: 'Invalid body or Cart ID', schema: errorEnvelope })
+  async checkAvailability(
+    @Req() request: AuthenticatedRequest,
+    @Param('cartId') cartId: string,
+    @Body() body: unknown,
+  ) {
+    const principal = this.principal(request);
+    const id = uuid.parse(cartId);
+    const cart = await this.requireCart(principal, id);
+    await this.requireBranch(principal, request, cart.branchId);
+    const input = checkAvailability.parse(body);
+    const result = await this.carts.checkAvailability(
+      principal.organizationId,
+      id,
+      input.warehouseId,
     );
     return { data: result };
   }

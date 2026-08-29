@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 
 import {
+  barcodes,
   branchAccess,
   businessCustomers,
   cartItems,
@@ -13,6 +14,8 @@ import {
   planEntitlements,
   plans,
   platformTenants,
+  priceBooks,
+  priceEntries,
   productVariants,
   products,
   subscriptions,
@@ -48,6 +51,7 @@ describe('Cart HTTP boundary', () => {
   let paginationBranchA: string;
   let ownerUserId: string;
   let variantA: string;
+  let draftVariantId: string;
   let unitA: string;
   let warehouseA: string;
   let customerA: string;
@@ -176,6 +180,61 @@ describe('Cart HTTP boundary', () => {
       quantity: '10.00000000',
       remainingQuantity: '10.00000000',
       unitCost: '1.0000',
+    });
+
+    // Default price book + entry (CASH/POS, branch-scoped) so quote() resolves live prices.
+    const priceBookId = newId();
+    await testdb.db.insert(priceBooks).values({
+      id: priceBookId,
+      organizationId: organizationA,
+      name: 'Cart HTTP Price Book',
+      isDefault: true,
+      isActive: true,
+    });
+    await testdb.db.insert(priceEntries).values({
+      id: newId(),
+      organizationId: organizationA,
+      priceBookId,
+      variantId: variantA,
+      unitId: unitA,
+      priceType: 'CASH',
+      channel: 'POS',
+      branchId: branchA,
+      amount: '12.50',
+      effectiveFrom: new Date('2020-01-01'),
+    });
+    await testdb.db.insert(barcodes).values({
+      id: newId(),
+      organizationId: organizationA,
+      variantId: variantA,
+      barcode: 'CART-HTTP-BARCODE',
+      isActive: true,
+    });
+
+    // A DRAFT product + variant + barcode to verify a scan reports sellable:false.
+    const draftProductId = newId();
+    draftVariantId = newId();
+    await testdb.db.insert(products).values({
+      id: draftProductId,
+      organizationId: organizationA,
+      name: 'Cart HTTP Draft Product',
+      status: 'DRAFT',
+    });
+    await testdb.db.insert(productVariants).values({
+      id: draftVariantId,
+      organizationId: organizationA,
+      productId: draftProductId,
+      name: 'Cart HTTP Draft Variant',
+      sku: 'CART-HTTP-DRAFT-SKU',
+      baseUnitId: unitA,
+      status: 'DRAFT',
+    });
+    await testdb.db.insert(barcodes).values({
+      id: newId(),
+      organizationId: organizationA,
+      variantId: draftVariantId,
+      barcode: 'CART-HTTP-DRAFT-BARCODE',
+      isActive: true,
     });
 
     paginationBranchA = newId();
@@ -352,6 +411,8 @@ describe('Cart HTTP boundary', () => {
         '/api/v1/pos/carts/{cartId}/hold',
         '/api/v1/pos/carts/{cartId}/resume',
         '/api/v1/pos/carts/{cartId}/save',
+        '/api/v1/pos/carts/{cartId}/quote',
+        '/api/v1/pos/carts/{cartId}/check-availability',
       ].sort(),
     );
     expect(document.components?.securitySchemes).toHaveProperty('tenant-bearer');
@@ -1177,6 +1238,176 @@ describe('Cart HTTP boundary', () => {
     });
     expect(editAfterShortage.statusCode).toBe(200);
     expect(editAfterShortage.json()).toMatchObject({ data: { version: 3 } });
+  });
+
+  it('quotes live per-line prices and a grand total against the default price book', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/v1/pos/carts',
+      headers: { authorization: `Bearer ${ownerBearer}`, 'idempotency-key': newId() },
+      payload: { branchId: branchA },
+    });
+    expect(created.statusCode).toBe(201);
+    const cartId = created.json().data.id as string;
+    const added = await app.inject({
+      method: 'POST',
+      url: `/api/v1/pos/carts/${cartId}/items`,
+      headers: {
+        authorization: `Bearer ${ownerBearer}`,
+        'idempotency-key': newId(),
+        'if-match': '1',
+      },
+      payload: { variantId: variantA, unitId: unitA, quantity: '2' },
+    });
+    expect(added.statusCode).toBe(200);
+
+    const quoted = await app.inject({
+      method: 'POST',
+      url: `/api/v1/pos/carts/${cartId}/quote`,
+      headers: { authorization: `Bearer ${ownerBearer}`, 'idempotency-key': newId() },
+      payload: { priceType: 'CASH' },
+    });
+    expect(quoted.statusCode).toBe(200);
+    expect(quoted.json()).toMatchObject({
+      data: {
+        cartId,
+        cartVersion: 2,
+        branchId: branchA,
+        priceType: 'CASH',
+        total: '25.00000000',
+        lines: [
+          {
+            variantId: variantA,
+            unitId: unitA,
+            quantity: '2.00000000',
+            unitPrice: '12.5000',
+            lineTotal: '25.00000000',
+            priceType: 'CASH',
+            source: 'BRANCH',
+          },
+        ],
+      },
+    });
+    const get = await app.inject({
+      method: 'GET',
+      url: `/api/v1/pos/carts/${cartId}`,
+      headers: { authorization: `Bearer ${ownerBearer}` },
+    });
+    expect(get.json()).toMatchObject({ data: { version: 2 } });
+  });
+
+  it('reports per-line availability and shortage without reserving or editing the Cart', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/v1/pos/carts',
+      headers: { authorization: `Bearer ${ownerBearer}`, 'idempotency-key': newId() },
+      payload: { branchId: branchA },
+    });
+    expect(created.statusCode).toBe(201);
+    const cartId = created.json().data.id as string;
+    await app.inject({
+      method: 'POST',
+      url: `/api/v1/pos/carts/${cartId}/items`,
+      headers: {
+        authorization: `Bearer ${ownerBearer}`,
+        'idempotency-key': newId(),
+        'if-match': '1',
+      },
+      payload: { variantId: variantA, unitId: unitA, quantity: '30' },
+    });
+
+    const availability = await app.inject({
+      method: 'POST',
+      url: `/api/v1/pos/carts/${cartId}/check-availability`,
+      headers: { authorization: `Bearer ${ownerBearer}`, 'idempotency-key': newId() },
+      payload: { warehouseId: warehouseA },
+    });
+    expect(availability.statusCode).toBe(200);
+    expect(availability.json()).toMatchObject({
+      data: {
+        cartId,
+        cartVersion: 2,
+        warehouseId: warehouseA,
+        lines: [
+          {
+            variantId: variantA,
+            unitId: unitA,
+            quantity: '30.00000000',
+            available: '10.00000000',
+            shortage: '20.00000000',
+          },
+        ],
+      },
+    });
+  });
+
+  it('rejects an availability check and barcode scan for a foreign warehouse/branch with 403', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/v1/pos/carts',
+      headers: { authorization: `Bearer ${ownerBearer}`, 'idempotency-key': newId() },
+      payload: { branchId: branchA },
+    });
+    expect(created.statusCode).toBe(201);
+    const cartId = created.json().data.id as string;
+
+    const foreignWarehouse = await app.inject({
+      method: 'POST',
+      url: `/api/v1/pos/carts/${cartId}/check-availability`,
+      headers: { authorization: `Bearer ${ownerBearer}`, 'idempotency-key': newId() },
+      payload: { warehouseId: newId() },
+    });
+    expect(foreignWarehouse.statusCode).toBe(404);
+
+    const barcodeForbidden = await app.inject({
+      method: 'GET',
+      url: `/api/v1/pos/products/barcode/CART-HTTP-BARCODE?branchId=${unauthorizedBranchA}`,
+      headers: { authorization: `Bearer ${ownerBearer}` },
+    });
+    expect(barcodeForbidden.statusCode).toBe(403);
+    expect(barcodeForbidden.json()).toMatchObject({ error: { code: 'BRANCH_ACCESS_DENIED' } });
+  });
+
+  it('resolves a scanned barcode to a sellable variant for the POS operator', async () => {
+    const resolved = await app.inject({
+      method: 'GET',
+      url: `/api/v1/pos/products/barcode/CART-HTTP-BARCODE?branchId=${branchA}`,
+      headers: { authorization: `Bearer ${ownerBearer}` },
+    });
+    expect(resolved.statusCode).toBe(200);
+    expect(resolved.json()).toMatchObject({
+      data: {
+        barcode: 'CART-HTTP-BARCODE',
+        variantId: variantA,
+        sku: 'CART-HTTP-SKU',
+        baseUnitId: unitA,
+        sellable: true,
+      },
+    });
+
+    const notFound = await app.inject({
+      method: 'GET',
+      url: `/api/v1/pos/products/barcode/DOES-NOT-EXIST?branchId=${branchA}`,
+      headers: { authorization: `Bearer ${ownerBearer}` },
+    });
+    expect(notFound.statusCode).toBe(404);
+    expect(notFound.json()).toMatchObject({ error: { code: 'RESOURCE_NOT_FOUND' } });
+  });
+
+  it('flags a scanned barcode for a non-active variant/product as not sellable', async () => {
+    const draft = await app.inject({
+      method: 'GET',
+      url: `/api/v1/pos/products/barcode/CART-HTTP-DRAFT-BARCODE?branchId=${branchA}`,
+      headers: { authorization: `Bearer ${ownerBearer}` },
+    });
+    expect(draft.statusCode).toBe(200);
+    expect(draft.json()).toMatchObject({
+      data: {
+        barcode: 'CART-HTTP-DRAFT-BARCODE',
+        variantId: draftVariantId,
+        sellable: false,
+      },
+    });
   });
 
   it('replays a create when customerId is omitted or explicitly null', async () => {

@@ -98,3 +98,37 @@ organization, user/operator, role/permission, or device authority fields.
   but its held reservation is no longer valid.
 - Hold, resume, expiration, and reservation release are idempotent and
   concurrency safe. Cart never mutates Inventory persistence directly.
+
+## M5-006: Pricing quote and availability integration
+
+The Cart module imports `PricingModule` and depends on its `PRICING_CONTRACTS`
+(`getPriceQuote`) and on `InventoryContracts.getAvailability`. These are the only
+cross-context reads Cart makes; Cart never reads Pricing or Inventory tables
+directly.
+
+- `POST /api/v1/pos/carts/{cartId}/quote` with optional body `{ priceType }`
+  (default `CASH`) resolves a live price for every line against the Organization's
+  default price book through `getPriceQuote(orgId, { variantId, unitId, priceType,
+  channel: 'POS', branchId })`. It returns per-line `unitPrice` (Pricing 4-decimal
+  amount), 8-decimal `lineTotal`, and an 8-decimal grand `total`. It is a read: it
+  persists nothing and never advances the Cart version.
+- `POST /api/v1/pos/carts/{cartId}/check-availability` with body `{ warehouseId }`
+  validates the warehouse belongs to the Cart's Organization and branch, then per
+  line calls `getAvailability` and returns exact 8-decimal `available` and
+  `shortage`. It creates no reservation or allocation. Each line's requested
+  `quantity` is converted to the variant's base unit (the stock position basis)
+  so non-base-unit lines compare correctly; the response includes the line's
+  `unitId` to make the basis explicit.
+- Barcode scan (`GET /api/v1/pos/products/barcode/{barcode}?branchId=...`) resolves
+  a variant through the Catalog `resolveBarcode` /
+  `validateSellableVariant` contracts, enforcing `sales.create` and branch access.
+  The response's `sellable` flag is `true` only when the variant and its product
+  are both `ACTIVE`; a scan may still return a non-ACTIVE variant for display with
+  `sellable: false`. It is a POS helper; the Cart add-item flow enforces
+  `VARIANT_NOT_SELLABLE` for non-ACTIVE items.
+- Money/quantity arithmetic in quote and availability uses integer math at
+  8-decimal scale; no floating-point values are used. The Pricing module returns
+  prices at its own 4-decimal `amount` precision; Cart converts to 8-decimal
+  totals.
+- Quoted prices are never frozen on the Cart; a later Sale completion stores the
+  price snapshot in the Sales/Pricing context. Quote recalculates live each call.
