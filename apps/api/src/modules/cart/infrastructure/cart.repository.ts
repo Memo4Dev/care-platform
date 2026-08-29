@@ -1,10 +1,12 @@
 import {
   cartItems,
+  cartHolds,
   carts,
   idempotencyOutcomes,
   integrationOutbox,
   newId,
   type CartItemRow,
+  type CartHoldRow,
   type CartRow,
 } from '@commerce-platform/database';
 import { PlatformError } from '@commerce-platform/contracts';
@@ -20,6 +22,8 @@ export interface CartRecord {
   cart: CartRow;
   lines: CartItemRow[];
 }
+
+export type CurrentCartHoldStatus = 'PENDING' | 'ACTIVE' | 'RELEASING';
 
 /**
  * Cart persistence adapter. Every read/write requires organization scope and
@@ -297,6 +301,116 @@ export class CartRepository {
       )
       .returning({ id: cartItems.id });
     return deleted.length > 0;
+  }
+
+  async findCurrentHold(
+    executor: DbExecutor,
+    organizationId: string,
+    cartId: string,
+  ): Promise<CartHoldRow | null> {
+    const [row] = await executor
+      .select()
+      .from(cartHolds)
+      .where(
+        and(
+          eq(cartHolds.organizationId, organizationId),
+          eq(cartHolds.cartId, cartId),
+          sql`${cartHolds.status} IN ('PENDING', 'ACTIVE', 'RELEASING')`,
+        ),
+      )
+      .orderBy(asc(cartHolds.createdAt), asc(cartHolds.id))
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findCurrentHoldForUpdate(
+    executor: DbExecutor,
+    organizationId: string,
+    cartId: string,
+  ): Promise<CartHoldRow | null> {
+    const [row] = await executor
+      .select()
+      .from(cartHolds)
+      .where(
+        and(
+          eq(cartHolds.organizationId, organizationId),
+          eq(cartHolds.cartId, cartId),
+          sql`${cartHolds.status} IN ('PENDING', 'ACTIVE', 'RELEASING')`,
+        ),
+      )
+      .orderBy(asc(cartHolds.createdAt), asc(cartHolds.id))
+      .limit(1)
+      .for('update');
+    return row ?? null;
+  }
+
+  async createHold(
+    executor: DbExecutor,
+    data: {
+      id: string;
+      organizationId: string;
+      cartId: string;
+      branchId: string;
+      warehouseId: string;
+      cartVersion: number;
+      ttlMinutes: number;
+      policyVersion: number;
+      expiresAt: Date;
+      actorId: string;
+      correlationId: string;
+      causationId: string;
+    },
+  ): Promise<CartHoldRow> {
+    try {
+      const [row] = await executor.insert(cartHolds).values(data).returning();
+      return row;
+    } catch (error) {
+      throw mapPersistenceError(error);
+    }
+  }
+
+  async completeHold(
+    executor: DbExecutor,
+    organizationId: string,
+    holdId: string,
+    status: 'ACTIVE' | 'FAILED',
+    data: { inventoryReservationId?: string | null; shortages?: unknown; failure?: unknown },
+  ): Promise<CartHoldRow> {
+    const [row] = await executor
+      .update(cartHolds)
+      .set({
+        status,
+        inventoryReservationId: data.inventoryReservationId ?? null,
+        shortagesJson: (data.shortages ?? null) as never,
+        failureJson: (data.failure ?? null) as never,
+        updatedAt: new Date(),
+        version: sql`${cartHolds.version} + 1`,
+      })
+      .where(and(eq(cartHolds.id, holdId), eq(cartHolds.organizationId, organizationId)))
+      .returning();
+    if (!row) throw PlatformError.notFound('Cart hold was not found.', { details: { holdId } });
+    return row;
+  }
+
+  async markHoldReleased(
+    executor: DbExecutor,
+    organizationId: string,
+    holdId: string,
+    status: 'RELEASED' | 'EXPIRED',
+    shortages: unknown,
+  ): Promise<CartHoldRow> {
+    const [row] = await executor
+      .update(cartHolds)
+      .set({
+        status,
+        shortagesJson: shortages as never,
+        updatedAt: new Date(),
+        version: sql`${cartHolds.version} + 1`,
+      })
+      .where(and(eq(cartHolds.id, holdId), eq(cartHolds.organizationId, organizationId)))
+      .returning();
+    if (!row) throw PlatformError.notFound('Cart hold was not found.', { details: { holdId } });
+    return row;
   }
 
   async claimIdempotency(

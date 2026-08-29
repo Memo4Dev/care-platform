@@ -12,7 +12,8 @@ import {
   idempotencyOutcomes,
   newId,
 } from '@commerce-platform/database';
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { PlatformError } from '@commerce-platform/contracts';
+import { and, asc, desc, eq, inArray, lte, sql } from 'drizzle-orm';
 
 import { INVENTORY_AGGREGATE_TYPE } from '../domain/events';
 import type { DbExecutor } from './db-executor';
@@ -78,6 +79,57 @@ export class InventoryRepository {
       .limit(1);
 
     return (row as StockPositionRow | undefined) ?? null;
+  }
+
+  /**
+   * Lock all existing positions for one tenant warehouse in deterministic ID
+   * order. Missing variants are intentionally absent from the result.
+   */
+  async lockStockPositionsForVariants(
+    executor: DbExecutor,
+    organizationId: string,
+    warehouseId: string,
+    variantIds: readonly string[],
+  ): Promise<StockPositionRow[]> {
+    if (variantIds.length === 0) return [];
+
+    const rows = await executor
+      .select()
+      .from(stockPositions)
+      .where(
+        and(
+          eq(stockPositions.organizationId, organizationId),
+          eq(stockPositions.warehouseId, warehouseId),
+          inArray(stockPositions.variantId, [...variantIds]),
+        ),
+      )
+      .orderBy(asc(stockPositions.id))
+      .for('update');
+
+    return rows as StockPositionRow[];
+  }
+
+  /** Lock known tenant positions in deterministic ID order. */
+  async lockStockPositionsByIds(
+    executor: DbExecutor,
+    organizationId: string,
+    stockPositionIds: readonly string[],
+  ): Promise<StockPositionRow[]> {
+    if (stockPositionIds.length === 0) return [];
+
+    const rows = await executor
+      .select()
+      .from(stockPositions)
+      .where(
+        and(
+          eq(stockPositions.organizationId, organizationId),
+          inArray(stockPositions.id, [...stockPositionIds]),
+        ),
+      )
+      .orderBy(asc(stockPositions.id))
+      .for('update');
+
+    return rows as StockPositionRow[];
   }
 
   /**
@@ -265,11 +317,14 @@ export class InventoryRepository {
     data: {
       id?: string;
       organizationId: string;
-      stockPositionId: string;
+      stockPositionId: string | null;
+      branchId?: string;
+      warehouseId?: string;
       status?: string;
       expiresAt?: Date | null;
       referenceType?: string;
       referenceId?: string;
+      referenceVersion?: number;
     },
   ): Promise<ReservationRow> {
     const id = data.id ?? newId();
@@ -279,10 +334,13 @@ export class InventoryRepository {
         id,
         organizationId: data.organizationId,
         stockPositionId: data.stockPositionId,
+        ...(data.branchId !== undefined ? { branchId: data.branchId } : {}),
+        ...(data.warehouseId !== undefined ? { warehouseId: data.warehouseId } : {}),
         status: data.status ?? 'ACTIVE',
         expiresAt: data.expiresAt ?? null,
         referenceType: data.referenceType ?? null,
         referenceId: data.referenceId ?? null,
+        referenceVersion: data.referenceVersion ?? 0,
       })
       .returning();
 
@@ -308,11 +366,66 @@ export class InventoryRepository {
     return (row as unknown as ReservationRow | undefined) ?? null;
   }
 
+  /** Serialize commands for one stable logical reference, including no-row creates. */
+  async lockReservationReference(
+    executor: DbExecutor,
+    organizationId: string,
+    referenceId: string,
+  ): Promise<void> {
+    await executor.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`${organizationId}:${referenceId}`}, 15))`,
+    );
+  }
+
+  /**
+   * Lock the latest reservation matching a tenant and logical Cart reference.
+   * The application compares branch/warehouse before exposing the row.
+   */
+  async lockCartReservationByReference(
+    executor: DbExecutor,
+    organizationId: string,
+    referenceId: string,
+  ): Promise<ReservationRow | null> {
+    const [row] = await executor
+      .select()
+      .from(reservations)
+      .where(
+        and(
+          eq(reservations.organizationId, organizationId),
+          eq(reservations.referenceType, 'CART_HOLD'),
+          eq(reservations.referenceId, referenceId),
+        ),
+      )
+      .orderBy(desc(reservations.createdAt), desc(reservations.id))
+      .limit(1)
+      .for('update');
+
+    return (row as unknown as ReservationRow | undefined) ?? null;
+  }
+
+  /** Claim a bounded due batch without blocking another expiration worker. */
+  async lockDueReservations(
+    executor: DbExecutor,
+    limit: number,
+    now: Date,
+  ): Promise<ReservationRow[]> {
+    const rows = await executor
+      .select()
+      .from(reservations)
+      .where(and(eq(reservations.status, 'ACTIVE'), lte(reservations.expiresAt, now)))
+      .orderBy(asc(reservations.expiresAt), asc(reservations.id))
+      .limit(limit)
+      .for('update', { skipLocked: true });
+
+    return rows as unknown as ReservationRow[];
+  }
+
   /**
    * Update reservation status with optimistic concurrency.
    */
   async updateReservationStatus(
     executor: DbExecutor,
+    organizationId: string,
     reservationId: string,
     status: string,
     version: number,
@@ -324,7 +437,13 @@ export class InventoryRepository {
         updatedAt: new Date(),
         version: version + 1,
       })
-      .where(and(eq(reservations.id, reservationId), eq(reservations.version, version)))
+      .where(
+        and(
+          eq(reservations.id, reservationId),
+          eq(reservations.organizationId, organizationId),
+          eq(reservations.version, version),
+        ),
+      )
       .returning();
 
     return (updated[0] as unknown as ReservationRow | undefined) ?? null;
@@ -339,6 +458,7 @@ export class InventoryRepository {
       id?: string;
       organizationId: string;
       reservationId: string;
+      stockPositionId?: string;
       variantId: string;
       quantity: string;
     },
@@ -350,6 +470,7 @@ export class InventoryRepository {
         id,
         organizationId: data.organizationId,
         reservationId: data.reservationId,
+        ...(data.stockPositionId !== undefined ? { stockPositionId: data.stockPositionId } : {}),
         variantId: data.variantId,
         quantity: data.quantity,
       })
@@ -363,12 +484,39 @@ export class InventoryRepository {
    */
   async findReservationItems(
     executor: DbExecutor,
+    organizationId: string,
     reservationId: string,
   ): Promise<ReservationItemRow[]> {
     const rows = await executor
       .select()
       .from(reservationItems)
-      .where(eq(reservationItems.reservationId, reservationId));
+      .where(
+        and(
+          eq(reservationItems.organizationId, organizationId),
+          eq(reservationItems.reservationId, reservationId),
+        ),
+      );
+
+    return rows as unknown as ReservationItemRow[];
+  }
+
+  /** Lock reservation items in deterministic stock-position order. */
+  async lockReservationItems(
+    executor: DbExecutor,
+    organizationId: string,
+    reservationId: string,
+  ): Promise<ReservationItemRow[]> {
+    const rows = await executor
+      .select()
+      .from(reservationItems)
+      .where(
+        and(
+          eq(reservationItems.organizationId, organizationId),
+          eq(reservationItems.reservationId, reservationId),
+        ),
+      )
+      .orderBy(asc(reservationItems.stockPositionId), asc(reservationItems.id))
+      .for('update');
 
     return rows as unknown as ReservationItemRow[];
   }
@@ -851,33 +999,54 @@ export class InventoryRepository {
     requestHash: string,
     scope: string,
   ): Promise<IdempotencyClaimResult> {
-    // Check for existing outcome first
+    const id = newId();
+    const inserted = await executor
+      .insert(idempotencyOutcomes)
+      .values({
+        id,
+        scope,
+        idempotencyKey: key,
+        requestHash,
+        status: 'IN_PROGRESS',
+      })
+      .onConflictDoNothing({
+        target: [idempotencyOutcomes.scope, idempotencyOutcomes.idempotencyKey],
+      })
+      .returning({ id: idempotencyOutcomes.id });
+
+    if (inserted.length === 1) {
+      return { kind: 'claimed', claimId: id };
+    }
+
     const [existing] = await executor
       .select()
       .from(idempotencyOutcomes)
       .where(and(eq(idempotencyOutcomes.idempotencyKey, key), eq(idempotencyOutcomes.scope, scope)))
       .limit(1);
 
-    if (existing) {
-      return {
-        kind: 'existing',
-        claimId: existing.id,
-        status: existing.status,
-        responseJson: existing.responseJson as Record<string, unknown> | null,
-      };
+    if (!existing) {
+      throw PlatformError.idempotencyConflict('Idempotency claim could not be resolved.', {
+        details: { idempotencyKey: key },
+      });
+    }
+    if (existing.requestHash !== requestHash) {
+      throw PlatformError.idempotencyConflict(
+        'Idempotency key was already used for a different request.',
+        { details: { idempotencyKey: key } },
+      );
+    }
+    if (existing.status === 'IN_PROGRESS') {
+      throw PlatformError.idempotencyConflict('Request is already being processed.', {
+        details: { idempotencyKey: key },
+      });
     }
 
-    // Insert new claim (will fail on unique constraint if concurrent)
-    const id = newId();
-    await executor.insert(idempotencyOutcomes).values({
-      id,
-      scope,
-      idempotencyKey: key,
-      requestHash,
-      status: 'IN_PROGRESS',
-    });
-
-    return { kind: 'claimed', claimId: id };
+    return {
+      kind: 'existing',
+      claimId: existing.id,
+      status: existing.status,
+      responseJson: existing.responseJson as Record<string, unknown> | null,
+    };
   }
 
   /**
@@ -961,11 +1130,14 @@ export interface LedgerEntryRow {
 export interface ReservationRow {
   id: string;
   organizationId: string;
-  stockPositionId: string;
+  stockPositionId: string | null;
+  branchId: string;
+  warehouseId: string;
   status: string;
   expiresAt: Date | null;
   referenceType: string | null;
   referenceId: string | null;
+  referenceVersion: number;
   createdAt: Date;
   updatedAt: Date;
   version: number;
@@ -975,6 +1147,7 @@ export interface ReservationItemRow {
   id: string;
   organizationId: string;
   reservationId: string;
+  stockPositionId: string;
   variantId: string;
   quantity: string;
   createdAt: Date;

@@ -1,20 +1,41 @@
 import { type DatabaseClient } from '@commerce-platform/database';
 import { ERROR_CODES, PlatformError } from '@commerce-platform/contracts';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 
 import { DATABASE } from '../../database/database.tokens';
+import { ORGANIZATION_CONTRACTS, type OrganizationContracts } from '../../organization/contracts';
+import type {
+  CartReservationDemand,
+  CartReservationItemSnapshot,
+  CartReservationShortage,
+  CartReservationSnapshot,
+  CartReservationStateResult,
+  CheckCartReservationInput,
+  CreateCartReservationInput,
+  CreateCartReservationResult,
+  ReleaseCartReservationInput,
+} from '../contracts';
 import {
   InventoryRepository,
   type StockPositionRow,
   type FIFOLayerRow,
   type LedgerEntryRow,
   type ReservationRow,
+  type ReservationItemRow,
   type AllocationRow,
   type StockTransferRow,
   type StockAdjustmentRow,
 } from '../infrastructure/inventory.repository';
 import { inventoryEvent } from '../infrastructure/event-envelope';
 import type { DbExecutor } from '../infrastructure/db-executor';
+import {
+  addInventoryQuantities,
+  compareInventoryQuantities,
+  normalizeInventoryQuantity,
+  subtractInventoryQuantities,
+} from './inventory-quantity';
+
+type WarehouseScopeContract = Pick<OrganizationContracts, 'getWarehouse'>;
 
 /**
  * Application service of the Inventory context: one method per domain
@@ -40,6 +61,9 @@ export class InventoryService {
   constructor(
     @Inject(DATABASE) private readonly db: DatabaseClient,
     @Inject(InventoryRepository) private readonly repository: InventoryRepository,
+    @Optional()
+    @Inject(ORGANIZATION_CONTRACTS)
+    private readonly organizationContracts?: WarehouseScopeContract,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -58,12 +82,8 @@ export class InventoryService {
     requestHash: string;
     principal: { id: string };
   }): Promise<{ received: StockPositionRow }> {
-    const quantityNum = parseFloat(params.quantity);
-    if (quantityNum <= 0) {
-      throw PlatformError.validationFailed('Receive quantity must be positive.', {
-        details: { quantity: params.quantity },
-      });
-    }
+    const quantity = normalizeInventoryQuantity(params.quantity);
+    const quantityNum = parseFloat(quantity);
 
     const idempotencyScope = `inventory:receiveStock:${params.organizationId}`;
     const result = await this.db.transaction(async (tx) => {
@@ -99,7 +119,7 @@ export class InventoryService {
           organizationId: params.organizationId,
           warehouseId: params.warehouseId,
           variantId: params.variantId,
-          onHand: params.quantity,
+          onHand: quantity,
         });
 
         events.push(
@@ -120,7 +140,7 @@ export class InventoryService {
           ),
         );
       } else {
-        const newOnHand = this.decimalAdd(stockPos.onHand, params.quantity);
+        const newOnHand = this.decimalAdd(stockPos.onHand, quantity);
         const updated = await this.repository.updateStockPosition(
           tx,
           params.organizationId,
@@ -145,8 +165,8 @@ export class InventoryService {
         organizationId: params.organizationId,
         stockPositionId: stockPos.id,
         receivedAt,
-        quantity: params.quantity,
-        remainingQuantity: params.quantity,
+        quantity,
+        remainingQuantity: quantity,
         unitCost: params.unitCost,
       });
 
@@ -155,7 +175,7 @@ export class InventoryService {
         organizationId: params.organizationId,
         stockPositionId: stockPos.id,
         entryType: 'RECEIPT',
-        quantityChange: `+${params.quantity}`,
+        quantityChange: quantity,
         referenceType: params.referenceType,
         referenceId: params.referenceId,
       });
@@ -321,6 +341,267 @@ export class InventoryService {
     return result;
   }
 
+  /**
+   * Create one atomic Inventory-owned reservation for all demands of a Cart
+   * hold. A shortage is a completed idempotent outcome with no stock effects.
+   */
+  async createCartReservation(
+    input: CreateCartReservationInput,
+  ): Promise<CreateCartReservationResult> {
+    const demands = this.aggregateCartDemands(input.demands);
+    const expiresAt = this.validateCartReservationInput(input);
+
+    const idempotencyScope = `inventory:createCartReservation:${input.organizationId}:${input.actorId}`;
+    return this.db.transaction(async (tx) => {
+      const claim = await this.repository.claimIdempotencyKey(
+        tx,
+        input.idempotencyKey,
+        input.requestHash,
+        idempotencyScope,
+      );
+      if (claim.kind === 'existing') {
+        if (claim.status === 'COMPLETED' && claim.responseJson) {
+          return claim.responseJson as unknown as CreateCartReservationResult;
+        }
+        throw PlatformError.idempotencyConflict('Request is being processed.', {
+          details: { idempotencyKey: input.idempotencyKey },
+        });
+      }
+
+      this.assertFutureCartReservationExpiry(expiresAt);
+      await this.assertWarehouseScope(input.organizationId, input.branchId, input.warehouseId);
+
+      await this.repository.lockReservationReference(tx, input.organizationId, input.referenceId);
+      const prior = await this.repository.lockCartReservationByReference(
+        tx,
+        input.organizationId,
+        input.referenceId,
+      );
+      if (prior) {
+        this.assertCartReservationIdentity(prior, input);
+        if (prior.status !== 'ACTIVE') {
+          throw PlatformError.of(
+            ERROR_CODES.RESERVATION_NOT_AVAILABLE,
+            `Cart reservation is ${prior.status} and cannot be recreated.`,
+            { details: { referenceId: input.referenceId, status: prior.status } },
+          );
+        }
+
+        const current = await this.loadReservationState(tx, prior);
+        this.assertCartReservationReplay(prior, current.items, demands, expiresAt);
+        const replay: CreateCartReservationResult = {
+          kind: 'ACTIVE',
+          reservation: this.toCartReservationSnapshot(prior, current.items, current.positions),
+          shortages: [],
+        };
+        await this.repository.recordIdempotencyOutcome(tx, claim.claimId, 'COMPLETED', replay);
+        return replay;
+      }
+
+      const positions = await this.repository.lockStockPositionsForVariants(
+        tx,
+        input.organizationId,
+        input.warehouseId,
+        demands.map((demand) => demand.variantId),
+      );
+      const positionsByVariant = new Map(
+        positions.map((position) => [position.variantId, position]),
+      );
+      const demandsByVariant = new Map(demands.map((demand) => [demand.variantId, demand]));
+      const shortages = this.shortagesForDemands(demands, positionsByVariant);
+
+      if (shortages.length > 0) {
+        const shortageResult: CreateCartReservationResult = {
+          kind: 'SHORTAGES',
+          reservation: null,
+          organizationId: input.organizationId,
+          branchId: input.branchId,
+          warehouseId: input.warehouseId,
+          referenceId: input.referenceId,
+          cartVersion: input.cartVersion,
+          expiresAt: expiresAt.toISOString(),
+          shortages,
+        };
+        await this.repository.recordIdempotencyOutcome(
+          tx,
+          claim.claimId,
+          'COMPLETED',
+          shortageResult,
+        );
+        return shortageResult;
+      }
+
+      const updatedPositions: StockPositionRow[] = [];
+      for (const position of positions) {
+        const demand = demandsByVariant.get(position.variantId);
+        if (!demand) continue;
+        const updated = await this.repository.updateStockPosition(
+          tx,
+          input.organizationId,
+          position.id,
+          { reserved: addInventoryQuantities(position.reserved, demand.quantity) },
+          position.version,
+        );
+        if (!updated) {
+          throw PlatformError.of(
+            ERROR_CODES.RESOURCE_VERSION_CONFLICT,
+            `Stock position ${position.id} was modified concurrently.`,
+            { details: { stockPositionId: position.id, expectedVersion: position.version } },
+          );
+        }
+        updatedPositions.push(updated);
+      }
+
+      const reservation = await this.repository.createReservation(tx, {
+        organizationId: input.organizationId,
+        stockPositionId: null,
+        branchId: input.branchId,
+        warehouseId: input.warehouseId,
+        expiresAt,
+        referenceType: 'CART_HOLD',
+        referenceId: input.referenceId,
+        referenceVersion: input.cartVersion,
+      });
+
+      const items: ReservationItemRow[] = [];
+      for (const position of positions) {
+        const demand = demandsByVariant.get(position.variantId);
+        if (!demand) continue;
+        const item = await this.repository.createReservationItem(tx, {
+          organizationId: input.organizationId,
+          reservationId: reservation.id,
+          stockPositionId: position.id,
+          variantId: position.variantId,
+          quantity: demand.quantity,
+        });
+        items.push(item);
+        await this.repository.createLedgerEntry(tx, {
+          organizationId: input.organizationId,
+          stockPositionId: position.id,
+          entryType: 'RESERVATION',
+          quantityChange: demand.quantity,
+          referenceType: 'RESERVATION',
+          referenceId: reservation.id,
+        });
+      }
+
+      await this.repository.createOutboxEvents(tx, [
+        inventoryEvent(
+          'inventory.stock-reserved',
+          input.organizationId,
+          'Reservation',
+          reservation.id,
+          reservation.version,
+          input.correlationId,
+          input.causationId,
+          input.actorId,
+          {
+            referenceType: 'CART_HOLD',
+            referenceId: input.referenceId,
+            branchId: input.branchId,
+            warehouseId: input.warehouseId,
+            expiresAt: expiresAt.toISOString(),
+          },
+        ),
+      ]);
+
+      const response: CreateCartReservationResult = {
+        kind: 'ACTIVE',
+        reservation: this.toCartReservationSnapshot(reservation, items, updatedPositions),
+        shortages: [],
+      };
+      await this.repository.recordIdempotencyOutcome(tx, claim.claimId, 'COMPLETED', response);
+      return response;
+    });
+  }
+
+  /** Release an existing Cart reservation, converging RELEASED/EXPIRED replays. */
+  async releaseCartReservation(
+    input: ReleaseCartReservationInput,
+  ): Promise<CartReservationStateResult> {
+    this.assertCartReferenceVersion(input.cartVersion);
+    const idempotencyScope = `inventory:releaseCartReservation:${input.organizationId}:${input.actorId}`;
+    return this.db.transaction(async (tx) => {
+      const claim = await this.repository.claimIdempotencyKey(
+        tx,
+        input.idempotencyKey,
+        input.requestHash,
+        idempotencyScope,
+      );
+      if (claim.kind === 'existing') {
+        if (claim.status === 'COMPLETED' && claim.responseJson) {
+          return claim.responseJson as unknown as CartReservationStateResult;
+        }
+        throw PlatformError.idempotencyConflict('Request is being processed.', {
+          details: { idempotencyKey: input.idempotencyKey },
+        });
+      }
+
+      const reservation = await this.lockRequiredCartReservation(tx, input);
+      const transition = await this.transitionReservation(tx, reservation, 'RELEASED', new Date(), {
+        correlationId: input.correlationId,
+        causationId: input.causationId,
+        actorId: input.actorId,
+      });
+      const response = this.toCartReservationStateResult(
+        transition.reservation,
+        transition.items,
+        transition.positions,
+      );
+      await this.repository.recordIdempotencyOutcome(
+        tx,
+        claim.claimId,
+        'COMPLETED',
+        response as unknown as Record<string, unknown>,
+      );
+      return response;
+    });
+  }
+
+  /** Check current reservation state and lazily expire it when due. */
+  async checkCartReservation(
+    input: CheckCartReservationInput,
+  ): Promise<CartReservationStateResult> {
+    this.assertCartReferenceVersion(input.cartVersion);
+    return this.db.transaction(async (tx) => {
+      const reservation = await this.lockRequiredCartReservation(tx, input);
+      const transition = await this.transitionReservation(tx, reservation, 'CHECK', new Date(), {
+        correlationId: input.correlationId,
+        causationId: input.causationId,
+        actorId: input.actorId,
+      });
+      return this.toCartReservationStateResult(
+        transition.reservation,
+        transition.items,
+        transition.positions,
+      );
+    });
+  }
+
+  /** Expire a bounded due batch using PostgreSQL FOR UPDATE SKIP LOCKED. */
+  async expireDueReservations(limit: number, now: Date = new Date()): Promise<{ expired: number }> {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1_000 || Number.isNaN(now.getTime())) {
+      throw PlatformError.validationFailed('Expiration batch must be between 1 and 1000.', {
+        details: { limit },
+      });
+    }
+
+    return this.db.transaction(async (tx) => {
+      const due = await this.repository.lockDueReservations(tx, limit, now);
+      let expired = 0;
+      for (const reservation of due) {
+        const correlationId = `inventory-expiration:${reservation.id}:${reservation.version}`;
+        const transition = await this.transitionReservation(tx, reservation, 'EXPIRED', now, {
+          correlationId,
+          causationId: correlationId,
+          actorId: 'inventory-expiration-worker',
+        });
+        if (transition.reservation.status === 'EXPIRED') expired += 1;
+      }
+      return { expired };
+    });
+  }
+
   async releaseReservation(params: {
     organizationId: string;
     reservationId: string;
@@ -367,85 +648,12 @@ export class InventoryService {
         );
       }
 
-      // Get reservation items to know how much to release per variant
-      const items = await this.repository.findReservationItems(tx, reservation.id);
-
-      // Release: decrease reserved on stock position for each item
-      // For simplicity, a reservation currently targets one stock position (single variant)
-      if (items.length > 0) {
-        const stockPos = await this.repository.findStockPositionById(
-          tx,
-          params.organizationId,
-          reservation.stockPositionId,
-        );
-
-        if (stockPos) {
-          let totalReserved = '0';
-          for (const item of items) {
-            totalReserved = this.decimalAdd(totalReserved, item.quantity);
-          }
-
-          const newReserved = this.decimalSubtract(stockPos.reserved, totalReserved);
-          const updated = await this.repository.updateStockPosition(
-            tx,
-            params.organizationId,
-            stockPos.id,
-            { reserved: newReserved },
-            stockPos.version,
-          );
-
-          if (!updated) {
-            throw PlatformError.of(
-              ERROR_CODES.RESOURCE_VERSION_CONFLICT,
-              `Stock position ${stockPos.id} was modified concurrently.`,
-              { details: { stockPositionId: stockPos.id, expectedVersion: stockPos.version } },
-            );
-          }
-
-          // Ledger entries for release
-          for (const item of items) {
-            await this.repository.createLedgerEntry(tx, {
-              organizationId: params.organizationId,
-              stockPositionId: stockPos.id,
-              entryType: 'RELEASE',
-              quantityChange: item.quantity,
-              referenceType: 'RESERVATION',
-              referenceId: reservation.id,
-            });
-          }
-        }
-      }
-
-      // Update reservation status
-      const updatedReservation = await this.repository.updateReservationStatus(
-        tx,
-        reservation.id,
-        'RELEASED',
-        reservation.version,
-      );
-
-      if (!updatedReservation) {
-        throw PlatformError.of(
-          ERROR_CODES.RESOURCE_VERSION_CONFLICT,
-          `Reservation ${reservation.id} was modified concurrently.`,
-          { details: { reservationId: reservation.id, expectedVersion: reservation.version } },
-        );
-      }
-
-      // Outbox event
-      await this.repository.createOutboxEvents(tx, [
-        inventoryEvent(
-          'inventory.reservation-released',
-          params.organizationId,
-          'Reservation',
-          reservation.id,
-          updatedReservation.version,
-          params.idempotencyKey,
-          params.idempotencyKey,
-          params.principal.id,
-          { stockPositionId: reservation.stockPositionId },
-        ),
-      ]);
+      const transition = await this.transitionReservation(tx, reservation, 'RELEASED', new Date(), {
+        correlationId: params.idempotencyKey,
+        causationId: params.idempotencyKey,
+        actorId: params.principal.id,
+      });
+      const updatedReservation = transition.reservation;
 
       const response = { released: updatedReservation };
       await this.repository.recordIdempotencyOutcome(tx, claim.claimId, 'COMPLETED', response);
@@ -503,10 +711,21 @@ export class InventoryService {
       }
 
       // Load reservation items
-      const items = await this.repository.findReservationItems(tx, reservation.id);
+      const items = await this.repository.findReservationItems(
+        tx,
+        params.organizationId,
+        reservation.id,
+      );
 
       // Consume: decrease on_hand and reserved, consume FIFO layers
       if (items.length > 0) {
+        if (!reservation.stockPositionId) {
+          throw PlatformError.of(
+            ERROR_CODES.OPERATION_NOT_ALLOWED,
+            'Grouped reservations must be consumed through the grouped consumption workflow.',
+            { details: { reservationId: reservation.id } },
+          );
+        }
         const stockPos = await this.repository.findStockPositionById(
           tx,
           params.organizationId,
@@ -561,6 +780,7 @@ export class InventoryService {
       // Update reservation status
       const updatedReservation = await this.repository.updateReservationStatus(
         tx,
+        params.organizationId,
         reservation.id,
         'CONSUMED',
         reservation.version,
@@ -2077,25 +2297,19 @@ export class InventoryService {
         );
       }
 
-      const receivedQty = parseFloat(receivedItem.receivedQuantity);
-      if (receivedQty < 0) {
-        throw PlatformError.validationFailed('Received quantity cannot be negative.', {
-          details: {
-            transferItemId: receivedItem.transferItemId,
-            receivedQuantity: receivedItem.receivedQuantity,
-          },
-        });
-      }
+      const receivedQuantity = normalizeInventoryQuantity(receivedItem.receivedQuantity, {
+        allowZero: true,
+      });
 
       // Update transfer item's received quantity
       await this.repository.updateTransferItemReceived(
         tx,
         receivedItem.transferItemId,
-        receivedItem.receivedQuantity,
+        receivedQuantity,
       );
 
       // Only create stock at destination if received quantity > 0
-      if (receivedQty > 0) {
+      if (compareInventoryQuantities(receivedQuantity, '0') > 0) {
         // Find or create destination stock position
         let destStockPos = await this.repository.findStockPosition(
           tx,
@@ -2109,7 +2323,7 @@ export class InventoryService {
             organizationId,
             warehouseId: transfer.destinationWarehouseId,
             variantId: transferItem.variantId,
-            onHand: receivedItem.receivedQuantity,
+            onHand: receivedQuantity,
           });
 
           await this.repository.createOutboxEvents(tx, [
@@ -2125,13 +2339,13 @@ export class InventoryService {
               {
                 warehouseId: transfer.destinationWarehouseId,
                 variantId: transferItem.variantId,
-                onHand: receivedItem.receivedQuantity,
+                onHand: receivedQuantity,
               },
             ),
           ]);
         } else {
           // Increase on_hand
-          const newOnHand = this.decimalAdd(destStockPos.onHand, receivedItem.receivedQuantity);
+          const newOnHand = this.decimalAdd(destStockPos.onHand, receivedQuantity);
           const updated = await this.repository.updateStockPosition(
             tx,
             organizationId,
@@ -2161,8 +2375,8 @@ export class InventoryService {
           organizationId,
           stockPositionId: destStockPos.id,
           receivedAt: new Date(),
-          quantity: receivedItem.receivedQuantity,
-          remainingQuantity: receivedItem.receivedQuantity,
+          quantity: receivedQuantity,
+          remainingQuantity: receivedQuantity,
           unitCost: '0', // Transfer in doesn't carry cost; cost reconciliation is separate
         });
 
@@ -2171,7 +2385,7 @@ export class InventoryService {
           organizationId,
           stockPositionId: destStockPos.id,
           entryType: 'TRANSFER_IN',
-          quantityChange: receivedItem.receivedQuantity,
+          quantityChange: receivedQuantity,
           referenceType: 'TRANSFER',
           referenceId: transfer.id,
         });
@@ -2216,16 +2430,393 @@ export class InventoryService {
   }
 
   // ---------------------------------------------------------------------------
+  // Cart reservation helpers
+  // ---------------------------------------------------------------------------
+
+  private aggregateCartDemands(demands: readonly CartReservationDemand[]): CartReservationDemand[] {
+    if (demands.length === 0) {
+      throw PlatformError.validationFailed('A Cart reservation requires at least one demand.', {
+        details: { field: 'demands' },
+      });
+    }
+
+    const aggregated = new Map<string, string>();
+    for (const demand of demands) {
+      if (!demand.variantId?.trim()) {
+        throw PlatformError.validationFailed('Every Cart demand requires a variant ID.', {
+          details: { field: 'demands.variantId' },
+        });
+      }
+      const quantity = normalizeInventoryQuantity(demand.quantity);
+      aggregated.set(
+        demand.variantId,
+        aggregated.has(demand.variantId)
+          ? addInventoryQuantities(aggregated.get(demand.variantId)!, quantity)
+          : quantity,
+      );
+    }
+
+    return [...aggregated.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([variantId, quantity]) => ({ variantId, quantity }));
+  }
+
+  private validateCartReservationInput(input: CreateCartReservationInput): Date {
+    this.assertCartReferenceVersion(input.cartVersion);
+    const expiresAt = new Date(input.expiresAt);
+    if (Number.isNaN(expiresAt.getTime())) {
+      throw PlatformError.validationFailed('Cart reservation expiry must be a valid instant.', {
+        details: { field: 'expiresAt' },
+      });
+    }
+    return expiresAt;
+  }
+
+  private assertFutureCartReservationExpiry(expiresAt: Date): void {
+    if (expiresAt.getTime() <= Date.now()) {
+      throw PlatformError.validationFailed('Cart reservation expiry must be a future instant.', {
+        details: { field: 'expiresAt' },
+      });
+    }
+  }
+
+  private assertCartReferenceVersion(cartVersion: number): void {
+    if (!Number.isInteger(cartVersion) || cartVersion < 1) {
+      throw PlatformError.validationFailed('Cart reservation version must be a positive integer.', {
+        details: { field: 'cartVersion', cartVersion },
+      });
+    }
+  }
+
+  private async assertWarehouseScope(
+    organizationId: string,
+    branchId: string,
+    warehouseId: string,
+  ): Promise<void> {
+    if (!this.organizationContracts) {
+      throw new Error('ORGANIZATION_CONTRACTS is required for Cart reservation commands.');
+    }
+    const warehouse = await this.organizationContracts.getWarehouse(organizationId, warehouseId);
+    if (!warehouse || warehouse.branchId !== branchId || !warehouse.isActive) {
+      throw PlatformError.notFound('Warehouse is unavailable for this organization branch.', {
+        details: { warehouseId },
+      });
+    }
+  }
+
+  private assertCartReservationIdentity(
+    reservation: ReservationRow,
+    input: {
+      organizationId: string;
+      branchId: string;
+      warehouseId: string;
+      referenceId: string;
+      cartVersion: number;
+    },
+  ): void {
+    if (
+      reservation.organizationId !== input.organizationId ||
+      reservation.branchId !== input.branchId ||
+      reservation.warehouseId !== input.warehouseId ||
+      reservation.referenceId !== input.referenceId ||
+      reservation.referenceVersion !== input.cartVersion
+    ) {
+      throw PlatformError.notFound('Cart reservation was not found in the requested scope.', {
+        details: { referenceId: input.referenceId },
+      });
+    }
+  }
+
+  private assertCartReservationReplay(
+    reservation: ReservationRow,
+    items: ReservationItemRow[],
+    demands: readonly CartReservationDemand[],
+    expiresAt: Date,
+  ): void {
+    const stored = new Map(
+      items.map((item) => [item.variantId, normalizeInventoryQuantity(item.quantity)]),
+    );
+    const changed =
+      reservation.expiresAt?.getTime() !== expiresAt.getTime() ||
+      stored.size !== demands.length ||
+      demands.some((demand) => stored.get(demand.variantId) !== demand.quantity);
+    if (changed) {
+      throw PlatformError.idempotencyConflict(
+        'Logical Cart hold reference was already used for a different request.',
+        { details: { referenceId: reservation.referenceId } },
+      );
+    }
+  }
+
+  private async lockRequiredCartReservation(
+    tx: DbExecutor,
+    input: {
+      organizationId: string;
+      branchId: string;
+      warehouseId: string;
+      referenceId: string;
+      cartVersion: number;
+    },
+  ): Promise<ReservationRow> {
+    await this.repository.lockReservationReference(tx, input.organizationId, input.referenceId);
+    const reservation = await this.repository.lockCartReservationByReference(
+      tx,
+      input.organizationId,
+      input.referenceId,
+    );
+    if (!reservation) {
+      throw PlatformError.notFound('Cart reservation was not found.', {
+        details: { referenceId: input.referenceId },
+      });
+    }
+    this.assertCartReservationIdentity(reservation, input);
+    return reservation;
+  }
+
+  private shortagesForDemands(
+    demands: readonly CartReservationDemand[],
+    positionsByVariant: ReadonlyMap<string, StockPositionRow>,
+  ): CartReservationShortage[] {
+    const shortages: CartReservationShortage[] = [];
+    for (const demand of demands) {
+      const position = positionsByVariant.get(demand.variantId);
+      const available = position ? this.availableForPosition(position) : '0.00000000';
+      if (compareInventoryQuantities(available, demand.quantity) < 0) {
+        shortages.push({
+          variantId: demand.variantId,
+          stockPositionId: position?.id ?? null,
+          requested: demand.quantity,
+          available,
+          shortage: subtractInventoryQuantities(demand.quantity, available),
+        });
+      }
+    }
+    return shortages;
+  }
+
+  private async loadReservationState(
+    tx: DbExecutor,
+    reservation: ReservationRow,
+  ): Promise<{ items: ReservationItemRow[]; positions: StockPositionRow[] }> {
+    const items = await this.repository.lockReservationItems(
+      tx,
+      reservation.organizationId,
+      reservation.id,
+    );
+    const positionIds = [...new Set(items.map((item) => item.stockPositionId))];
+    const positions = await this.repository.lockStockPositionsByIds(
+      tx,
+      reservation.organizationId,
+      positionIds,
+    );
+    if (positions.length !== positionIds.length) {
+      throw PlatformError.of(
+        ERROR_CODES.OPERATION_NOT_ALLOWED,
+        'Reservation references an unavailable stock position.',
+        { details: { reservationId: reservation.id } },
+      );
+    }
+    return { items, positions };
+  }
+
+  private async transitionReservation(
+    tx: DbExecutor,
+    reservation: ReservationRow,
+    requested: 'CHECK' | 'RELEASED' | 'EXPIRED',
+    now: Date,
+    metadata: { correlationId: string; causationId: string; actorId: string },
+  ): Promise<{
+    reservation: ReservationRow;
+    items: ReservationItemRow[];
+    positions: StockPositionRow[];
+  }> {
+    const state = await this.loadReservationState(tx, reservation);
+    if (reservation.status === 'CONSUMED') {
+      throw PlatformError.of(
+        ERROR_CODES.RESERVATION_ALREADY_CONSUMED,
+        'A consumed reservation cannot be released or expired.',
+        { details: { reservationId: reservation.id } },
+      );
+    }
+    if (reservation.status === 'RELEASED' || reservation.status === 'EXPIRED') {
+      return { reservation, ...state };
+    }
+
+    const due = reservation.expiresAt !== null && reservation.expiresAt.getTime() <= now.getTime();
+    const target = due ? 'EXPIRED' : requested === 'CHECK' ? null : requested;
+    if (!target) return { reservation, ...state };
+
+    const quantityByPosition = new Map<string, string>();
+    for (const item of state.items) {
+      quantityByPosition.set(
+        item.stockPositionId,
+        quantityByPosition.has(item.stockPositionId)
+          ? addInventoryQuantities(quantityByPosition.get(item.stockPositionId)!, item.quantity)
+          : normalizeInventoryQuantity(item.quantity),
+      );
+    }
+
+    const updatedPositions: StockPositionRow[] = [];
+    for (const position of state.positions) {
+      const quantity = quantityByPosition.get(position.id);
+      if (!quantity) {
+        updatedPositions.push(position);
+        continue;
+      }
+      if (compareInventoryQuantities(position.reserved, quantity) < 0) {
+        throw PlatformError.of(
+          ERROR_CODES.OPERATION_NOT_ALLOWED,
+          'Reservation balance is inconsistent with its stock position.',
+          { details: { reservationId: reservation.id, stockPositionId: position.id } },
+        );
+      }
+      const updated = await this.repository.updateStockPosition(
+        tx,
+        reservation.organizationId,
+        position.id,
+        { reserved: subtractInventoryQuantities(position.reserved, quantity) },
+        position.version,
+      );
+      if (!updated) {
+        throw PlatformError.of(
+          ERROR_CODES.RESOURCE_VERSION_CONFLICT,
+          `Stock position ${position.id} was modified concurrently.`,
+          { details: { stockPositionId: position.id, expectedVersion: position.version } },
+        );
+      }
+      updatedPositions.push(updated);
+      await this.repository.createLedgerEntry(tx, {
+        organizationId: reservation.organizationId,
+        stockPositionId: position.id,
+        entryType: 'RELEASE',
+        quantityChange: quantity,
+        referenceType: 'RESERVATION',
+        referenceId: reservation.id,
+      });
+    }
+
+    const updatedReservation = await this.repository.updateReservationStatus(
+      tx,
+      reservation.organizationId,
+      reservation.id,
+      target,
+      reservation.version,
+    );
+    if (!updatedReservation) {
+      throw PlatformError.of(
+        ERROR_CODES.RESOURCE_VERSION_CONFLICT,
+        `Reservation ${reservation.id} was modified concurrently.`,
+        { details: { reservationId: reservation.id, expectedVersion: reservation.version } },
+      );
+    }
+
+    await this.repository.createOutboxEvents(tx, [
+      inventoryEvent(
+        target === 'EXPIRED' ? 'inventory.reservation-expired' : 'inventory.reservation-released',
+        reservation.organizationId,
+        'Reservation',
+        reservation.id,
+        updatedReservation.version,
+        metadata.correlationId,
+        metadata.causationId,
+        metadata.actorId,
+        {
+          referenceType: reservation.referenceType,
+          referenceId: reservation.referenceId,
+          branchId: reservation.branchId,
+          warehouseId: reservation.warehouseId,
+        },
+      ),
+    ]);
+
+    return { reservation: updatedReservation, items: state.items, positions: updatedPositions };
+  }
+
+  private toCartReservationStateResult(
+    reservation: ReservationRow,
+    items: ReservationItemRow[],
+    positions: StockPositionRow[],
+  ): CartReservationStateResult {
+    const snapshot = this.toCartReservationSnapshot(reservation, items, positions);
+    const positionsByVariant = new Map(positions.map((position) => [position.variantId, position]));
+    const shortages = this.shortagesForDemands(
+      items.map((item) => ({
+        variantId: item.variantId,
+        quantity: normalizeInventoryQuantity(item.quantity),
+      })),
+      positionsByVariant,
+    );
+    return { kind: snapshot.status, reservation: snapshot, shortages };
+  }
+
+  private toCartReservationSnapshot(
+    reservation: ReservationRow,
+    items: ReservationItemRow[],
+    positions: StockPositionRow[],
+  ): CartReservationSnapshot {
+    if (!reservation.referenceId || reservation.referenceType !== 'CART_HOLD') {
+      throw PlatformError.of(ERROR_CODES.OPERATION_NOT_ALLOWED, 'Reservation is not a Cart hold.', {
+        details: { reservationId: reservation.id },
+      });
+    }
+    if (!['ACTIVE', 'RELEASED', 'EXPIRED', 'CONSUMED'].includes(reservation.status)) {
+      throw PlatformError.of(ERROR_CODES.OPERATION_NOT_ALLOWED, 'Reservation status is invalid.', {
+        details: { reservationId: reservation.id },
+      });
+    }
+
+    const positionsById = new Map(positions.map((position) => [position.id, position]));
+    const itemSnapshots: CartReservationItemSnapshot[] = items.map((item) => {
+      const position = positionsById.get(item.stockPositionId);
+      if (!position) {
+        throw PlatformError.of(
+          ERROR_CODES.OPERATION_NOT_ALLOWED,
+          'Reservation item stock position is unavailable.',
+          { details: { reservationId: reservation.id } },
+        );
+      }
+      return {
+        stockPositionId: position.id,
+        variantId: item.variantId,
+        quantity: normalizeInventoryQuantity(item.quantity),
+        onHand: normalizeInventoryQuantity(position.onHand, { allowZero: true }),
+        reserved: normalizeInventoryQuantity(position.reserved, { allowZero: true }),
+        allocated: normalizeInventoryQuantity(position.allocated, { allowZero: true }),
+        available: this.availableForPosition(position),
+      };
+    });
+
+    return {
+      reservationId: reservation.id,
+      organizationId: reservation.organizationId,
+      branchId: reservation.branchId,
+      warehouseId: reservation.warehouseId,
+      referenceId: reservation.referenceId,
+      cartVersion: reservation.referenceVersion,
+      status: reservation.status as CartReservationSnapshot['status'],
+      expiresAt: reservation.expiresAt?.toISOString() ?? null,
+      items: itemSnapshots,
+    };
+  }
+
+  private availableForPosition(position: StockPositionRow): string {
+    return subtractInventoryQuantities(
+      subtractInventoryQuantities(position.onHand, position.reserved),
+      position.allocated,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Decimal arithmetic helpers (string-based, no floating point errors)
   // ---------------------------------------------------------------------------
 
   /** Add two decimal strings and return a decimal string. */
   private decimalAdd(a: string, b: string): string {
-    return String(parseFloat(a) + parseFloat(b));
+    return addInventoryQuantities(a, b);
   }
 
   /** Subtract b from a (decimal strings) and return a decimal string. */
   private decimalSubtract(a: string, b: string): string {
-    return String(parseFloat(a) - parseFloat(b));
+    return subtractInventoryQuantities(a, b);
   }
 }

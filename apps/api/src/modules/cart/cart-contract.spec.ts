@@ -50,6 +50,7 @@ describe('Cart public DTO', () => {
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     version: 1,
+    hold: null,
     items: [
       {
         id: '01900000-0000-7000-8000-000000000004',

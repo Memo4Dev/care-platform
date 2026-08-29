@@ -4,7 +4,9 @@ import {
   branchAccess,
   businessCustomers,
   cartItems,
+  cartHolds,
   carts,
+  fifoLayers,
   integrationOutbox,
   newId,
   idempotencyOutcomes,
@@ -14,8 +16,10 @@ import {
   productVariants,
   products,
   subscriptions,
+  stockPositions,
   unitDefinitions,
   users,
+  warehouses,
 } from '@commerce-platform/database';
 import { createTestDatabase, type TestDatabase } from '@commerce-platform/testing';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -45,6 +49,7 @@ describe('Cart HTTP boundary', () => {
   let ownerUserId: string;
   let variantA: string;
   let unitA: string;
+  let warehouseA: string;
   let customerA: string;
   let foreignCustomerId: string;
   let foreignOrganizationId: string;
@@ -147,6 +152,30 @@ describe('Cart HTTP boundary', () => {
       type: 'BUSINESS',
       displayName: 'Cart HTTP Customer',
       code: 'CART-CUSTOMER',
+    });
+    warehouseA = newId();
+    await testdb.db.insert(warehouses).values({
+      id: warehouseA,
+      organizationId: organizationA,
+      branchId: branchA,
+      code: 'CART-MAIN',
+      name: 'Cart Main Warehouse',
+    });
+    const stockPositionId = newId();
+    await testdb.db.insert(stockPositions).values({
+      id: stockPositionId,
+      organizationId: organizationA,
+      warehouseId: warehouseA,
+      variantId: variantA,
+      onHand: '10.00000000',
+    });
+    await testdb.db.insert(fifoLayers).values({
+      id: newId(),
+      organizationId: organizationA,
+      stockPositionId,
+      quantity: '10.00000000',
+      remainingQuantity: '10.00000000',
+      unitCost: '1.0000',
     });
 
     paginationBranchA = newId();
@@ -320,6 +349,8 @@ describe('Cart HTTP boundary', () => {
         '/api/v1/pos/carts/{cartId}',
         '/api/v1/pos/carts/{cartId}/items',
         '/api/v1/pos/carts/{cartId}/items/{itemId}',
+        '/api/v1/pos/carts/{cartId}/hold',
+        '/api/v1/pos/carts/{cartId}/resume',
         '/api/v1/pos/carts/{cartId}/save',
       ].sort(),
     );
@@ -989,6 +1020,163 @@ describe('Cart HTTP boundary', () => {
     expect(list.json().data).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: cartId, version: 2 })]),
     );
+  });
+
+  it('holds all Cart items in one warehouse, blocks edits, and resumes by releasing Inventory', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/v1/pos/carts',
+      headers: { authorization: `Bearer ${ownerBearer}`, 'idempotency-key': newId() },
+      payload: { branchId: branchA },
+    });
+    expect(created.statusCode).toBe(201);
+    const cartId = created.json().data.id as string;
+    const added = await app.inject({
+      method: 'POST',
+      url: `/api/v1/pos/carts/${cartId}/items`,
+      headers: {
+        authorization: `Bearer ${ownerBearer}`,
+        'idempotency-key': newId(),
+        'if-match': '1',
+      },
+      payload: { variantId: variantA, unitId: unitA, quantity: '2' },
+    });
+    expect(added.statusCode).toBe(200);
+    const itemId = added.json().data.items[0].id as string;
+
+    const held = await app.inject({
+      method: 'POST',
+      url: `/api/v1/pos/carts/${cartId}/hold`,
+      headers: {
+        authorization: `Bearer ${ownerBearer}`,
+        'idempotency-key': newId(),
+        'if-match': '2',
+      },
+      payload: { warehouseId: warehouseA },
+    });
+    expect(held.statusCode).toBe(200);
+    expect(held.json()).toMatchObject({
+      data: {
+        id: cartId,
+        version: 2,
+        hold: { status: 'ACTIVE', warehouseId: warehouseA, shortages: [] },
+      },
+    });
+
+    const editWhileHeld = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/pos/carts/${cartId}/items/${itemId}`,
+      headers: {
+        authorization: `Bearer ${ownerBearer}`,
+        'idempotency-key': newId(),
+        'if-match': '2',
+      },
+      payload: { quantity: '3' },
+    });
+    expect(editWhileHeld.statusCode).toBe(403);
+    expect(editWhileHeld.json()).toMatchObject({ error: { code: 'OPERATION_NOT_ALLOWED' } });
+
+    const resumed = await app.inject({
+      method: 'POST',
+      url: `/api/v1/pos/carts/${cartId}/resume`,
+      headers: {
+        authorization: `Bearer ${ownerBearer}`,
+        'idempotency-key': newId(),
+        'if-match': '2',
+      },
+    });
+    expect(resumed.statusCode).toBe(200);
+    expect(resumed.json()).toMatchObject({
+      data: { id: cartId, version: 2, hold: { status: 'RELEASED', shortages: [] } },
+    });
+
+    const get = await app.inject({
+      method: 'GET',
+      url: `/api/v1/pos/carts/${cartId}`,
+      headers: { authorization: `Bearer ${ownerBearer}` },
+    });
+    expect(get.statusCode).toBe(200);
+    expect(get.json()).toMatchObject({ data: { id: cartId, hold: null } });
+
+    const editAfterResume = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/pos/carts/${cartId}/items/${itemId}`,
+      headers: {
+        authorization: `Bearer ${ownerBearer}`,
+        'idempotency-key': newId(),
+        'if-match': '2',
+      },
+      payload: { quantity: '3' },
+    });
+    expect(editAfterResume.statusCode).toBe(200);
+    expect(editAfterResume.json()).toMatchObject({ data: { version: 3 } });
+  });
+
+  it('returns explicit shortages for unsatisfied hold without making the Cart non-editable', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/v1/pos/carts',
+      headers: { authorization: `Bearer ${ownerBearer}`, 'idempotency-key': newId() },
+      payload: { branchId: branchA },
+    });
+    expect(created.statusCode).toBe(201);
+    const cartId = created.json().data.id as string;
+    const added = await app.inject({
+      method: 'POST',
+      url: `/api/v1/pos/carts/${cartId}/items`,
+      headers: {
+        authorization: `Bearer ${ownerBearer}`,
+        'idempotency-key': newId(),
+        'if-match': '1',
+      },
+      payload: { variantId: variantA, unitId: unitA, quantity: '20' },
+    });
+    expect(added.statusCode).toBe(200);
+    const itemId = added.json().data.items[0].id as string;
+
+    const held = await app.inject({
+      method: 'POST',
+      url: `/api/v1/pos/carts/${cartId}/hold`,
+      headers: {
+        authorization: `Bearer ${ownerBearer}`,
+        'idempotency-key': newId(),
+        'if-match': '2',
+      },
+      payload: { warehouseId: warehouseA },
+    });
+
+    expect(held.statusCode).toBe(200);
+    expect(held.json()).toMatchObject({
+      data: {
+        id: cartId,
+        version: 2,
+        hold: {
+          status: 'FAILED',
+          shortages: [{ variantId: variantA, requested: '20.00000000' }],
+        },
+      },
+    });
+    const [hold] = await testdb.db
+      .select({
+        status: cartHolds.status,
+        inventoryReservationId: cartHolds.inventoryReservationId,
+      })
+      .from(cartHolds)
+      .where(and(eq(cartHolds.organizationId, organizationA), eq(cartHolds.cartId, cartId)));
+    expect(hold).toEqual({ status: 'FAILED', inventoryReservationId: null });
+
+    const editAfterShortage = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/pos/carts/${cartId}/items/${itemId}`,
+      headers: {
+        authorization: `Bearer ${ownerBearer}`,
+        'idempotency-key': newId(),
+        'if-match': '2',
+      },
+      payload: { quantity: '1' },
+    });
+    expect(editAfterShortage.statusCode).toBe(200);
+    expect(editAfterShortage.json()).toMatchObject({ data: { version: 3 } });
   });
 
   it('replays a create when customerId is omitted or explicitly null', async () => {

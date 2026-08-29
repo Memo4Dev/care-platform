@@ -3,15 +3,19 @@ import {
   decimal,
   foreignKey,
   index,
+  integer,
+  jsonb,
   pgSchema,
   text,
+  timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 import { productVariants, unitDefinitions } from './catalog';
-import { branches, organizations } from './organization';
+import { branches, organizations, warehouses } from './organization';
 import { idColumn, optimisticVersion, timestamps } from './shared';
 
 /** Persisted editable-cart state owned by the Cart bounded context. */
@@ -23,6 +27,19 @@ export type CartChannel = (typeof CART_CHANNELS)[number];
 /** M5-004 persists only editable Draft carts; later lifecycle states are additive. */
 export const CART_STATUSES = ['DRAFT'] as const;
 export type CartStatus = (typeof CART_STATUSES)[number];
+
+export const CART_HOLD_STATUSES = [
+  'PENDING',
+  'ACTIVE',
+  'RELEASING',
+  'RELEASED',
+  'EXPIRED',
+  'FAILED',
+] as const;
+export type CartHoldStatus = (typeof CART_HOLD_STATUSES)[number];
+
+export type CartHoldShortage = Record<string, unknown>;
+export type CartHoldFailure = Record<string, unknown>;
 
 export const carts = cartSchema.table(
   'carts',
@@ -43,6 +60,7 @@ export const carts = cartSchema.table(
     check('carts_channel_check', sql`${table.channel} IN ('ONLINE', 'POS', 'SALES')`),
     check('carts_status_check', sql`${table.status} = 'DRAFT'`),
     unique('carts_tenant_scope_unique').on(table.id, table.organizationId),
+    unique('carts_tenant_branch_scope_unique').on(table.id, table.organizationId, table.branchId),
     index('carts_organization_id_idx').on(table.organizationId),
     index('carts_org_branch_created_at_idx').on(
       table.organizationId,
@@ -55,6 +73,74 @@ export const carts = cartSchema.table(
       columns: [table.branchId, table.organizationId],
       foreignColumns: [branches.id, branches.organizationId],
     }).onDelete('cascade'),
+  ],
+);
+
+/**
+ * Durable, Cart-owned hold workflow state. Inventory reservation identity is a
+ * plain cross-context reference: Cart never owns or foreign-keys Inventory
+ * persistence.
+ */
+export const cartHolds = cartSchema.table(
+  'cart_holds',
+  {
+    id: idColumn(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    cartId: uuid('cart_id').notNull(),
+    branchId: uuid('branch_id').notNull(),
+    warehouseId: uuid('warehouse_id').notNull(),
+    cartVersion: integer('cart_version').notNull(),
+    status: text('status').$type<CartHoldStatus>().notNull().default('PENDING'),
+    ttlMinutes: integer('ttl_minutes').notNull(),
+    policyVersion: integer('policy_version').notNull(),
+    /** Cross-context reference only; deliberately no Inventory FK. */
+    inventoryReservationId: uuid('inventory_reservation_id'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    shortagesJson: jsonb('shortages_json').$type<CartHoldShortage[]>(),
+    failureJson: jsonb('failure_json').$type<CartHoldFailure>(),
+    /** Trusted Organization user captured when the workflow was accepted. */
+    actorId: uuid('actor_id').notNull(),
+    correlationId: text('correlation_id').notNull(),
+    causationId: text('causation_id').notNull(),
+    ...timestamps,
+    version: optimisticVersion,
+  },
+  (table) => [
+    check('cart_holds_cart_version_positive_check', sql`${table.cartVersion} >= 1`),
+    check(
+      'cart_holds_status_check',
+      sql`${table.status} IN ('PENDING', 'ACTIVE', 'RELEASING', 'RELEASED', 'EXPIRED', 'FAILED')`,
+    ),
+    check('cart_holds_ttl_minutes_check', sql`${table.ttlMinutes} BETWEEN 1 AND 1440`),
+    check('cart_holds_policy_version_check', sql`${table.policyVersion} >= 0`),
+    uniqueIndex('cart_holds_one_current_per_cart_unique')
+      .on(table.organizationId, table.cartId)
+      .where(sql`${table.status} IN ('PENDING', 'ACTIVE', 'RELEASING')`),
+    index('cart_holds_org_cart_created_at_idx').on(
+      table.organizationId,
+      table.cartId,
+      table.createdAt,
+    ),
+    index('cart_holds_current_workflow_idx')
+      .on(table.organizationId, table.status, table.updatedAt)
+      .where(sql`${table.status} IN ('PENDING', 'ACTIVE', 'RELEASING')`),
+    index('cart_holds_warehouse_scope_idx').on(
+      table.warehouseId,
+      table.organizationId,
+      table.branchId,
+    ),
+    foreignKey({
+      name: 'cart_holds_cart_tenant_branch_fk',
+      columns: [table.cartId, table.organizationId, table.branchId],
+      foreignColumns: [carts.id, carts.organizationId, carts.branchId],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'cart_holds_warehouse_tenant_branch_fk',
+      columns: [table.warehouseId, table.organizationId, table.branchId],
+      foreignColumns: [warehouses.id, warehouses.organizationId, warehouses.branchId],
+    }),
   ],
 );
 
@@ -105,3 +191,4 @@ export const cartItems = cartSchema.table(
 
 export type CartRow = typeof carts.$inferSelect;
 export type CartItemRow = typeof cartItems.$inferSelect;
+export type CartHoldRow = typeof cartHolds.$inferSelect;

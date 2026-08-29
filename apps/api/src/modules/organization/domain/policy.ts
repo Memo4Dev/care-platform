@@ -27,6 +27,7 @@ export const POLICY_TYPES = [
   'CREDIT',
   'DELIVERY',
   'INVENTORY',
+  'CART',
 ] as const;
 
 export type PolicyType = (typeof POLICY_TYPES)[number];
@@ -67,6 +68,7 @@ export const DEFAULT_POLICY_VALUES: Readonly<Record<PolicyType, PolicyValue>> = 
   CREDIT: { enabled: false },
   DELIVERY: { enabled: false },
   INVENTORY: { enabled: true },
+  CART: { holdReservationTtlMinutes: 15 },
 });
 
 /**
@@ -109,11 +111,34 @@ export function setPolicy(
       { details: { field: 'policyType', allowedValues: POLICY_TYPES } },
     );
   }
-  assertPolicyValue(value);
+  assertPolicyValueFor(policyType, value);
 
   const version = state.nextVersion;
   state.nextVersion += 1;
   state.latest.set(policyType, { value, version });
 
   return { policyType, value, version };
+}
+
+function assertPolicyValueFor(
+  policyType: PolicyType,
+  value: unknown,
+): asserts value is PolicyValue {
+  assertPolicyValue(value);
+  if (policyType !== 'CART') return;
+
+  const keys = Object.keys(value);
+  const ttl = value.holdReservationTtlMinutes;
+  if (
+    keys.length !== 1 ||
+    typeof ttl !== 'number' ||
+    !Number.isInteger(ttl) ||
+    ttl < 1 ||
+    ttl > 1440
+  ) {
+    throw PlatformError.validationFailed(
+      'CART policy holdReservationTtlMinutes must be an integer from 1 through 1440.',
+      { details: { field: 'value.holdReservationTtlMinutes', policyType: 'CART' } },
+    );
+  }
 }

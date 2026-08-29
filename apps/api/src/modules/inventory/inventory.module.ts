@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { DatabaseModule } from '../database/database.module';
+import { OrganizationModule } from '../organization/organization.module';
 import { InventoryContractProvider } from './application/inventory-contracts.provider';
 import { InventoryService } from './application/inventory.service';
 import { INVENTORY_CONTRACTS } from './contracts';
@@ -16,7 +17,7 @@ import { InventoryRepository } from './infrastructure/inventory.repository';
  * The HTTP controller is registered in {@link ApiModule}.
  */
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, OrganizationModule],
   providers: [
     InventoryRepository,
     InventoryService,
@@ -26,6 +27,6 @@ import { InventoryRepository } from './infrastructure/inventory.repository';
       useExisting: InventoryContractProvider,
     },
   ],
-  exports: [INVENTORY_CONTRACTS, InventoryService, InventoryRepository],
+  exports: [INVENTORY_CONTRACTS, InventoryService],
 })
 export class InventoryModule {}

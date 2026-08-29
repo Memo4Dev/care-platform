@@ -1,7 +1,11 @@
+import { sql } from 'drizzle-orm';
 import {
+  check,
+  customType,
   decimal,
   foreignKey,
   index,
+  integer,
   pgSchema,
   text,
   timestamp,
@@ -9,7 +13,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import { organizations, warehouses } from './organization';
+import { branches, organizations, warehouses } from './organization';
 import { productVariants } from './catalog';
 import { idColumn, idColumnDbGenerated, optimisticVersion, timestamps } from './shared';
 
@@ -25,11 +29,26 @@ import { idColumn, idColumnDbGenerated, optimisticVersion, timestamps } from './
  * - Every tenant-owned row carries `organization_id`.
  * - Business uniqueness is UNIQUE (organization_id, business_key).
  * - Composite tenant FKs anchor child rows to the owning organization.
- * - Quantities and costs are decimal(14,4), never float.
+ * - Correctness quantities use exact eight-decimal persistence, never float.
+ *   Unit cost remains decimal(14,4).
  * - Ledger entries are append-only (UPDATE/DELETE triggers in M3).
  * - FIFO layers are consumed oldest-first via partial index.
  */
 export const inventorySchema = pgSchema('inventory');
+
+/**
+ * Semantic NUMERIC(18,8) quantity domain.
+ *
+ * PostgreSQL's numeric(p,s) typmod rounds excess fractional digits before a
+ * CHECK can inspect them. The reviewed migration therefore uses an
+ * unconstrained-numeric domain with equivalent 10-integer/8-fractional bounds,
+ * allowing the database to reject rather than silently round a ninth decimal.
+ */
+const exactInventoryQuantity = customType<{ data: string; driverData: string }>({
+  dataType() {
+    return 'inventory.quantity_18_8';
+  },
+});
 
 /* -------------------------------------------------------------------------- */
 /* Stock Positions — Core Aggregate Identity                                   */
@@ -55,9 +74,9 @@ export const stockPositions = inventorySchema.table(
       .references(() => organizations.id, { onDelete: 'cascade' }),
     warehouseId: uuid('warehouse_id').notNull(),
     variantId: uuid('variant_id').notNull(),
-    onHand: decimal('on_hand', { precision: 14, scale: 4 }).notNull().default('0'),
-    reserved: decimal('reserved', { precision: 14, scale: 4 }).notNull().default('0'),
-    allocated: decimal('allocated', { precision: 14, scale: 4 }).notNull().default('0'),
+    onHand: exactInventoryQuantity('on_hand').notNull().default('0'),
+    reserved: exactInventoryQuantity('reserved').notNull().default('0'),
+    allocated: exactInventoryQuantity('allocated').notNull().default('0'),
     ...timestamps,
     version: optimisticVersion,
   },
@@ -71,11 +90,13 @@ export const stockPositions = inventorySchema.table(
     uniqueIndex('stock_positions_tenant_scope_unique').on(table.id, table.organizationId),
     index('stock_positions_organization_id_idx').on(table.organizationId),
     index('stock_positions_org_warehouse_idx').on(table.organizationId, table.warehouseId),
-    // CHECK: on_hand >= 0
-    // CHECK: reserved >= 0
-    // CHECK: allocated >= 0
-    // CHECK: reserved + allocated <= on_hand
-    // (Drizzle does not support CHECK inline; these are in the SQL migration)
+    check('stock_positions_non_negative_on_hand', sql`${table.onHand} >= 0`),
+    check('stock_positions_non_negative_reserved', sql`${table.reserved} >= 0`),
+    check('stock_positions_non_negative_allocated', sql`${table.allocated} >= 0`),
+    check(
+      'stock_positions_reserved_within_on_hand',
+      sql`${table.reserved} + ${table.allocated} <= ${table.onHand}`,
+    ),
     foreignKey({
       name: 'stock_positions_warehouse_tenant_fk',
       columns: [table.warehouseId, table.organizationId],
@@ -109,8 +130,8 @@ export const fifoLayers = inventorySchema.table(
       .references(() => organizations.id, { onDelete: 'cascade' }),
     stockPositionId: uuid('stock_position_id').notNull(),
     receivedAt: timestamp('received_at', { withTimezone: true }).notNull().defaultNow(),
-    quantity: decimal('quantity', { precision: 14, scale: 4 }).notNull(),
-    remainingQuantity: decimal('remaining_quantity', { precision: 14, scale: 4 }).notNull(),
+    quantity: exactInventoryQuantity('quantity').notNull(),
+    remainingQuantity: exactInventoryQuantity('remaining_quantity').notNull(),
     unitCost: decimal('unit_cost', { precision: 14, scale: 4 }).notNull(),
     ...timestamps,
   },
@@ -165,7 +186,7 @@ export const ledgerEntries = inventorySchema.table(
       .references(() => organizations.id, { onDelete: 'cascade' }),
     stockPositionId: uuid('stock_position_id').notNull(),
     entryType: text('entry_type').notNull(),
-    quantityChange: decimal('quantity_change', { precision: 14, scale: 4 }).notNull(),
+    quantityChange: exactInventoryQuantity('quantity_change').notNull(),
     referenceType: text('reference_type'),
     referenceId: uuid('reference_id'),
     ...timestamps,
@@ -202,11 +223,23 @@ export const reservations = inventorySchema.table(
     organizationId: uuid('organization_id')
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
-    stockPositionId: uuid('stock_position_id').notNull(),
+    /** Legacy single-position anchor; null for new grouped reservations. */
+    stockPositionId: uuid('stock_position_id'),
+    /**
+     * NULL defaults let the compatibility trigger derive scope for old inserts
+     * that still provide stock_position_id. Grouped inserts must provide both.
+     */
+    branchId: uuid('branch_id')
+      .notNull()
+      .default(sql`NULL`),
+    warehouseId: uuid('warehouse_id')
+      .notNull()
+      .default(sql`NULL`),
     status: text('status').notNull().default('ACTIVE'),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     referenceType: text('reference_type'),
     referenceId: uuid('reference_id'),
+    referenceVersion: integer('reference_version').notNull().default(0),
     ...timestamps,
     version: optimisticVersion,
   },
@@ -214,12 +247,40 @@ export const reservations = inventorySchema.table(
     index('reservations_organization_id_idx').on(table.organizationId),
     index('reservations_stock_position_id_idx').on(table.stockPositionId),
     index('reservations_status_idx').on(table.status),
+    index('reservations_org_warehouse_status_idx').on(
+      table.organizationId,
+      table.warehouseId,
+      table.status,
+    ),
+    index('reservations_active_due_expiration_idx')
+      .on(table.expiresAt, table.id)
+      .where(sql`${table.status} = 'ACTIVE' AND ${table.expiresAt} IS NOT NULL`),
+    uniqueIndex('reservations_active_reference_unique')
+      .on(table.organizationId, table.referenceType, table.referenceId)
+      .where(
+        sql`${table.status} = 'ACTIVE' AND ${table.referenceType} IS NOT NULL AND ${table.referenceId} IS NOT NULL`,
+      ),
     // Tenant-scope unique for FK references from child tables (reservation_items)
     uniqueIndex('reservations_tenant_scope_unique').on(table.id, table.organizationId),
+    check(
+      'reservations_status_check',
+      sql`${table.status} IN ('ACTIVE', 'CONSUMED', 'RELEASED', 'EXPIRED')`,
+    ),
+    check('reservations_reference_version_check', sql`${table.referenceVersion} >= 0`),
     foreignKey({
       name: 'reservations_stock_position_tenant_fk',
       columns: [table.stockPositionId, table.organizationId],
       foreignColumns: [stockPositions.id, stockPositions.organizationId],
+    }),
+    foreignKey({
+      name: 'reservations_branch_tenant_fk',
+      columns: [table.branchId, table.organizationId],
+      foreignColumns: [branches.id, branches.organizationId],
+    }),
+    foreignKey({
+      name: 'reservations_warehouse_tenant_branch_fk',
+      columns: [table.warehouseId, table.organizationId, table.branchId],
+      foreignColumns: [warehouses.id, warehouses.organizationId, warehouses.branchId],
     }),
   ],
 );
@@ -239,16 +300,32 @@ export const reservationItems = inventorySchema.table(
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
     reservationId: uuid('reservation_id').notNull(),
+    /** Derived from the parent only for legacy single-position inserts. */
+    stockPositionId: uuid('stock_position_id')
+      .notNull()
+      .default(sql`NULL`),
     variantId: uuid('variant_id').notNull(),
-    quantity: decimal('quantity', { precision: 14, scale: 4 }).notNull(),
+    quantity: exactInventoryQuantity('quantity').notNull(),
     ...timestamps,
   },
   (table) => [
     index('reservation_items_reservation_id_idx').on(table.reservationId),
+    index('reservation_items_stock_position_id_idx').on(table.stockPositionId),
+    uniqueIndex('reservation_items_reservation_stock_position_unique').on(
+      table.organizationId,
+      table.reservationId,
+      table.stockPositionId,
+    ),
+    check('reservation_items_quantity_positive_check', sql`${table.quantity} > 0`),
     foreignKey({
       name: 'reservation_items_reservation_tenant_fk',
       columns: [table.reservationId, table.organizationId],
       foreignColumns: [reservations.id, reservations.organizationId],
+    }),
+    foreignKey({
+      name: 'reservation_items_stock_position_tenant_fk',
+      columns: [table.stockPositionId, table.organizationId],
+      foreignColumns: [stockPositions.id, stockPositions.organizationId],
     }),
   ],
 );
@@ -367,8 +444,8 @@ export const stockTransferItems = inventorySchema.table(
       .references(() => organizations.id, { onDelete: 'cascade' }),
     transferId: uuid('transfer_id').notNull(),
     variantId: uuid('variant_id').notNull(),
-    quantity: decimal('quantity', { precision: 14, scale: 4 }).notNull(),
-    receivedQuantity: decimal('received_quantity', { precision: 14, scale: 4 }),
+    quantity: exactInventoryQuantity('quantity').notNull(),
+    receivedQuantity: exactInventoryQuantity('received_quantity'),
     ...timestamps,
   },
   (table) => [
@@ -403,8 +480,8 @@ export const stockAdjustments = inventorySchema.table(
       .references(() => organizations.id, { onDelete: 'cascade' }),
     stockPositionId: uuid('stock_position_id').notNull(),
     adjustmentType: text('adjustment_type').notNull(),
-    quantityBefore: decimal('quantity_before', { precision: 14, scale: 4 }).notNull(),
-    quantityAfter: decimal('quantity_after', { precision: 14, scale: 4 }).notNull(),
+    quantityBefore: exactInventoryQuantity('quantity_before').notNull(),
+    quantityAfter: exactInventoryQuantity('quantity_after').notNull(),
     reason: text('reason').notNull(),
     approvedBy: uuid('approved_by'),
     referenceType: text('reference_type'),

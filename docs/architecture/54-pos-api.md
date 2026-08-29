@@ -97,7 +97,7 @@ GET /variants/{variantId}
 
 Prefer a compact response suitable for local caching.
 
-## M5-004 online Draft Carts
+## M5-004/M5-005 online Draft Carts
 
 ```text
 POST   /carts
@@ -107,6 +107,8 @@ POST   /carts/{cartId}/items
 PATCH  /carts/{cartId}/items/{itemId}
 DELETE /carts/{cartId}/items/{itemId}
 POST   /carts/{cartId}/save
+POST   /carts/{cartId}/hold
+POST   /carts/{cartId}/resume
 ```
 
 The public Cart resource uses `items`; no line-oriented alias or tenant-admin
@@ -130,6 +132,29 @@ calls no Pricing, Inventory, or Sales contract, and creates no reservation,
 allocation, Sale, or price snapshot. Per Pricing architecture, only completed
 Orders/Sales store a price snapshot; later quote/reopen recalculates through
 Pricing in M5-006.
+
+### Hold/resume contract
+
+`POST /carts/{cartId}/hold` has body `{ warehouseId }`. `POST
+/carts/{cartId}/resume` is bodyless. Both require `Idempotency-Key`, `If-Match`,
+the transitional tenant bearer accepted by `PosOperatorGuard`, `sales.create`,
+Organization scope, and branch access.
+
+Hold validates that the selected warehouse is active and belongs to the Cart's
+Organization and branch. M5 does not auto-select a default warehouse and does not
+split one Cart across warehouses. Empty Cart hold is invalid.
+
+Hold converts Cart item quantities to exact variant base-unit demands and calls
+Inventory through its module contract to create one atomic logical reservation.
+If any demand is short, the response contains explicit shortages and no Inventory
+reservation is created; the Cart remains editable. While a hold is pending,
+active, or releasing, item/customer mutations return `OPERATION_NOT_ALLOWED`.
+
+Resume releases the active Inventory reservation exactly once, handles already
+released/expired reservations convergently, never creates or extends a
+reservation, and returns the Cart to editable Draft behavior. The command
+response includes the final released/expired hold state; later Cart reads omit a
+current hold.
 
 ## Pricing quote
 

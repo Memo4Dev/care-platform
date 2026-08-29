@@ -8,6 +8,7 @@ import {
   unitDefinitions,
 } from '@commerce-platform/database';
 import { createTestDatabase, type TestDatabase } from '@commerce-platform/testing';
+import { ERROR_CODES } from '@commerce-platform/contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used in some test paths
 import { eq, and } from 'drizzle-orm';
@@ -685,6 +686,7 @@ describe('Inventory concurrency control', () => {
       // Simulate expiration worker: update status to EXPIRED via repository
       await repository.updateReservationStatus(
         testdb.db,
+        orgId,
         reservation.id,
         'EXPIRED',
         reservation.version,
@@ -757,11 +759,11 @@ describe('Inventory concurrency control', () => {
   });
 
   // ===========================================================================
-  // 7. Same Idempotency Key Different Payload Replays (Not Conflict)
+  // 7. Same Idempotency Key Different Payload Conflicts
   // ===========================================================================
 
   describe('idempotency key with different payload', () => {
-    it('given same idempotency key with different quantity then replays original response', async () => {
+    it('given same idempotency key with different request hash then returns conflict', async () => {
       const orgId = await createTestOrg();
       const branchId = await createTestBranch(orgId);
       const warehouseId = await createTestWarehouse(orgId, branchId);
@@ -781,7 +783,7 @@ describe('Inventory concurrency control', () => {
       const idempotencyKey = `idem-diff-${newId()}`;
 
       // First reservation: quantity=5
-      const { reservation: r1 } = await service.reserveStock({
+      await service.reserveStock({
         organizationId: orgId,
         warehouseId,
         variantId,
@@ -791,21 +793,17 @@ describe('Inventory concurrency control', () => {
         principal: actor,
       });
 
-      // Second attempt with same key but quantity=3
-      // The idempotency implementation returns the existing completed
-      // outcome regardless of requestHash difference.
-      const { reservation: r2 } = await service.reserveStock({
-        organizationId: orgId,
-        warehouseId,
-        variantId,
-        quantity: '3',
-        idempotencyKey,
-        requestHash: 'hash-different',
-        principal: actor,
-      });
-
-      // Should replay original outcome (quantity=5 reservation)
-      expect(r2.id).toBe(r1.id);
+      await expect(
+        service.reserveStock({
+          organizationId: orgId,
+          warehouseId,
+          variantId,
+          quantity: '3',
+          idempotencyKey,
+          requestHash: 'hash-different',
+          principal: actor,
+        }),
+      ).rejects.toMatchObject({ code: ERROR_CODES.IDEMPOTENCY_CONFLICT });
 
       // Stock position: reserved should be 5 (from first), not 8
       const pos = await service.getStockPosition(orgId, warehouseId, variantId);
@@ -1359,7 +1357,7 @@ describe('Inventory concurrency control', () => {
       expect(rows).toHaveLength(1);
       // The application never produces this state — this test documents
       // that the invariant is enforced at the application layer, not the DB.
-      expect(rows[0].quantity_change).toBe('999.0000'); // Direct SQL did update
+      expect(dec(rows[0].quantity_change)).toBe(dec('999.0000')); // Direct SQL did update
     });
 
     it('given multiple ledger entries then ordering matches insertion order', async () => {

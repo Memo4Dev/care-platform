@@ -1,6 +1,7 @@
 import {
   branches,
   cartItems,
+  cartHolds,
   carts,
   integrationOutbox,
   idempotencyOutcomes,
@@ -9,6 +10,7 @@ import {
   productVariants,
   products,
   unitDefinitions,
+  warehouses,
 } from '@commerce-platform/database';
 import { createTestDatabase, type TestDatabase } from '@commerce-platform/testing';
 import { and, eq } from 'drizzle-orm';
@@ -16,6 +18,8 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type { CatalogContracts, SellableVariantView } from '../catalog/contracts';
 import type { CustomersContracts } from '../customers/contracts';
+import type { InventoryContracts } from '../inventory/contracts';
+import type { OrganizationContracts } from '../organization/contracts';
 import { CartService, requestHash } from './application/cart.service';
 import { CartRepository } from './infrastructure/cart.repository';
 
@@ -30,6 +34,9 @@ describe('Cart persistence', () => {
   let unitB: string;
   let variantA: string;
   let variantB: string;
+  let warehouseA: string;
+  let inventory: InventoryContracts;
+  let organization: OrganizationContracts;
 
   const actorId = newId();
 
@@ -63,7 +70,7 @@ describe('Cart persistence', () => {
       `INSERT INTO cart.cart_items
          (id, organization_id, cart_id, variant_id, unit_id, quantity)
        VALUES ($1, $2, $3, $4, $5, $6::numeric)
-       RETURNING quantity`,
+        RETURNING id, quantity`,
       [newId(), orgA, cartId, variantA, unitA, quantity],
     );
   }
@@ -78,6 +85,7 @@ describe('Cart persistence', () => {
     unitB = newId();
     variantA = newId();
     variantB = newId();
+    warehouseA = newId();
 
     await testdb.db.insert(organizations).values([
       { id: orgA, name: 'Cart A' },
@@ -87,6 +95,13 @@ describe('Cart persistence', () => {
       { id: branchA, organizationId: orgA, code: 'A', name: 'Branch A' },
       { id: branchB, organizationId: orgB, code: 'B', name: 'Branch B' },
     ]);
+    await testdb.db.insert(warehouses).values({
+      id: warehouseA,
+      organizationId: orgA,
+      branchId: branchA,
+      code: 'MAIN',
+      name: 'Main Warehouse',
+    });
     await testdb.db.insert(unitDefinitions).values([
       { id: unitA, organizationId: orgA, name: 'Piece A', symbol: 'pc' },
       { id: unitB, organizationId: orgB, name: 'Piece B', symbol: 'pc' },
@@ -120,7 +135,18 @@ describe('Cart persistence', () => {
 
     const catalog: CatalogContracts = {
       getProduct: async () => null,
-      getVariant: async () => null,
+      getVariant: async (organizationId, variantId) => ({
+        id: variantId,
+        organizationId,
+        productId: newId(),
+        name: 'Variant',
+        sku: 'SKU',
+        barcode: null,
+        baseUnitId: unitA,
+        categoryId: null,
+        status: 'ACTIVE',
+        version: 1,
+      }),
       resolveBarcode: async () => null,
       convertUnit: async () => '1',
       validateSellableVariant: async (organizationId, variantId) =>
@@ -130,7 +156,94 @@ describe('Cart persistence', () => {
       getCustomer: async () => null,
       searchCustomers: async () => [],
     };
-    service = new CartService(testdb.db, new CartRepository(), catalog, customers);
+    inventory = {
+      getAvailability: async () => null,
+      receiveStock: async () => ({ stockPositionId: newId() }),
+      createCartReservation: async (input) => ({
+        kind: 'ACTIVE',
+        shortages: [],
+        reservation: {
+          reservationId: newId(),
+          organizationId: input.organizationId,
+          branchId: input.branchId,
+          warehouseId: input.warehouseId,
+          referenceId: input.referenceId,
+          cartVersion: input.cartVersion,
+          status: 'ACTIVE',
+          expiresAt: input.expiresAt,
+          items: input.demands.map((demand) => ({
+            stockPositionId: newId(),
+            variantId: demand.variantId,
+            quantity: demand.quantity,
+            onHand: '10.00000000',
+            reserved: demand.quantity,
+            allocated: '0.00000000',
+            available: '9.00000000',
+          })),
+        },
+      }),
+      releaseCartReservation: async (input) => ({
+        kind: 'RELEASED',
+        shortages: [],
+        reservation: {
+          reservationId: newId(),
+          organizationId: input.organizationId,
+          branchId: input.branchId,
+          warehouseId: input.warehouseId,
+          referenceId: input.referenceId,
+          cartVersion: input.cartVersion,
+          status: 'RELEASED',
+          expiresAt: null,
+          items: [],
+        },
+      }),
+      checkCartReservation: async (input) => ({
+        kind: 'ACTIVE',
+        shortages: [],
+        reservation: {
+          reservationId: newId(),
+          organizationId: input.organizationId,
+          branchId: input.branchId,
+          warehouseId: input.warehouseId,
+          referenceId: input.referenceId,
+          cartVersion: input.cartVersion,
+          status: 'ACTIVE',
+          expiresAt: null,
+          items: [],
+        },
+      }),
+    };
+    organization = {
+      getBranch: async () => null,
+      getBranchPriority: async () => 0,
+      getWarehouse: async (organizationId, warehouseId) =>
+        warehouseId === warehouseA
+          ? {
+              id: warehouseA,
+              organizationId,
+              branchId: branchA,
+              code: 'MAIN',
+              name: 'Main Warehouse',
+              isActive: true,
+              version: 1,
+            }
+          : null,
+      getOrganizationPolicy: async (organizationId, policyType) => ({
+        organizationId,
+        policyType,
+        value: { holdReservationTtlMinutes: 15 },
+        version: 0,
+        source: 'default',
+      }),
+    };
+    service = new CartService(
+      testdb.db,
+      new CartRepository(),
+      catalog,
+      customers,
+      inventory,
+      organization,
+    );
   });
 
   afterAll(async () => testdb?.teardown());
@@ -874,6 +987,316 @@ describe('Cart persistence', () => {
         context(`save-empty-${newId()}`, { cartId: emptyCartId, expectedVersion: 1 }),
       ),
     ).resolves.toMatchObject({ id: emptyCartId, version: 1, items: [] });
+  });
+
+  it('creates one Cart hold through Inventory and blocks edits until resume releases it', async () => {
+    const createReservation = vi.spyOn(inventory, 'createCartReservation');
+    const releaseReservation = vi.spyOn(inventory, 'releaseCartReservation');
+    const cart = await service.create(
+      { organizationId: orgA, branchId: branchA, customerId: null },
+      context(`hold-create-${newId()}`, { branchId: branchA }),
+    );
+    const added = await service.addItem(
+      {
+        organizationId: orgA,
+        cartId: cart.id,
+        variantId: variantA,
+        unitId: unitA,
+        quantity: '2',
+        expectedVersion: 1,
+      },
+      context(`hold-add-${newId()}`, {
+        cartId: cart.id,
+        variantId: variantA,
+        unitId: unitA,
+        quantity: '2',
+        expectedVersion: 1,
+      }),
+    );
+
+    const held = await service.hold(
+      { organizationId: orgA, cartId: cart.id, warehouseId: warehouseA, expectedVersion: 2 },
+      context(`hold-active-${newId()}`, {
+        cartId: cart.id,
+        warehouseId: warehouseA,
+        expectedVersion: 2,
+      }),
+    );
+
+    expect(held.version).toBe(2);
+    expect(held.hold).toMatchObject({ status: 'ACTIVE', warehouseId: warehouseA });
+    expect(createReservation).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        organizationId: orgA,
+        branchId: branchA,
+        warehouseId: warehouseA,
+        cartVersion: 2,
+        demands: [{ variantId: variantA, quantity: '2.00000000' }],
+      }),
+    );
+
+    await expect(
+      service.updateItem(
+        {
+          organizationId: orgA,
+          cartId: cart.id,
+          itemId: added.items[0]!.id,
+          quantity: '3',
+          expectedVersion: 2,
+        },
+        context(`held-edit-${newId()}`, {
+          cartId: cart.id,
+          itemId: added.items[0]!.id,
+          quantity: '3',
+          expectedVersion: 2,
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'OPERATION_NOT_ALLOWED' });
+
+    const resumed = await service.resume(
+      { organizationId: orgA, cartId: cart.id, expectedVersion: 2 },
+      context(`hold-resume-${newId()}`, { cartId: cart.id, expectedVersion: 2 }),
+    );
+
+    expect(resumed.version).toBe(2);
+    expect(resumed.hold).toMatchObject({ status: 'RELEASED', shortages: [] });
+    expect(releaseReservation).toHaveBeenCalledOnce();
+    expect(await service.get(orgA, cart.id)).toMatchObject({ id: cart.id, hold: null });
+  });
+
+  it('keeps a Cart editable and records explicit shortages when Inventory cannot hold all items', async () => {
+    vi.spyOn(inventory, 'createCartReservation').mockResolvedValueOnce({
+      kind: 'SHORTAGES',
+      reservation: null,
+      organizationId: orgA,
+      branchId: branchA,
+      warehouseId: warehouseA,
+      referenceId: 'unused-by-cart-response',
+      cartVersion: 2,
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      shortages: [
+        {
+          variantId: variantA,
+          stockPositionId: null,
+          requested: '5.00000000',
+          available: '0.00000000',
+          shortage: '5.00000000',
+        },
+      ],
+    });
+    const cart = await service.create(
+      { organizationId: orgA, branchId: branchA, customerId: null },
+      context(`short-create-${newId()}`, { branchId: branchA }),
+    );
+    await service.addItem(
+      {
+        organizationId: orgA,
+        cartId: cart.id,
+        variantId: variantA,
+        unitId: unitA,
+        quantity: '5',
+        expectedVersion: 1,
+      },
+      context(`short-add-${newId()}`, {
+        cartId: cart.id,
+        variantId: variantA,
+        unitId: unitA,
+        quantity: '5',
+        expectedVersion: 1,
+      }),
+    );
+
+    const result = await service.hold(
+      { organizationId: orgA, cartId: cart.id, warehouseId: warehouseA, expectedVersion: 2 },
+      context(`short-hold-${newId()}`, {
+        cartId: cart.id,
+        warehouseId: warehouseA,
+        expectedVersion: 2,
+      }),
+    );
+
+    expect(result.hold).toMatchObject({
+      status: 'FAILED',
+      shortages: [{ variantId: variantA, requested: '5.00000000', shortage: '5.00000000' }],
+    });
+    const [hold] = await testdb.db
+      .select()
+      .from(cartHolds)
+      .where(and(eq(cartHolds.organizationId, orgA), eq(cartHolds.cartId, cart.id)));
+    expect(hold?.status).toBe('FAILED');
+    await expect(
+      service.addItem(
+        {
+          organizationId: orgA,
+          cartId: cart.id,
+          variantId: variantA,
+          unitId: unitA,
+          quantity: '1',
+          expectedVersion: 2,
+        },
+        context(`short-edit-${newId()}`, {
+          cartId: cart.id,
+          variantId: variantA,
+          unitId: unitA,
+          quantity: '1',
+          expectedVersion: 2,
+        }),
+      ),
+    ).resolves.toMatchObject({ version: 3 });
+  });
+
+  it('converges a retried in-progress hold checkpoint instead of poisoning the Cart', async () => {
+    const createReservation = vi.spyOn(inventory, 'createCartReservation');
+    createReservation.mockClear();
+    const cartId = await createRawCart();
+    await insertRawLine(cartId, '1');
+    const key = `pending-hold-${newId()}`;
+    const payload = { cartId, warehouseId: warehouseA, expectedVersion: 1 };
+    const holdId = newId();
+    const expiresAt = new Date(Date.now() + 15 * 60_000);
+    await testdb.db.insert(idempotencyOutcomes).values({
+      id: newId(),
+      scope: `ORGANIZATION_USER:${actorId}:${orgA}:POST:/api/v1/pos/carts/:cartId/hold`,
+      idempotencyKey: key,
+      requestHash: requestHash(payload),
+      status: 'IN_PROGRESS',
+    });
+    await testdb.db.insert(cartHolds).values({
+      id: holdId,
+      organizationId: orgA,
+      cartId,
+      branchId: branchA,
+      warehouseId: warehouseA,
+      cartVersion: 1,
+      ttlMinutes: 15,
+      policyVersion: 0,
+      expiresAt,
+      actorId,
+      correlationId: `correlation-${key}`,
+      causationId: key,
+    });
+
+    const completed = await service.hold(
+      { organizationId: orgA, cartId, warehouseId: warehouseA, expectedVersion: 1 },
+      context(key, payload),
+    );
+
+    expect(completed.hold).toMatchObject({ id: holdId, status: 'ACTIVE' });
+    expect(createReservation).toHaveBeenCalledOnce();
+    expect(createReservation).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        referenceId: holdId,
+        idempotencyKey: `cart-hold:${holdId}`,
+        requestHash: requestHash({
+          holdId,
+          cartId,
+          cartVersion: 1,
+          warehouseId: warehouseA,
+          demands: [{ variantId: variantA, quantity: '1.00000000' }],
+          expiresAt: expiresAt.toISOString(),
+        }),
+      }),
+    );
+    const replay = await service.hold(
+      { organizationId: orgA, cartId, warehouseId: warehouseA, expectedVersion: 1 },
+      context(key, payload),
+    );
+    expect(replay).toEqual(completed);
+  });
+
+  it('resumes a stale pending hold without an Inventory reservation and unblocks edits', async () => {
+    vi.spyOn(inventory, 'releaseCartReservation').mockRejectedValueOnce({
+      code: 'RESOURCE_NOT_FOUND',
+    });
+    const cartId = await createRawCart();
+    const item = await insertRawLine(cartId, '1');
+    await testdb.db.insert(cartHolds).values({
+      id: newId(),
+      organizationId: orgA,
+      cartId,
+      branchId: branchA,
+      warehouseId: warehouseA,
+      cartVersion: 1,
+      ttlMinutes: 15,
+      policyVersion: 0,
+      expiresAt: new Date(Date.now() + 15 * 60_000),
+      actorId,
+      correlationId: 'stale-pending-hold',
+      causationId: 'lost-hold-request',
+    });
+
+    const resumed = await service.resume(
+      { organizationId: orgA, cartId, expectedVersion: 1 },
+      context(`resume-pending-${newId()}`, { cartId, expectedVersion: 1 }),
+    );
+
+    expect(resumed.hold).toMatchObject({ status: 'RELEASED', shortages: [] });
+    expect(await service.get(orgA, cartId)).toMatchObject({ hold: null });
+    await expect(
+      service.updateItem(
+        {
+          organizationId: orgA,
+          cartId,
+          itemId: item.rows[0].id,
+          quantity: '2',
+          expectedVersion: 1,
+        },
+        context(`edit-after-pending-${newId()}`, {
+          cartId,
+          itemId: item.rows[0].id,
+          quantity: '2',
+          expectedVersion: 1,
+        }),
+      ),
+    ).resolves.toMatchObject({ version: 2 });
+  });
+
+  it('rejects empty Cart hold and branch-mismatched warehouses before Inventory reservation', async () => {
+    const createReservation = vi.spyOn(inventory, 'createCartReservation');
+    createReservation.mockClear();
+    const cart = await service.create(
+      { organizationId: orgA, branchId: branchA, customerId: null },
+      context(`empty-hold-create-${newId()}`, { branchId: branchA }),
+    );
+    await expect(
+      service.hold(
+        { organizationId: orgA, cartId: cart.id, warehouseId: warehouseA, expectedVersion: 1 },
+        context(`empty-hold-${newId()}`, {
+          cartId: cart.id,
+          warehouseId: warehouseA,
+          expectedVersion: 1,
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+
+    await service.addItem(
+      {
+        organizationId: orgA,
+        cartId: cart.id,
+        variantId: variantA,
+        unitId: unitA,
+        quantity: '1',
+        expectedVersion: 1,
+      },
+      context(`empty-hold-add-${newId()}`, {
+        cartId: cart.id,
+        variantId: variantA,
+        unitId: unitA,
+        quantity: '1',
+        expectedVersion: 1,
+      }),
+    );
+    await expect(
+      service.hold(
+        { organizationId: orgA, cartId: cart.id, warehouseId: newId(), expectedVersion: 2 },
+        context(`bad-warehouse-hold-${newId()}`, {
+          cartId: cart.id,
+          warehouseId: 'not-the-real-warehouse',
+          expectedVersion: 2,
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+    expect(createReservation).not.toHaveBeenCalled();
   });
 
   it('holds the tenant-scoped POS Draft root lock until the save outcome commits', async () => {

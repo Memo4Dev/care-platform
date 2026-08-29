@@ -2,7 +2,7 @@
 
 Phase: M5 IN PROGRESS
 Milestone: M5 (Sales & POS Core)
-Active task: M5-005 hold/resume Cart reservation lifecycle is next. M5-004 canonical POS Cart persistence/API implementation is locally accepted and included in the current focused commit; it is not pushed or deployed.
+Active task: M5-005 hold/resume Cart reservation lifecycle. ADR-0010 is accepted and implementation is fully verified locally: Cart hold/resume APIs, Organization CART TTL policy, and Inventory multi-position reservation contracts/persistence pass all local gates (603 unit, 446 native PostgreSQL integration) and independent correctness/security reviews. M5-005 is committed locally but not pushed or deployed.
 CI: M4 main CI run 38 for merge `05d9292` passed; M5 changes are unpushed and have no remote CI run yet. Historical staging credential rotation remains required before push.
 Branch: feat/m5-sales-pos-core
 
@@ -30,12 +30,45 @@ All 10 M4 tasks complete (M4-001 through M4-010):
 | TypeScript               | ✅ full PASS           | pending              | —   |
 | ESLint                   | ✅ full PASS           | pending              | —   |
 | Prettier                 | ✅ full PASS           | pending              | —   |
-| Unit tests               | ✅ 597 PASS            | pending              | —   |
-| Integration tests        | ✅ 420 PASS, 2 skipped | Redis required in CI | —   |
-| POS Cart PostgreSQL/HTTP | ✅ 44 PASS             | pending              | —   |
+| Unit tests               | ✅ 603 PASS            | pending              | —   |
+| Integration tests        | ✅ 446 PASS, 2 skipped | Redis required in CI | —   |
+| POS Cart PostgreSQL/HTTP | ✅ 24 + 27 PASS        | pending              | —   |
 | Build                    | ✅ full PASS           | pending              | —   |
 | Reviewer                 | ✅ PASS                | pending              | —   |
 | Security review          | ✅ PASS                | pending              | —   |
+
+## M5-005 current verification
+
+- ADR-0010 accepted: one explicit same-branch warehouse per Cart hold, one
+  atomic logical Inventory reservation, no warehouse auto-split, empty-hold
+  rejection, held Cart non-editable until resume, and `CART` policy default TTL
+  15 minutes with 1–1440-minute bounds.
+- Additive persistence migration `0030_cart_hold_reservation.sql` adds Cart hold
+  workflow state, expands Inventory reservation precision/grouping support, and
+  extends Organization policy type for `CART`.
+- Cart exposes `POST /api/v1/pos/carts/{cartId}/hold` and bodyless
+  `POST /api/v1/pos/carts/{cartId}/resume` through the transitional
+  `PosOperatorGuard`, `sales.create`, Organization/branch access, `If-Match`, and
+  `Idempotency-Key`.
+- Cart calls Inventory only through `INVENTORY_CONTRACTS`; Inventory owns
+  all-or-nothing reservation creation, exact eight-decimal quantities,
+  deterministic locking, idempotent release/lazy expiration, and due-reservation
+  worker wiring.
+- Targeted local verification so far: API typecheck passed; focused unit tests 22
+  passed; Cart PostgreSQL/HTTP tests 49 passed; Inventory Cart reservation,
+  migration, concurrency, persistence, and HTTP regressions 127 passed. Full
+  format/lint/unit/integration/build gates and independent reviews passed for
+  M5-005 acceptance.
+- M5-005 final local verification: full format, lint, typecheck, build, and diff
+  checks pass; 603 unit tests and 446 native PostgreSQL integration tests pass
+  (2 Redis/BullMQ tests remain CI-required). Independent correctness review PASS
+  and security review PASS. Crash/retry recoverability for the Cart hold
+  workflow is covered: a retried in-progress PENDING hold converges to ACTIVE
+  (never lands as a poisoned PENDING Cart), and a stale PENDING hold with no
+  Inventory reservation is terminalized by resume to unblock edits. The CART
+  hold TTL policy is validated with 1–1440 integer bounds in the Organization
+  domain. M5-005 is committed as `feat(m5): cart hold/resume reservation` on
+  `feat/m5-sales-pos-core`; not pushed or deployed.
 
 ## M5-003 current verification
 

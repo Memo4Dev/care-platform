@@ -46,6 +46,119 @@ export interface ReceiveStockInput {
   referenceId: string;
 }
 
+/** One exact base-unit demand in an atomic logical Cart hold. */
+export interface CartReservationDemand {
+  variantId: string;
+  /** Positive canonical decimal string with at most eight fractional digits. */
+  quantity: string;
+}
+
+/** Shared trusted workflow metadata for Inventory-owned Cart reservation writes. */
+export interface CartReservationOperationMetadata {
+  idempotencyKey: string;
+  requestHash: string;
+  correlationId: string;
+  causationId: string;
+  /** Trusted actor resolved by the calling application boundary. */
+  actorId: string;
+}
+
+/** Create one all-or-nothing reservation for one logical Cart hold. */
+export interface CreateCartReservationInput extends CartReservationOperationMetadata {
+  organizationId: string;
+  branchId: string;
+  warehouseId: string;
+  /** Stable Cart-owned hold workflow ID. */
+  referenceId: string;
+  /** Exact Cart aggregate version whose demands are being held. */
+  cartVersion: number;
+  demands: readonly CartReservationDemand[];
+  /** TTL result already resolved and snapshotted by the Cart workflow. */
+  expiresAt: string;
+}
+
+/** Release a Cart hold without ever creating or extending a reservation. */
+export interface ReleaseCartReservationInput extends CartReservationOperationMetadata {
+  organizationId: string;
+  branchId: string;
+  warehouseId: string;
+  referenceId: string;
+  cartVersion: number;
+}
+
+/** Observe a Cart hold; a due ACTIVE hold is lazily expired in Inventory. */
+export interface CheckCartReservationInput {
+  organizationId: string;
+  branchId: string;
+  warehouseId: string;
+  referenceId: string;
+  cartVersion: number;
+  correlationId: string;
+  causationId: string;
+  actorId: string;
+}
+
+export type CartReservationStatus = 'ACTIVE' | 'RELEASED' | 'EXPIRED' | 'CONSUMED';
+
+/** Current exact balance view for one item of a logical reservation. */
+export interface CartReservationItemSnapshot {
+  stockPositionId: string;
+  variantId: string;
+  quantity: string;
+  onHand: string;
+  reserved: string;
+  allocated: string;
+  available: string;
+}
+
+/** Explicit inability to satisfy one aggregated base-unit demand. */
+export interface CartReservationShortage {
+  variantId: string;
+  stockPositionId: string | null;
+  requested: string;
+  available: string;
+  shortage: string;
+}
+
+/** ORM-free Inventory reservation boundary snapshot. */
+export interface CartReservationSnapshot {
+  reservationId: string;
+  organizationId: string;
+  branchId: string;
+  warehouseId: string;
+  referenceId: string;
+  cartVersion: number;
+  status: CartReservationStatus;
+  expiresAt: string | null;
+  items: CartReservationItemSnapshot[];
+}
+
+/** Atomic create outcome. SHORTAGES is completed and has no stock side effects. */
+export type CreateCartReservationResult =
+  | {
+      kind: 'ACTIVE';
+      reservation: CartReservationSnapshot;
+      shortages: [];
+    }
+  | {
+      kind: 'SHORTAGES';
+      reservation: null;
+      organizationId: string;
+      branchId: string;
+      warehouseId: string;
+      referenceId: string;
+      cartVersion: number;
+      expiresAt: string;
+      shortages: CartReservationShortage[];
+    };
+
+/** Current state returned by release/check, including present availability. */
+export interface CartReservationStateResult {
+  kind: CartReservationStatus;
+  reservation: CartReservationSnapshot;
+  shortages: CartReservationShortage[];
+}
+
 /**
  * Commands and queries provided by the Inventory bounded context.
  */
@@ -71,4 +184,13 @@ export interface InventoryContracts {
    * @returns The ID of the stock position that received the stock.
    */
   receiveStock(input: ReceiveStockInput): Promise<{ stockPositionId: string }>;
+
+  /** Atomically hold all aggregated Cart demands or return every shortage. */
+  createCartReservation(input: CreateCartReservationInput): Promise<CreateCartReservationResult>;
+
+  /** Convergently release/expire an existing Cart reservation. */
+  releaseCartReservation(input: ReleaseCartReservationInput): Promise<CartReservationStateResult>;
+
+  /** Check current state and lazily expire a due reservation. */
+  checkCartReservation(input: CheckCartReservationInput): Promise<CartReservationStateResult>;
 }

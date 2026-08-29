@@ -8,6 +8,7 @@ import {
   unitDefinitions,
 } from '@commerce-platform/database';
 import { createTestDatabase, type TestDatabase } from '@commerce-platform/testing';
+import { ERROR_CODES } from '@commerce-platform/contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { InventoryRepository } from './infrastructure/inventory.repository';
@@ -417,6 +418,7 @@ describe('Inventory context persistence', () => {
       // Simulate expiration by directly updating the reservation status
       await repository.updateReservationStatus(
         testdb.db,
+        orgId,
         reservation.id,
         'EXPIRED',
         reservation.version,
@@ -426,7 +428,7 @@ describe('Inventory context persistence', () => {
       const stockPos = await repository.findStockPositionById(
         testdb.db,
         orgId,
-        reservation.stockPositionId,
+        reservation.stockPositionId!,
       );
       expect(stockPos).not.toBeNull();
 
@@ -1588,22 +1590,18 @@ describe('Inventory context persistence', () => {
         principal: actor,
       });
 
-      // Second receive with same key but different request hash
-      // This should replay (since key already exists, not conflict — the
-      // idempotency implementation returns existing outcome)
-      const { received } = await service.receiveStock({
-        organizationId: orgId,
-        warehouseId,
-        variantId,
-        quantity: '75', // Different quantity
-        unitCost: '8.0000', // Different cost
-        idempotencyKey,
-        requestHash: 'hash-different',
-        principal: actor,
-      });
-
-      // Should replay original outcome
-      expect(dec(received.onHand)).toBe(dec('50'));
+      await expect(
+        service.receiveStock({
+          organizationId: orgId,
+          warehouseId,
+          variantId,
+          quantity: '75',
+          unitCost: '8.0000',
+          idempotencyKey,
+          requestHash: 'hash-different',
+          principal: actor,
+        }),
+      ).rejects.toMatchObject({ code: ERROR_CODES.IDEMPOTENCY_CONFLICT });
     });
   });
 });

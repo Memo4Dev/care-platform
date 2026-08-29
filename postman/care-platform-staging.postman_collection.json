@@ -90,7 +90,11 @@
           "name": "GET /platform/tenants",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/platform/tenants", "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "tenants"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/tenants",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "platform", "tenants"]
+            },
             "auth": {
               "type": "bearer",
               "bearer": [{ "key": "token", "value": "{{platformToken}}" }]
@@ -103,7 +107,8 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/v1/platform/tenants/{{tenantId}}",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "tenants", "{{tenantId}}"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "platform", "tenants", "{{tenantId}}"]
             },
             "auth": {
               "type": "bearer",
@@ -117,7 +122,8 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/v1/platform/tenants/{{tenantId}}/activate",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "tenants", "{{tenantId}}", "activate"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "platform", "tenants", "{{tenantId}}", "activate"]
             },
             "auth": {
               "type": "bearer",
@@ -136,7 +142,8 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/v1/platform/tenants/{{tenantId}}/suspend",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "tenants", "{{tenantId}}", "suspend"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "platform", "tenants", "{{tenantId}}", "suspend"]
             },
             "auth": {
               "type": "bearer",
@@ -155,7 +162,8 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/v1/platform/tenants/{{tenantId}}/reactivate",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "tenants", "{{tenantId}}", "reactivate"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "platform", "tenants", "{{tenantId}}", "reactivate"]
             },
             "auth": {
               "type": "bearer",
@@ -174,7 +182,8 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/v1/platform/tenants/{{tenantId}}/close",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "tenants", "{{tenantId}}", "close"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "platform", "tenants", "{{tenantId}}", "close"]
             },
             "auth": {
               "type": "bearer",
@@ -196,8 +205,15 @@
           "name": "GET /platform/plans",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/platform/plans", "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "plans"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{platformToken}}" }] }
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/plans",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "platform", "plans"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{platformToken}}" }]
+            }
           }
         },
         {
@@ -206,9 +222,13 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/v1/platform/plans/{{planId}}",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "plans", "{{planId}}"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "platform", "plans", "{{planId}}"]
             },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{platformToken}}" }] }
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{platformToken}}" }]
+            }
           }
         }
       ]
@@ -220,8 +240,15 @@
           "name": "GET /platform/subscriptions",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/platform/subscriptions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "platform", "subscriptions"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{platformToken}}" }] }
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/platform/subscriptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "platform", "subscriptions"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{platformToken}}" }]
+            }
           }
         }
       ]
@@ -233,7 +260,11 @@
           "name": "GET /catalog/products",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/products", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "products"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "catalog", "products"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -241,8 +272,15 @@
           "name": "POST /catalog/products",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/products", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "products"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "catalog", "products"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Sample Product\"\n}",
@@ -256,9 +294,13 @@
             "method": "PATCH",
             "url": {
               "raw": "{{baseUrl}}/api/v1/admin/catalog/products/{{productId}}",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "products", "{{productId}}"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "catalog", "products", "{{productId}}"]
             },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Updated Product\"\n}",
@@ -272,9 +314,13 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/v1/admin/catalog/products/{{productId}}/variants",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "products", "{{productId}}", "variants"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "catalog", "products", "{{productId}}", "variants"]
             },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Default Variant\",\n  \"sku\": \"SKU-001\",\n  \"baseUnitId\": \"{{unitId}}\"\n}",
@@ -288,7 +334,8 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/v1/admin/catalog/products/{{productId}}/variants",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "products", "{{productId}}", "variants"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "catalog", "products", "{{productId}}", "variants"]
             },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
@@ -299,9 +346,13 @@
             "method": "PATCH",
             "url": {
               "raw": "{{baseUrl}}/api/v1/admin/catalog/variants/{{variantId}}",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "variants", "{{variantId}}"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "catalog", "variants", "{{variantId}}"]
             },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Updated Variant\"\n}",
@@ -313,7 +364,11 @@
           "name": "GET /catalog/categories",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/categories", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "categories"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "catalog", "categories"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -321,8 +376,15 @@
           "name": "POST /catalog/categories",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/categories", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "categories"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "catalog", "categories"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Beverages\"\n}",
@@ -336,9 +398,13 @@
             "method": "PATCH",
             "url": {
               "raw": "{{baseUrl}}/api/v1/admin/catalog/categories/{{categoryId}}",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "categories", "{{categoryId}}"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "catalog", "categories", "{{categoryId}}"]
             },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Updated Category\"\n}",
@@ -350,7 +416,11 @@
           "name": "GET /catalog/units",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/units", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "units"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/units",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "catalog", "units"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -358,8 +428,15 @@
           "name": "POST /catalog/units",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/units", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "units"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/units",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "catalog", "units"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Each\",\n  \"symbol\": \"ea\"\n}",
@@ -371,8 +448,15 @@
           "name": "POST /catalog/unit-conversions",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/unit-conversions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "unit-conversions"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/unit-conversions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "catalog", "unit-conversions"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"fromUnitId\": \"{{unitId}}\",\n  \"toUnitId\": \"{{unitId2}}\",\n  \"factor\": \"12\"\n}",
@@ -384,8 +468,15 @@
           "name": "POST /catalog/barcodes",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/barcodes", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "barcodes"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/barcodes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "catalog", "barcodes"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"variantId\": \"{{variantId}}\",\n  \"barcode\": \"1234567890123\"\n}",
@@ -397,8 +488,15 @@
           "name": "POST /catalog/packaging-definitions",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/catalog/packaging-definitions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "catalog", "packaging-definitions"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/packaging-definitions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "catalog", "packaging-definitions"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Case\",\n  \"unitId\": \"{{unitId}}\"\n}",
@@ -415,7 +513,11 @@
           "name": "GET /pricing/price-books",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/price-books", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "price-books"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/price-books",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "pricing", "price-books"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -423,8 +525,15 @@
           "name": "POST /pricing/price-books",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/price-books", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "price-books"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/price-books",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "pricing", "price-books"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Default Price Book\",\n  \"isDefault\": true\n}",
@@ -438,9 +547,13 @@
             "method": "PATCH",
             "url": {
               "raw": "{{baseUrl}}/api/v1/admin/pricing/price-books/{{priceBookId}}",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "price-books", "{{priceBookId}}"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "pricing", "price-books", "{{priceBookId}}"]
             },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Updated Price Book\"\n}",
@@ -454,7 +567,8 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/v1/admin/pricing/price-books/{{priceBookId}}/default",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "price-books", "{{priceBookId}}", "default"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "pricing", "price-books", "{{priceBookId}}", "default"]
             },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
@@ -463,7 +577,11 @@
           "name": "GET /pricing/price-entries",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/price-entries", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "price-entries"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/price-entries",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "pricing", "price-entries"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -471,8 +589,15 @@
           "name": "POST /pricing/price-entries",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/price-entries", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "price-entries"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/price-entries",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "pricing", "price-entries"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"priceBookId\": \"{{priceBookId}}\",\n  \"variantId\": \"{{variantId}}\",\n  \"unitId\": \"{{unitId}}\",\n  \"priceType\": \"CASH\",\n  \"channel\": \"POS\",\n  \"amount\": \"1500\",\n  \"effectiveFrom\": \"2025-01-01\"\n}",
@@ -486,9 +611,13 @@
             "method": "PATCH",
             "url": {
               "raw": "{{baseUrl}}/api/v1/admin/pricing/price-entries/{{priceEntryId}}",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "price-entries", "{{priceEntryId}}"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "pricing", "price-entries", "{{priceEntryId}}"]
             },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"amount\": \"1750\"\n}",
@@ -500,8 +629,15 @@
           "name": "POST /pricing/promotions",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/promotions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "promotions"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/promotions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "pricing", "promotions"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Summer Sale\",\n  \"type\": \"PERCENTAGE\",\n  \"target\": \"PRODUCT\",\n  \"value\": \"10\",\n  \"startDate\": \"2025-06-01\",\n  \"endDate\": \"2025-08-31\"\n}",
@@ -513,7 +649,11 @@
           "name": "GET /pricing/promotions",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/promotions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "promotions"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/promotions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "pricing", "promotions"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -523,9 +663,13 @@
             "method": "PATCH",
             "url": {
               "raw": "{{baseUrl}}/api/v1/admin/pricing/promotions/{{promotionId}}",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "promotions", "{{promotionId}}"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "pricing", "promotions", "{{promotionId}}"]
             },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"isActive\": false\n}",
@@ -537,8 +681,15 @@
           "name": "POST /pricing/coupons",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/coupons", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "coupons"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/coupons",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "pricing", "coupons"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"code\": \"SUMMER10\",\n  \"type\": \"PERCENTAGE\",\n  \"value\": \"10\",\n  \"promotionId\": \"{{promotionId}}\"\n}",
@@ -550,7 +701,11 @@
           "name": "GET /pricing/coupons",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/coupons", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "coupons"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/coupons",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "pricing", "coupons"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -560,7 +715,8 @@
             "method": "POST",
             "url": {
               "raw": "{{baseUrl}}/api/v1/admin/pricing/coupons/{{couponId}}/redeem",
-              "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "coupons", "{{couponId}}", "redeem"]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "pricing", "coupons", "{{couponId}}", "redeem"]
             },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
@@ -569,8 +725,15 @@
           "name": "POST /pricing/quote",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/pricing/quote", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "pricing", "quote"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/quote",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "pricing", "quote"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"variantId\": \"{{variantId}}\",\n  \"unitId\": \"{{unitId}}\",\n  \"priceType\": \"CASH\",\n  \"channel\": \"POS\"\n}",
@@ -587,7 +750,12 @@
           "name": "GET /inventory/stock-positions (list)",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/stock-positions?limit=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "stock-positions"], "query": [{ "key": "limit", "value": "50" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/stock-positions?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "inventory", "stock-positions"],
+              "query": [{ "key": "limit", "value": "50" }]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -595,7 +763,11 @@
           "name": "GET /inventory/stock-positions/:id (detail)",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/stock-positions/{{stockPositionId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "stock-positions", "{{stockPositionId}}"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/stock-positions/{{stockPositionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "inventory", "stock-positions", "{{stockPositionId}}"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -603,7 +775,19 @@
           "name": "GET /inventory/stock-positions/:id/fifo-layers",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/stock-positions/{{stockPositionId}}/fifo-layers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "stock-positions", "{{stockPositionId}}", "fifo-layers"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/stock-positions/{{stockPositionId}}/fifo-layers",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "inventory",
+                "stock-positions",
+                "{{stockPositionId}}",
+                "fifo-layers"
+              ]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -611,7 +795,20 @@
           "name": "GET /inventory/stock-positions/:id/ledger",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/stock-positions/{{stockPositionId}}/ledger?limit=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "stock-positions", "{{stockPositionId}}", "ledger"], "query": [{ "key": "limit", "value": "50" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/stock-positions/{{stockPositionId}}/ledger?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "inventory",
+                "stock-positions",
+                "{{stockPositionId}}",
+                "ledger"
+              ],
+              "query": [{ "key": "limit", "value": "50" }]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -619,8 +816,15 @@
           "name": "POST /inventory/reservations (create)",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/reservations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "reservations"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/reservations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "inventory", "reservations"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"variantId\": \"{{variantId}}\",\n  \"quantity\": \"5\"\n}",
@@ -632,7 +836,19 @@
           "name": "POST /inventory/reservations/:id/consume",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/reservations/{{reservationId}}/consume", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "reservations", "{{reservationId}}", "consume"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/reservations/{{reservationId}}/consume",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "inventory",
+                "reservations",
+                "{{reservationId}}",
+                "consume"
+              ]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -640,7 +856,19 @@
           "name": "POST /inventory/reservations/:id/release",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/reservations/{{reservationId}}/release", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "reservations", "{{reservationId}}", "release"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/reservations/{{reservationId}}/release",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "inventory",
+                "reservations",
+                "{{reservationId}}",
+                "release"
+              ]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -648,7 +876,11 @@
           "name": "GET /inventory/reservations (list)",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/reservations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "reservations"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/reservations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "inventory", "reservations"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -656,8 +888,15 @@
           "name": "POST /inventory/allocations (create)",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/allocations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "allocations"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/allocations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "inventory", "allocations"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"variantId\": \"{{variantId}}\",\n  \"quantity\": \"5\"\n}",
@@ -669,7 +908,19 @@
           "name": "POST /inventory/allocations/:id/consume",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/allocations/{{allocationId}}/consume", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "allocations", "{{allocationId}}", "consume"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/allocations/{{allocationId}}/consume",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "inventory",
+                "allocations",
+                "{{allocationId}}",
+                "consume"
+              ]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -677,7 +928,19 @@
           "name": "POST /inventory/allocations/:id/release",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/allocations/{{allocationId}}/release", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "allocations", "{{allocationId}}", "release"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/allocations/{{allocationId}}/release",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "inventory",
+                "allocations",
+                "{{allocationId}}",
+                "release"
+              ]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -685,7 +948,11 @@
           "name": "GET /inventory/allocations (list)",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/allocations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "allocations"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/allocations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "inventory", "allocations"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -693,8 +960,15 @@
           "name": "POST /inventory/stock/receive",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/stock/receive", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "stock", "receive"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/stock/receive",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "inventory", "stock", "receive"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"variantId\": \"{{variantId}}\",\n  \"quantity\": \"100\",\n  \"unitCost\": \"2500\"\n}",
@@ -706,8 +980,15 @@
           "name": "POST /inventory/stock/consume",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/stock/consume", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "stock", "consume"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/stock/consume",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "inventory", "stock", "consume"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"variantId\": \"{{variantId}}\",\n  \"quantity\": \"10\"\n}",
@@ -719,8 +1000,15 @@
           "name": "POST /inventory/transfers (create)",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/transfers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "transfers"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/transfers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "inventory", "transfers"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"sourceWarehouseId\": \"{{warehouseId}}\",\n  \"destinationWarehouseId\": \"{{warehouseId}}\",\n  \"items\": [\n    {\n      \"variantId\": \"{{variantId}}\",\n      \"quantity\": \"5\"\n    }\n  ]\n}",
@@ -732,7 +1020,11 @@
           "name": "POST /inventory/transfers/:id/dispatch",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/transfers/{{transferId}}/dispatch", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "transfers", "{{transferId}}", "dispatch"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/transfers/{{transferId}}/dispatch",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "inventory", "transfers", "{{transferId}}", "dispatch"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -740,8 +1032,15 @@
           "name": "POST /inventory/transfers/:id/receive",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/transfers/{{transferId}}/receive", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "transfers", "{{transferId}}", "receive"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/transfers/{{transferId}}/receive",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "inventory", "transfers", "{{transferId}}", "receive"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"items\": [\n    {\n      \"transferItemId\": \"{{transferItemId}}\",\n      \"receivedQuantity\": \"5\"\n    }\n  ]\n}",
@@ -753,7 +1052,11 @@
           "name": "GET /inventory/transfers (list)",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/transfers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "transfers"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/transfers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "inventory", "transfers"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -761,7 +1064,11 @@
           "name": "GET /inventory/transfers/:id (detail)",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/transfers/{{transferId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "transfers", "{{transferId}}"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/transfers/{{transferId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "inventory", "transfers", "{{transferId}}"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -769,8 +1076,15 @@
           "name": "POST /inventory/adjustments (create)",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/adjustments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "adjustments"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/adjustments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "inventory", "adjustments"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"stockPositionId\": \"{{stockPositionId}}\",\n  \"adjustmentType\": \"CORRECTION\",\n  \"quantityChange\": \"10\",\n  \"reason\": \"Cycle count correction\"\n}",
@@ -782,7 +1096,11 @@
           "name": "GET /inventory/adjustments (list)",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/inventory/adjustments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "inventory", "adjustments"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/adjustments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "inventory", "adjustments"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         }
@@ -795,7 +1113,12 @@
           "name": "GET /purchasing/suppliers (list)",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/suppliers?limit=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "suppliers"], "query": [{ "key": "limit", "value": "50" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/suppliers?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "purchasing", "suppliers"],
+              "query": [{ "key": "limit", "value": "50" }]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -803,8 +1126,15 @@
           "name": "POST /purchasing/suppliers (create)",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/suppliers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "suppliers"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/suppliers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "purchasing", "suppliers"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Idempotency-Key", "value": "{{$guid}}" }
@@ -820,8 +1150,15 @@
           "name": "PATCH /purchasing/suppliers/:id (update)",
           "request": {
             "method": "PATCH",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/suppliers/{{supplierId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "suppliers", "{{supplierId}}"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/suppliers/{{supplierId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "purchasing", "suppliers", "{{supplierId}}"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Idempotency-Key", "value": "{{$guid}}" }
@@ -837,7 +1174,12 @@
           "name": "GET /purchasing/purchase-orders (list)",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders?limit=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders"], "query": [{ "key": "limit", "value": "50" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "purchasing", "purchase-orders"],
+              "query": [{ "key": "limit", "value": "50" }]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -845,8 +1187,15 @@
           "name": "POST /purchasing/purchase-orders (create)",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "purchasing", "purchase-orders"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Idempotency-Key", "value": "{{$guid}}" }
@@ -862,7 +1211,11 @@
           "name": "GET /purchasing/purchase-orders/:id (detail)",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -870,8 +1223,15 @@
           "name": "PATCH /purchasing/purchase-orders/:id (update)",
           "request": {
             "method": "PATCH",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Idempotency-Key", "value": "{{$guid}}" }
@@ -887,30 +1247,71 @@
           "name": "POST /purchasing/purchase-orders/:id/submit",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}/submit", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}", "submit"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
-            "header": [
-              { "key": "Idempotency-Key", "value": "{{$guid}}" }
-            ]
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}/submit",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "purchasing",
+                "purchase-orders",
+                "{{purchaseOrderId}}",
+                "submit"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
+            "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }]
           }
         },
         {
           "name": "POST /purchasing/purchase-orders/:id/approve",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}/approve", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}", "approve"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
-            "header": [
-              { "key": "Idempotency-Key", "value": "{{$guid}}" }
-            ]
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "purchasing",
+                "purchase-orders",
+                "{{purchaseOrderId}}",
+                "approve"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
+            "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }]
           }
         },
         {
           "name": "POST /purchasing/purchase-orders/:id/reject",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}/reject", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}", "reject"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "purchasing",
+                "purchase-orders",
+                "{{purchaseOrderId}}",
+                "reject"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Idempotency-Key", "value": "{{$guid}}" }
@@ -926,19 +1327,47 @@
           "name": "POST /purchasing/purchase-orders/:id/send",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}/send", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}", "send"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
-            "header": [
-              { "key": "Idempotency-Key", "value": "{{$guid}}" }
-            ]
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}/send",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "purchasing",
+                "purchase-orders",
+                "{{purchaseOrderId}}",
+                "send"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
+            "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }]
           }
         },
         {
           "name": "POST /purchasing/purchase-orders/:id/cancel",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "purchase-orders", "{{purchaseOrderId}}", "cancel"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/purchase-orders/{{purchaseOrderId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "purchasing",
+                "purchase-orders",
+                "{{purchaseOrderId}}",
+                "cancel"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Idempotency-Key", "value": "{{$guid}}" }
@@ -954,7 +1383,12 @@
           "name": "GET /purchasing/goods-receipts (list)",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/goods-receipts?limit=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "goods-receipts"], "query": [{ "key": "limit", "value": "50" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/goods-receipts?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "purchasing", "goods-receipts"],
+              "query": [{ "key": "limit", "value": "50" }]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -962,8 +1396,15 @@
           "name": "POST /purchasing/goods-receipts (create)",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/goods-receipts", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "goods-receipts"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/goods-receipts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "purchasing", "goods-receipts"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Idempotency-Key", "value": "{{$guid}}" }
@@ -979,7 +1420,11 @@
           "name": "GET /purchasing/goods-receipts/:id (detail)",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/goods-receipts/{{goodsReceiptId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "goods-receipts", "{{goodsReceiptId}}"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/goods-receipts/{{goodsReceiptId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "purchasing", "goods-receipts", "{{goodsReceiptId}}"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -987,19 +1432,47 @@
           "name": "POST /purchasing/goods-receipts/:id/confirm",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/goods-receipts/{{goodsReceiptId}}/confirm", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "goods-receipts", "{{goodsReceiptId}}", "confirm"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
-            "header": [
-              { "key": "Idempotency-Key", "value": "{{$guid}}" }
-            ]
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/goods-receipts/{{goodsReceiptId}}/confirm",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "purchasing",
+                "goods-receipts",
+                "{{goodsReceiptId}}",
+                "confirm"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
+            "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }]
           }
         },
         {
           "name": "POST /purchasing/goods-receipts/:id/cancel",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/purchasing/goods-receipts/{{goodsReceiptId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "purchasing", "goods-receipts", "{{goodsReceiptId}}", "cancel"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/purchasing/goods-receipts/{{goodsReceiptId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "purchasing",
+                "goods-receipts",
+                "{{goodsReceiptId}}",
+                "cancel"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Idempotency-Key", "value": "{{$guid}}" }
@@ -1020,7 +1493,15 @@
           "name": "GET /customers/search",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/customers/search?q=Acme&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "customers", "search"], "query": [{ "key": "q", "value": "Acme" }, { "key": "limit", "value": "20" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/customers/search?q=Acme&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "customers", "search"],
+              "query": [
+                { "key": "q", "value": "Acme" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -1028,8 +1509,15 @@
           "name": "POST /customers (create)",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/customers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "customers"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "customers"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Idempotency-Key", "value": "{{$guid}}" }
@@ -1059,7 +1547,11 @@
           "name": "GET /customers/:id",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/admin/customers/{{customerId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "customers", "{{customerId}}"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "customers", "{{customerId}}"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         }
@@ -1072,7 +1564,15 @@
           "name": "GET /carts (branch scoped)",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts?branchId={{tenantBranchId}}&limit=50", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts"], "query": [{ "key": "branchId", "value": "{{tenantBranchId}}" }, { "key": "limit", "value": "50" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts?branchId={{tenantBranchId}}&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pos", "carts"],
+              "query": [
+                { "key": "branchId", "value": "{{tenantBranchId}}" },
+                { "key": "limit", "value": "50" }
+              ]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           },
           "event": [
@@ -1098,7 +1598,16 @@
           "name": "GET /carts (next cursor)",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts?branchId={{tenantBranchId}}&limit=50&after={{cartNextCursor}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts"], "query": [{ "key": "branchId", "value": "{{tenantBranchId}}" }, { "key": "limit", "value": "50" }, { "key": "after", "value": "{{cartNextCursor}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts?branchId={{tenantBranchId}}&limit=50&after={{cartNextCursor}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pos", "carts"],
+              "query": [
+                { "key": "branchId", "value": "{{tenantBranchId}}" },
+                { "key": "limit", "value": "50" },
+                { "key": "after", "value": "{{cartNextCursor}}" }
+              ]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           }
         },
@@ -1106,8 +1615,15 @@
           "name": "POST /carts (create POS Draft)",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pos", "carts"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Idempotency-Key", "value": "{{$guid}}" }
@@ -1140,8 +1656,15 @@
           "name": "POST /carts/:cartId/items (add or merge)",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/items", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts", "{{cartId}}", "items"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pos", "carts", "{{cartId}}", "items"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Idempotency-Key", "value": "{{$guid}}" },
@@ -1175,7 +1698,11 @@
           "name": "GET /carts/:cartId",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts", "{{cartId}}"] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pos", "carts", "{{cartId}}"]
+            },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] }
           },
           "event": [
@@ -1198,8 +1725,89 @@
           "request": {
             "description": "LOCAL_ATOMIC no-op save. Requires Idempotency-Key and If-Match; does not change Cart state, version, updatedAt, items, Inventory, Pricing, or Sales.",
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/save", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts", "{{cartId}}", "save"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/save",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pos", "carts", "{{cartId}}", "save"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
+            "header": [
+              { "key": "Idempotency-Key", "value": "{{$guid}}" },
+              { "key": "If-Match", "value": "{{cartVersion}}" }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.data) pm.collectionVariables.set('cartVersion', body.data.version);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /carts/:cartId/hold",
+          "request": {
+            "description": "WORKFLOW_IDEMPOTENT Cart hold. Requires one explicit warehouseId, Idempotency-Key, and If-Match; returns ACTIVE hold or explicit shortages.",
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/hold",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pos", "carts", "{{cartId}}", "hold"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" },
+              { "key": "If-Match", "value": "{{cartVersion}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"{{warehouseId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.data) pm.collectionVariables.set('cartVersion', body.data.version);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /carts/:cartId/resume (no body)",
+          "request": {
+            "description": "WORKFLOW_IDEMPOTENT resume. Releases the active Cart hold exactly once and never creates a new reservation.",
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/resume",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pos", "carts", "{{cartId}}", "resume"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "header": [
               { "key": "Idempotency-Key", "value": "{{$guid}}" },
               { "key": "If-Match", "value": "{{cartVersion}}" }
@@ -1224,8 +1832,15 @@
           "name": "PATCH /carts/:cartId/items/:itemId",
           "request": {
             "method": "PATCH",
-            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/items/{{cartItemId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts", "{{cartId}}", "items", "{{cartItemId}}"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/items/{{cartItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pos", "carts", "{{cartId}}", "items", "{{cartItemId}}"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Idempotency-Key", "value": "{{$guid}}" },
@@ -1256,8 +1871,15 @@
           "name": "DELETE /carts/:cartId/items/:itemId",
           "request": {
             "method": "DELETE",
-            "url": { "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/items/{{cartItemId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "pos", "carts", "{{cartId}}", "items", "{{cartItemId}}"] },
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tenantToken}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/items/{{cartItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pos", "carts", "{{cartId}}", "items", "{{cartItemId}}"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{tenantToken}}" }]
+            },
             "header": [
               { "key": "Idempotency-Key", "value": "{{$guid}}" },
               { "key": "If-Match", "value": "{{cartVersion}}" }

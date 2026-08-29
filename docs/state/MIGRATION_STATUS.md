@@ -179,6 +179,19 @@ All migrations are additive-only. No destructive DDL. No production rollout perf
 
 `0027_add_purchasing_permissions.sql` — Seeds purchasing permission codes.
 
+## M5-005: Cart Hold Reservation Persistence
+
+`0030_cart_hold_reservation.sql` — Cart hold workflow and Inventory reservation expansion.
+
+- Adds Organization `CART` policy support for `holdReservationTtlMinutes`.
+- Adds `cart.cart_holds` workflow/checkpoint state keyed by Organization and Cart,
+  with one current pending/active/releasing hold per Cart.
+- Expands Inventory reservations for logical Cart holds with reference metadata,
+  nullable legacy root stock position support, multi-position reservation items,
+  eight-decimal quantities, and due-expiration indexes.
+- Additive-only; existing Draft Carts and legacy single-position reservations
+  remain compatible.
+
 - Seeds 4 permission codes into `identity.permissions`: `purchasing.read`, `purchasing.write`, `purchasing.approve`, `purchasing.receive`.
 - Uses `ON CONFLICT ("code") DO NOTHING` for safe re-delivery.
 - IDs follow sequence (000000000033–000000000036) after inventory (000000000032).

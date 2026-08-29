@@ -211,6 +211,13 @@
       "when": 1787891000000,
       "tag": "0029_cart_core",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1787977400000,
+      "tag": "0030_cart_hold_reservation",
+      "breakpoints": true
     }
   ]
 }

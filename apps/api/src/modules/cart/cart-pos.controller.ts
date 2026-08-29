@@ -52,6 +52,8 @@ const addItem = z
 
 const updateItem = z.object({ quantity: z.string().trim().min(1).max(15) }).strict();
 
+const holdCart = z.object({ warehouseId: uuid }).strict();
+
 const noBody = z.undefined();
 
 const listCarts = z.object({ branchId: uuid }).merge(cursorPageRequestSchema).strict();
@@ -128,6 +130,46 @@ const cartItemResponse = {
   },
 };
 
+const cartHoldShortageResponse = {
+  type: 'object',
+  required: ['variantId', 'stockPositionId', 'requested', 'available', 'shortage'],
+  properties: {
+    variantId: { type: 'string', format: 'uuid' },
+    stockPositionId: { type: 'string', format: 'uuid', nullable: true },
+    requested: CART_QUANTITY_RESPONSE_SCHEMA,
+    available: CART_QUANTITY_RESPONSE_SCHEMA,
+    shortage: CART_QUANTITY_RESPONSE_SCHEMA,
+  },
+};
+
+const cartHoldResponse = {
+  type: 'object',
+  required: [
+    'id',
+    'status',
+    'warehouseId',
+    'cartVersion',
+    'ttlMinutes',
+    'policyVersion',
+    'expiresAt',
+    'shortages',
+  ],
+  nullable: true,
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    status: {
+      type: 'string',
+      enum: ['PENDING', 'ACTIVE', 'RELEASING', 'RELEASED', 'EXPIRED', 'FAILED'],
+    },
+    warehouseId: { type: 'string', format: 'uuid' },
+    cartVersion: { type: 'integer', minimum: 1 },
+    ttlMinutes: { type: 'integer', minimum: 1, maximum: 1440 },
+    policyVersion: { type: 'integer', minimum: 0 },
+    expiresAt: { type: 'string', format: 'date-time', nullable: true },
+    shortages: { type: 'array', items: cartHoldShortageResponse },
+  },
+};
+
 const cartResponse = {
   type: 'object',
   required: [
@@ -141,6 +183,7 @@ const cartResponse = {
     'updatedAt',
     'version',
     'items',
+    'hold',
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
@@ -153,7 +196,15 @@ const cartResponse = {
     updatedAt: { type: 'string', format: 'date-time' },
     version: { type: 'integer', minimum: 1 },
     items: { type: 'array', items: cartItemResponse },
+    hold: cartHoldResponse,
   },
+};
+
+const holdCartRequest = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['warehouseId'],
+  properties: { warehouseId: { type: 'string', format: 'uuid' } },
 };
 
 const errorEnvelope = {
@@ -561,6 +612,118 @@ export class CartPosController {
         cartId: cartIdValue,
         expectedVersion,
       },
+      this.context(
+        principal,
+        request,
+        idempotencyKey,
+        requestHash({ cartId: cartIdValue, expectedVersion }),
+      ),
+    );
+    return { data: result };
+  }
+
+  /** Idempotency classification: WORKFLOW_IDEMPOTENT. */
+  @Post(':cartId/hold')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Hold all current Cart items in one selected warehouse' })
+  @ApiParam({ name: 'cartId', type: String, format: 'uuid' })
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  @ApiHeader({ name: 'If-Match', required: true })
+  @ApiBody({ schema: holdCartRequest })
+  @ApiResponse({
+    status: 200,
+    description: 'Cart hold accepted or shortages returned',
+    schema: cartSuccess,
+  })
+  @ApiResponse({ status: 401, description: 'Authentication required', schema: errorEnvelope })
+  @ApiResponse({
+    status: 403,
+    description: 'sales.create permission or branch access required',
+    schema: errorEnvelope,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cart or warehouse not found in tenant/branch',
+    schema: errorEnvelope,
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Idempotency, version, or held-state conflict',
+    schema: errorEnvelope,
+  })
+  @ApiResponse({
+    status: 422,
+    description: 'Invalid body, headers, empty Cart, or policy',
+    schema: errorEnvelope,
+  })
+  async hold(
+    @Req() request: AuthenticatedRequest,
+    @Param('cartId') cartId: string,
+    @Body() body: unknown,
+  ) {
+    const principal = this.principal(request);
+    const cartIdValue = uuid.parse(cartId);
+    const cart = await this.requireCart(principal, cartIdValue);
+    await this.requireBranch(principal, request, cart.branchId);
+    const input = holdCart.parse(body);
+    const idempotencyKey = this.requireIdempotencyKey(request);
+    const expectedVersion = this.requireVersion(request);
+    const result = await this.carts.hold(
+      {
+        organizationId: principal.organizationId,
+        cartId: cartIdValue,
+        warehouseId: input.warehouseId,
+        expectedVersion,
+      },
+      this.context(
+        principal,
+        request,
+        idempotencyKey,
+        requestHash({ cartId: cartIdValue, warehouseId: input.warehouseId, expectedVersion }),
+      ),
+    );
+    return { data: result };
+  }
+
+  /** Idempotency classification: WORKFLOW_IDEMPOTENT. */
+  @Post(':cartId/resume')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Release the active Cart hold and return to editable Draft' })
+  @ApiParam({ name: 'cartId', type: String, format: 'uuid' })
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  @ApiHeader({ name: 'If-Match', required: true })
+  @ApiResponse({
+    status: 200,
+    description: 'Cart hold released or already editable',
+    schema: cartSuccess,
+  })
+  @ApiResponse({ status: 401, description: 'Authentication required', schema: errorEnvelope })
+  @ApiResponse({
+    status: 403,
+    description: 'sales.create permission or branch access required',
+    schema: errorEnvelope,
+  })
+  @ApiResponse({ status: 404, description: 'Cart not found in tenant', schema: errorEnvelope })
+  @ApiResponse({
+    status: 409,
+    description: 'Idempotency or version conflict',
+    schema: errorEnvelope,
+  })
+  @ApiResponse({
+    status: 422,
+    description: 'Request body not allowed or invalid headers',
+    schema: errorEnvelope,
+  })
+  async resume(@Req() request: AuthenticatedRequest, @Param('cartId') cartId: string) {
+    noBody.parse(request.body);
+    const principal = this.principal(request);
+    const cartIdValue = uuid.parse(cartId);
+    const cart = await this.requireCart(principal, cartIdValue);
+    await this.requireBranch(principal, request, cart.branchId);
+    const idempotencyKey = this.requireIdempotencyKey(request);
+    const expectedVersion = this.requireVersion(request);
+    const result = await this.carts.resume(
+      { organizationId: principal.organizationId, cartId: cartIdValue, expectedVersion },
       this.context(
         principal,
         request,

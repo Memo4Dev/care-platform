@@ -19,9 +19,9 @@
 - Draft carts can be saved and reopened.
 - POS carts preserve branch/device scope.
 
-## M5-004 canonical POS Cart surface
+## M5-004/M5-005 canonical POS Cart surface
 
-M5-004 exposes only the online, versioned POS Draft Cart routes below:
+M5 exposes only the online, versioned POS Draft Cart routes below:
 
 ```text
 POST   /api/v1/pos/carts
@@ -31,6 +31,8 @@ POST   /api/v1/pos/carts/{cartId}/items
 PATCH  /api/v1/pos/carts/{cartId}/items/{itemId}
 DELETE /api/v1/pos/carts/{cartId}/items/{itemId}
 POST   /api/v1/pos/carts/{cartId}/save
+POST   /api/v1/pos/carts/{cartId}/hold
+POST   /api/v1/pos/carts/{cartId}/resume
 ```
 
 The public DTO uses `items` and `CartItem`; persistence and domain internals may
@@ -73,11 +75,26 @@ organization, user/operator, role/permission, or device authority fields.
 - A normal POS Draft Cart performs availability checks only; it never reserves
   stock.
 - `Hold Cart` requests an Inventory reservation. The default TTL is 15 minutes
-  and `cart.holdReservationTtlMinutes` is an Organization Policy.
+  and `CART.holdReservationTtlMinutes` is an Organization Policy constrained to
+  whole minutes from 1 through 1440.
+- `POST /api/v1/pos/carts/{cartId}/hold` requires `Idempotency-Key`, `If-Match`,
+  and one explicit `warehouseId`; the warehouse must be active and belong to the
+  Cart's Organization and branch. M5 does not auto-select or split warehouses.
+- Hold creates one Cart-owned workflow checkpoint and one Inventory-owned logical
+  multi-position reservation for the exact Cart version. The Inventory command is
+  all-or-nothing: every demanded base-unit quantity reserves atomically, or the
+  response returns explicit shortages and no Inventory reservation side effect.
+- Cart item/customer mutations are rejected while a hold is pending, active, or
+  releasing. A failed-shortage hold is not current and the Cart remains editable.
+- Holding an empty Cart is rejected.
+- `POST /api/v1/pos/carts/{cartId}/resume` is bodyless, requires
+  `Idempotency-Key` and `If-Match`, releases the active Inventory reservation at
+  most once, never creates or extends a reservation, and makes the Cart editable
+  again. The response includes the released/expired hold state and current
+  shortages/availability details when Inventory reports them; subsequent Cart
+  reads show no current hold.
 - Reservation expiration releases Inventory through the Inventory context's
-  existing mechanism. The persisted Cart remains but its held reservation is no
-  longer valid.
-- Resuming an expired held Cart must recheck availability and surface shortages.
-  It must not silently recreate a reservation when stock is unavailable.
-- Hold, unhold/resume, and reservation release are idempotent and concurrency
-  safe. Cart never mutates Inventory persistence directly.
+  due-reservation worker and lazy release/check path. The persisted Cart remains
+  but its held reservation is no longer valid.
+- Hold, resume, expiration, and reservation release are idempotent and
+  concurrency safe. Cart never mutates Inventory persistence directly.

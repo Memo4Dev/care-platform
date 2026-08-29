@@ -417,7 +417,7 @@ describe('Inventory HTTP boundary — Authorization matrix', () => {
         organizationId: tenantOrganizationId,
         warehouseId,
         variantId,
-        onHand: '10.0000',
+        onHand: '10.00000000',
       });
       createdStockPositionId = body.id;
     });
@@ -1260,8 +1260,8 @@ describe('Inventory HTTP boundary — Authorization matrix', () => {
       });
       expect(receiveRes.statusCode).toBe(201);
       const stockPositionId = receiveRes.json().id;
-      expect(receiveRes.json().onHand).toBe('10.0000');
-      expect(receiveRes.json().reserved).toBe('0.0000');
+      expect(receiveRes.json().onHand).toBe('10.00000000');
+      expect(receiveRes.json().reserved).toBe('0.00000000');
 
       // 2. Verify stock position has on_hand=10
       const getRes = await app.inject({
@@ -1270,8 +1270,8 @@ describe('Inventory HTTP boundary — Authorization matrix', () => {
         headers: { authorization: `Bearer ${ownerBearer}` },
       });
       expect(getRes.statusCode).toBe(200);
-      expect(getRes.json().onHand).toBe('10.0000');
-      expect(getRes.json().reserved).toBe('0.0000');
+      expect(getRes.json().onHand).toBe('10.00000000');
+      expect(getRes.json().reserved).toBe('0.00000000');
 
       // 3. Reserve 3 units
       const reserveRes = await app.inject({
@@ -1297,8 +1297,8 @@ describe('Inventory HTTP boundary — Authorization matrix', () => {
         headers: { authorization: `Bearer ${ownerBearer}` },
       });
       expect(afterReserve.statusCode).toBe(200);
-      expect(afterReserve.json().onHand).toBe('10.0000');
-      expect(afterReserve.json().reserved).toBe('3.0000');
+      expect(afterReserve.json().onHand).toBe('10.00000000');
+      expect(afterReserve.json().reserved).toBe('3.00000000');
       // available = on_hand - reserved - allocated = 10 - 3 - 0 = 7
 
       // 5. Consume reservation
@@ -1323,8 +1323,8 @@ describe('Inventory HTTP boundary — Authorization matrix', () => {
         headers: { authorization: `Bearer ${ownerBearer}` },
       });
       expect(afterConsume.statusCode).toBe(200);
-      expect(afterConsume.json().onHand).toBe('7.0000');
-      expect(afterConsume.json().reserved).toBe('0.0000');
+      expect(afterConsume.json().onHand).toBe('7.00000000');
+      expect(afterConsume.json().reserved).toBe('0.00000000');
     });
   });
 
@@ -1357,7 +1357,7 @@ describe('Inventory HTTP boundary — Authorization matrix', () => {
       });
       expect(receiveRes.statusCode).toBe(201);
       const sourceStockPositionId = receiveRes.json().id;
-      expect(receiveRes.json().onHand).toBe('20.0000');
+      expect(receiveRes.json().onHand).toBe('20.00000000');
 
       // 3. Create transfer of 10
       const createTransferRes = await app.inject({
@@ -1399,7 +1399,7 @@ describe('Inventory HTTP boundary — Authorization matrix', () => {
         headers: { authorization: `Bearer ${ownerBearer}` },
       });
       expect(afterDispatch.statusCode).toBe(200);
-      expect(afterDispatch.json().onHand).toBe('10.0000');
+      expect(afterDispatch.json().onHand).toBe('10.00000000');
 
       // 6. Get transfer detail to find transfer item IDs
       const transferDetailRes = await app.inject({
@@ -1443,7 +1443,7 @@ describe('Inventory HTTP boundary — Authorization matrix', () => {
         .where(eq(stockPositions.warehouseId, destWarehouseId));
 
       expect(destStockPositions.length).toBe(1);
-      expect(destStockPositions[0].onHand).toBe('10.0000');
+      expect(destStockPositions[0].onHand).toBe('10.00000000');
     });
   });
 });

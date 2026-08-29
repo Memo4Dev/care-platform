@@ -1,12 +1,14 @@
 import { createHash } from 'node:crypto';
 
 import { ERROR_CODES, PlatformError } from '@commerce-platform/contracts';
-import { newId, type DatabaseClient } from '@commerce-platform/database';
+import { newId, type CartHoldRow, type DatabaseClient } from '@commerce-platform/database';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { DATABASE } from '../../database/database.tokens';
 import { CATALOG_CONTRACTS, type CatalogContracts } from '../../catalog/contracts';
 import { CUSTOMERS_CONTRACTS, type CustomersContracts } from '../../customers/contracts';
+import { INVENTORY_CONTRACTS, type InventoryContracts } from '../../inventory/contracts';
+import { ORGANIZATION_CONTRACTS, type OrganizationContracts } from '../../organization/contracts';
 import { normalizeCartView, type CartPage, type CartView } from '../contracts';
 import { Cart } from '../domain/cart';
 import {
@@ -31,6 +33,8 @@ export class CartService {
     @Inject(CartRepository) private readonly repository: CartRepository,
     @Inject(CATALOG_CONTRACTS) private readonly catalog: CatalogContracts,
     @Inject(CUSTOMERS_CONTRACTS) private readonly customers: CustomersContracts,
+    @Inject(INVENTORY_CONTRACTS) private readonly inventory: InventoryContracts,
+    @Inject(ORGANIZATION_CONTRACTS) private readonly organization: OrganizationContracts,
   ) {}
 
   async create(
@@ -78,7 +82,7 @@ export class CartService {
         actorId: context.actorId,
       });
 
-      const result = toCartView({ cart: row, lines: [] });
+      const result = toCartView({ cart: row, lines: [] }, null);
       await this.repository.completeIdempotency(tx, claim.claimId, result);
       return result;
     });
@@ -86,7 +90,9 @@ export class CartService {
 
   async get(organizationId: string, cartId: string): Promise<CartView | null> {
     const record = await this.repository.findCart(this.db, organizationId, cartId);
-    return record ? toCartView(record) : null;
+    if (!record) return null;
+    const hold = await this.repository.findCurrentHold(this.db, organizationId, cartId);
+    return toCartView(record, hold);
   }
 
   async list(
@@ -97,7 +103,7 @@ export class CartService {
   ): Promise<CartPage> {
     const page = await this.repository.listCarts(this.db, organizationId, branchId, limit, after);
     return {
-      items: page.records.map(toCartView),
+      items: page.records.map((record) => toCartView(record, null)),
       nextCursor: page.nextCursor,
       hasMore: page.hasMore,
     };
@@ -125,7 +131,8 @@ export class CartService {
       const replay = this.replayIfCompleted(claim, context.requestHash);
       if (replay) return replay;
 
-      const record = await this.requireCart(tx, input.organizationId, input.cartId);
+      const record = await this.requireCartForUpdate(tx, input.organizationId, input.cartId);
+      await this.assertNoCurrentHold(tx, input.organizationId, input.cartId);
       const aggregate = this.reconstitute(record);
       this.assertExpectedVersion(aggregate.id, aggregate.version, input.expectedVersion);
       const existing = record.lines.find(
@@ -202,6 +209,7 @@ export class CartService {
       // the lock, a concurrent mutation could commit after this read and before
       // the durable replay snapshot is stored for the caller's stale If-Match.
       const record = await this.requireCartForUpdate(tx, input.organizationId, input.cartId);
+      await this.assertNoCurrentHold(tx, input.organizationId, input.cartId);
       const aggregate = this.reconstitute(record);
       this.assertExpectedVersion(aggregate.id, aggregate.version, input.expectedVersion);
       aggregate.updateLine(input.itemId, input.quantity);
@@ -253,7 +261,8 @@ export class CartService {
       const replay = this.replayIfCompleted(claim, context.requestHash);
       if (replay) return replay;
 
-      const record = await this.requireCart(tx, input.organizationId, input.cartId);
+      const record = await this.requireCartForUpdate(tx, input.organizationId, input.cartId);
+      await this.assertNoCurrentHold(tx, input.organizationId, input.cartId);
       const aggregate = this.reconstitute(record);
       this.assertExpectedVersion(aggregate.id, aggregate.version, input.expectedVersion);
       aggregate.removeLine(input.itemId);
@@ -310,8 +319,206 @@ export class CartService {
       const record = await this.requireCartForUpdate(tx, input.organizationId, input.cartId);
       this.assertExpectedVersion(record.cart.id, record.cart.version, input.expectedVersion);
 
-      const result = toCartView(record);
+      const result = toCartView(
+        record,
+        await this.repository.findCurrentHold(tx, input.organizationId, input.cartId),
+      );
       await this.repository.completeIdempotency(tx, claim.claimId, result);
+      return result;
+    });
+  }
+
+  async hold(
+    input: { organizationId: string; cartId: string; warehouseId: string; expectedVersion: number },
+    context: MutationContext,
+  ): Promise<CartView> {
+    const operation = 'POST:/api/v1/pos/carts/:cartId/hold';
+
+    let holdId = '';
+    let inventoryRequestHash = '';
+    let demands: Array<{ variantId: string; quantity: string }> = [];
+    const accepted = await this.db.transaction(async (tx) => {
+      const claim = await this.claim(tx, context, operation);
+      if (claim.kind === 'existing') {
+        if (claim.requestHash !== context.requestHash) {
+          throw PlatformError.idempotencyConflict(
+            'Idempotency-Key was used with a different Cart request.',
+          );
+        }
+        const replay = this.replayIfCompletedOrNull(claim);
+        if (replay) return { replay };
+      }
+      const record = await this.requireCartForUpdate(tx, input.organizationId, input.cartId);
+      this.assertExpectedVersion(record.cart.id, record.cart.version, input.expectedVersion);
+      if (record.lines.length === 0) {
+        throw PlatformError.validationFailed('Cannot hold an empty Cart.', {
+          details: { cartId: input.cartId },
+        });
+      }
+      await this.assertWarehouse(input.organizationId, record.cart.branchId, input.warehouseId);
+      demands = await this.resolveBaseDemands(input.organizationId, record.lines);
+      let hold: CartHoldRow;
+      if (claim.kind === 'existing') {
+        const existingHold = await this.repository.findCurrentHoldForUpdate(
+          tx,
+          input.organizationId,
+          input.cartId,
+        );
+        if (!existingHold || existingHold.causationId !== context.idempotencyKey) {
+          throw PlatformError.idempotencyConflict('Cart hold mutation is already in progress.');
+        }
+        if (existingHold.status === 'ACTIVE' || existingHold.status === 'FAILED') {
+          const result = toCartView(record, existingHold);
+          await this.repository.completeIdempotency(tx, claim.claimId, result);
+          return { replay: result };
+        }
+        if (existingHold.status !== 'PENDING') {
+          throw PlatformError.idempotencyConflict('Cart hold mutation is already in progress.');
+        }
+        if (
+          existingHold.warehouseId !== input.warehouseId ||
+          existingHold.cartVersion !== input.expectedVersion
+        ) {
+          throw PlatformError.idempotencyConflict(
+            'Idempotency-Key was used with a different Cart request.',
+          );
+        }
+        hold = existingHold;
+        holdId = existingHold.id;
+      } else {
+        await this.assertNoCurrentHold(tx, input.organizationId, input.cartId);
+        const policy = await this.resolveCartHoldPolicy(input.organizationId);
+        holdId = newId();
+        const expiresAt = new Date(Date.now() + policy.ttlMinutes * 60_000);
+        hold = await this.repository.createHold(tx, {
+          id: holdId,
+          organizationId: input.organizationId,
+          cartId: input.cartId,
+          branchId: record.cart.branchId,
+          warehouseId: input.warehouseId,
+          cartVersion: record.cart.version,
+          ttlMinutes: policy.ttlMinutes,
+          policyVersion: policy.policyVersion,
+          expiresAt,
+          actorId: context.actorId,
+          correlationId: context.correlationId,
+          causationId: context.idempotencyKey,
+        });
+      }
+      inventoryRequestHash = requestHash({
+        holdId,
+        cartId: input.cartId,
+        cartVersion: input.expectedVersion,
+        warehouseId: input.warehouseId,
+        demands,
+        expiresAt: hold.expiresAt?.toISOString() ?? null,
+      });
+      return { record, hold, claimId: claim.claimId };
+    });
+    if ('replay' in accepted) {
+      if (!accepted.replay) throw new Error('Cart hold replay was unexpectedly empty.');
+      return accepted.replay;
+    }
+
+    const inventory = await this.inventory.createCartReservation({
+      organizationId: input.organizationId,
+      branchId: accepted.record.cart.branchId,
+      warehouseId: input.warehouseId,
+      referenceId: holdId,
+      cartVersion: input.expectedVersion,
+      demands,
+      expiresAt: accepted.hold.expiresAt?.toISOString() ?? new Date().toISOString(),
+      idempotencyKey: `cart-hold:${holdId}`,
+      requestHash: inventoryRequestHash,
+      correlationId: context.correlationId,
+      causationId: context.idempotencyKey,
+      actorId: context.actorId,
+    });
+
+    return this.db.transaction(async (tx) => {
+      const hold =
+        inventory.kind === 'ACTIVE'
+          ? await this.repository.completeHold(tx, input.organizationId, holdId, 'ACTIVE', {
+              inventoryReservationId: inventory.reservation.reservationId,
+            })
+          : await this.repository.completeHold(tx, input.organizationId, holdId, 'FAILED', {
+              shortages: inventory.shortages,
+            });
+      const result = toCartView(
+        await this.requireCart(tx, input.organizationId, input.cartId),
+        hold,
+      );
+      await this.repository.completeIdempotency(tx, accepted.claimId, result);
+      return result;
+    });
+  }
+
+  async resume(
+    input: { organizationId: string; cartId: string; expectedVersion: number },
+    context: MutationContext,
+  ): Promise<CartView> {
+    const operation = 'POST:/api/v1/pos/carts/:cartId/resume';
+    const replay = await this.findCompletedReplay(context, operation);
+    if (replay) return replay;
+    const accepted = await this.db.transaction(async (tx) => {
+      const claim = await this.claim(tx, context, operation);
+      const replay = this.replayIfCompleted(claim, context.requestHash);
+      if (replay) return { replay };
+      const record = await this.requireCartForUpdate(tx, input.organizationId, input.cartId);
+      this.assertExpectedVersion(record.cart.id, record.cart.version, input.expectedVersion);
+      const hold = await this.repository.findCurrentHoldForUpdate(
+        tx,
+        input.organizationId,
+        input.cartId,
+      );
+      if (!hold) {
+        const result = toCartView(record, hold ?? null);
+        await this.repository.completeIdempotency(tx, claim.claimId, result);
+        return { replay: result };
+      }
+      const demands = await this.resolveBaseDemands(input.organizationId, record.lines);
+      return { record, hold, demands, claimId: claim.claimId };
+    });
+    if ('replay' in accepted) {
+      if (!accepted.replay) throw new Error('Cart resume replay was unexpectedly empty.');
+      return accepted.replay;
+    }
+
+    const releaseRequest = {
+      organizationId: input.organizationId,
+      branchId: accepted.record.cart.branchId,
+      warehouseId: accepted.hold.warehouseId,
+      referenceId: accepted.hold.id,
+      cartVersion: accepted.hold.cartVersion,
+      idempotencyKey: `cart-resume:${accepted.hold.id}`,
+      requestHash: requestHash({ holdId: accepted.hold.id, demands: accepted.demands }),
+      correlationId: context.correlationId,
+      causationId: context.idempotencyKey,
+      actorId: context.actorId,
+    };
+    const released = await this.inventory.releaseCartReservation(releaseRequest).catch((error) => {
+      if (
+        accepted.hold.status === 'PENDING' &&
+        isErrorCode(error, ERROR_CODES.RESOURCE_NOT_FOUND)
+      ) {
+        return { kind: 'RELEASED' as const, shortages: [] };
+      }
+      throw error;
+    });
+
+    return this.db.transaction(async (tx) => {
+      const finalHold = await this.repository.markHoldReleased(
+        tx,
+        input.organizationId,
+        accepted.hold.id,
+        released.kind === 'EXPIRED' ? 'EXPIRED' : 'RELEASED',
+        released.shortages,
+      );
+      const result = toCartView(
+        await this.requireCart(tx, input.organizationId, input.cartId),
+        finalHold,
+      );
+      await this.repository.completeIdempotency(tx, accepted.claimId, result);
       return result;
     });
   }
@@ -359,6 +566,20 @@ export class CartService {
     throw PlatformError.idempotencyConflict('Cart mutation is already in progress.');
   }
 
+  private replayIfCompletedOrNull(
+    claim: Extract<IdempotencyClaimResult, { kind: 'existing' }>,
+  ): CartView | null {
+    const replay = claim.responseJson ? normalizeCartView(claim.responseJson) : null;
+    if (claim.status === 'COMPLETED' && replay) return replay;
+    if (claim.status === 'COMPLETED') {
+      throw PlatformError.of(
+        ERROR_CODES.OPERATION_NOT_ALLOWED,
+        'The stored Cart mutation outcome is invalid.',
+      );
+    }
+    return null;
+  }
+
   private async assertCustomerReference(
     organizationId: string,
     customerId: string | null,
@@ -387,6 +608,74 @@ export class CartService {
         },
       });
     }
+  }
+
+  private async assertNoCurrentHold(tx: DbExecutor, organizationId: string, cartId: string) {
+    const hold = await this.repository.findCurrentHoldForUpdate(tx, organizationId, cartId);
+    if (hold) {
+      throw PlatformError.of(
+        ERROR_CODES.OPERATION_NOT_ALLOWED,
+        'Cart is held and must be resumed before editing.',
+        { details: { cartId, holdId: hold.id, status: hold.status } },
+      );
+    }
+  }
+
+  private async assertWarehouse(organizationId: string, branchId: string, warehouseId: string) {
+    const warehouse = await this.organization.getWarehouse(organizationId, warehouseId);
+    if (
+      !warehouse ||
+      warehouse.organizationId !== organizationId ||
+      warehouse.branchId !== branchId ||
+      !warehouse.isActive
+    ) {
+      throw PlatformError.notFound('Warehouse was not found for this Cart branch.', {
+        details: { warehouseId },
+      });
+    }
+  }
+
+  private async resolveCartHoldPolicy(
+    organizationId: string,
+  ): Promise<{ ttlMinutes: number; policyVersion: number }> {
+    const policy = await this.organization.getOrganizationPolicy(organizationId, 'CART');
+    const ttl = policy.value.holdReservationTtlMinutes;
+    if (typeof ttl !== 'number' || !Number.isInteger(ttl) || ttl < 1 || ttl > 1440) {
+      throw PlatformError.validationFailed(
+        'Cart hold TTL policy must be between 1 and 1440 minutes.',
+        {
+          details: { policyType: 'CART', field: 'holdReservationTtlMinutes' },
+        },
+      );
+    }
+    return { ttlMinutes: ttl, policyVersion: policy.version };
+  }
+
+  private async resolveBaseDemands(
+    organizationId: string,
+    lines: CartRecord['lines'],
+  ): Promise<Array<{ variantId: string; quantity: string }>> {
+    const demands: Array<{ variantId: string; quantity: string }> = [];
+    for (const line of lines) {
+      const variant = await this.catalog.getVariant(organizationId, line.variantId);
+      if (!variant)
+        throw PlatformError.notFound('Variant was not found.', {
+          details: { variantId: line.variantId },
+        });
+      demands.push({
+        variantId: line.variantId,
+        quantity:
+          line.unitId === variant.baseUnitId
+            ? line.quantity
+            : await this.catalog.convertUnit(
+                organizationId,
+                line.unitId,
+                variant.baseUnitId,
+                line.quantity,
+              ),
+      });
+    }
+    return demands;
   }
 
   private async requireCart(
@@ -437,7 +726,7 @@ export class CartService {
     cartId: string,
   ): Promise<CartView> {
     const record = await this.requireCart(tx, organizationId, cartId);
-    return toCartView(record);
+    return toCartView(record, await this.repository.findCurrentHold(tx, organizationId, cartId));
   }
 
   private assertExpectedVersion(cartId: string, actual: number, expected: number): void {
@@ -451,7 +740,10 @@ export class CartService {
   }
 }
 
-function toCartView(record: Pick<CartRecord, 'cart' | 'lines'>): CartView {
+function toCartView(
+  record: Pick<CartRecord, 'cart' | 'lines'>,
+  hold: CartHoldRow | null,
+): CartView {
   const { cart, lines } = record;
   return {
     id: cart.id,
@@ -473,6 +765,18 @@ function toCartView(record: Pick<CartRecord, 'cart' | 'lines'>): CartView {
       createdAt: line.createdAt.toISOString(),
       updatedAt: line.updatedAt.toISOString(),
     })),
+    hold: hold
+      ? {
+          id: hold.id,
+          status: hold.status,
+          warehouseId: hold.warehouseId,
+          cartVersion: hold.cartVersion,
+          ttlMinutes: hold.ttlMinutes,
+          policyVersion: hold.policyVersion,
+          expiresAt: hold.expiresAt?.toISOString() ?? null,
+          shortages: Array.isArray(hold.shortagesJson) ? (hold.shortagesJson as never[]) : [],
+        }
+      : null,
   };
 }
 
@@ -499,4 +803,8 @@ function canonicalize(value: unknown): unknown {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isErrorCode(error: unknown, code: string): boolean {
+  return isRecord(error) && error.code === code;
 }

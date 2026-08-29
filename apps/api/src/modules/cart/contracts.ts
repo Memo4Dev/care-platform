@@ -22,6 +22,25 @@ export interface CartItemView {
   readonly updatedAt: string;
 }
 
+export interface CartHoldShortageView {
+  readonly variantId: string;
+  readonly stockPositionId: string | null;
+  readonly requested: string;
+  readonly available: string;
+  readonly shortage: string;
+}
+
+export interface CartHoldView {
+  readonly id: string;
+  readonly status: 'PENDING' | 'ACTIVE' | 'RELEASING' | 'RELEASED' | 'EXPIRED' | 'FAILED';
+  readonly warehouseId: string;
+  readonly cartVersion: number;
+  readonly ttlMinutes: number;
+  readonly policyVersion: number;
+  readonly expiresAt: string | null;
+  readonly shortages: readonly CartHoldShortageView[];
+}
+
 export interface CartView {
   readonly id: string;
   readonly organizationId: string;
@@ -33,6 +52,7 @@ export interface CartView {
   readonly updatedAt: string;
   readonly version: number;
   readonly items: readonly CartItemView[];
+  readonly hold: CartHoldView | null;
 }
 
 export interface CartContracts {
@@ -55,7 +75,8 @@ export function isCartView(value: unknown): value is CartView {
     Number.isSafeInteger(value.version) &&
     value.version >= 1 &&
     Array.isArray(value.items) &&
-    value.items.every(isCartItemView)
+    value.items.every(isCartItemView) &&
+    (value.hold === null || isCartHoldView(value.hold))
   );
 }
 
@@ -82,7 +103,24 @@ export function normalizeCartView(value: unknown): CartView | null {
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
     })),
+    hold: value.hold,
   };
+}
+
+function isCartHoldView(value: unknown): value is CartHoldView {
+  if (!isRecord(value)) return false;
+  return (
+    isString(value.id) &&
+    ['PENDING', 'ACTIVE', 'RELEASING', 'RELEASED', 'EXPIRED', 'FAILED'].includes(
+      String(value.status),
+    ) &&
+    isString(value.warehouseId) &&
+    typeof value.cartVersion === 'number' &&
+    typeof value.ttlMinutes === 'number' &&
+    typeof value.policyVersion === 'number' &&
+    (value.expiresAt === null || isString(value.expiresAt)) &&
+    Array.isArray(value.shortages)
+  );
 }
 
 function isCartItemView(value: unknown): value is CartItemView {
