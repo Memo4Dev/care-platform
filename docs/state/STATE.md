@@ -2,7 +2,7 @@
 
 Phase: M5 IN PROGRESS
 Milestone: M5 (Sales & POS Core)
-Active task: M5-006 scope + ADR-0011 auth correction verified ONLINE on staging; full POS/cart/pricing matrix 21/21 green. Staging deployed at `68aa8b5` (activation endpoints) on top of `99f423f` (price-entry + compose network fix) on `feat/m5-sales-pos-core`. Remaining online verification (save/hold/resume + idempotency-replay) still pending; M5-007 not started.
+Active task: M5-006 scope + ADR-0011 auth correction verified ONLINE on staging; full POS/cart/pricing matrix **25/25** green (including add-item idempotent replay, cart save, cart hold→resume, quote, availability, plus auth/tenant negatives). Staging deployed at `68aa8b5` (activation endpoints) on top of `99f423f` (price-entry + compose network fix) on `feat/m5-sales-pos-core`. Next: manual Postman checklist; M5-007 not started.
 CI: M4 main CI run 38 for merge `05d9292` passed; M5 changes are unpushed and have no remote CI run yet. Historical staging credential rotation remains required before push.
 Branch: feat/m5-sales-pos-core
 
@@ -160,13 +160,16 @@ All 10 M4 tasks complete (M4-001 through M4-010):
     `VARIANT_NOT_SELLABLE`, blocking the whole cart-sale flow.
 - Online verification via `run_m5_matrix.py` against `https://api.care-systems.site`
   using real Supabase sign-in JWTs (fresh refresh-token grant each run; identity access
-  tokens expire in ~1h): **21/21 PASS**.
+  tokens expire in ~1h): **25/25 PASS**.
   - Seed: unit, product, variant, product/variant activation (→ ACTIVE), price book,
     barcode row, price entry, stock receipt, customer.
   - POS: barcode lookup 200; unauthenticated 401; restricted (no `sales.create`) 403
     `PERMISSION_DENIED`; cross-tenant org-A branch denied 404 `RESOURCE_NOT_FOUND`;
-    create cart 201 (`version=1`); **add item 200**; quote 200; check-availability 200;
-    invalid cart id 404.
+    create cart 201 (`version=1`); **add item 200**; **add-item idempotent replay 200**
+    (same key + `If-Match` → no duplicate line, no version bump); **cart save 200**
+    (bodyless `LOCAL_ATOMIC`, no version bump); **cart hold 200** (warehouse reservation);
+    **cart resume 200** (hold released / editable restored); quote 200; check-availability
+    200; invalid cart id 404.
 - Verification-harness findings (test script only, not production code):
   1. Body-less `POST` (e.g. activate) fails with 422 `VALIDATION_FAILED` if the client
      sends `Content-Type: application/json` with an empty body — Fastify rejects an
@@ -177,10 +180,10 @@ All 10 M4 tasks complete (M4-001 through M4-010):
   2. Activate endpoints return `201` (the newly persisted snapshot resource); the harness
      asserted `== 200`, fixed to accept `200|201`.
 - The activation endpoints themselves are correct; no production code needed fixing for
-  these two items. `add item` now returns 200 with the item attached and the cart advanced.
-- Not yet covered online (deferred, not M5-007): cart `save`/`hold`/`resume` and an
-  idempotency-replay assertion (same key → no duplicate). Postman manual checklist is the
-  next step.
+  these two items. `add item` now returns 200 with the item attached and the cart advanced,
+  and save/hold/resume + idempotency-replay are verified online.
+- Not yet covered online: none of the M5 cart contract surface remains unexercised online
+  here; a manual Postman checklist is the next step. M5-007 not started.
 
 ## M5-003 current verification
 
