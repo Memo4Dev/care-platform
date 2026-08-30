@@ -91,6 +91,18 @@ POS quick operator authentication uses Employee Card/Barcode + PIN:
 - device credentials are separate from user credentials
 - POS operator credentials (employee card + PIN) are separate from device credentials
 
+> **Audience vs authorization (ADR-0011).** The Supabase JWT `aud` identifies the
+> token's intended API audience only; it is **not** the Platform/Tenant
+> authorization boundary. Both Platform and Tenant bearer guards verify the same
+> Supabase `authenticated` audience for user tokens. Platform/Tenant separation
+> is enforced server-side **after** Supabase identity verification: Platform
+> access requires an ACTIVE `platform.principals` row (via
+> `DatabasePlatformPrincipalResolver`), and tenant access requires an ACTIVE
+> `identity.users` row plus a `platform.tenants` lifecycle of provisioning
+> `COMPLETED` and status `ACTIVE` (via `TenantBearerGuard`). A verified subject
+> with no server-side assignment is denied even with a valid token. Caller-supplied
+> role/permission/organization claims never authorize anything.
+
 ## Secrets
 
 Store externally from source code:

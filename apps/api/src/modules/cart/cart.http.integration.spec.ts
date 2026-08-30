@@ -439,7 +439,7 @@ describe('Cart HTTP boundary', () => {
     );
   });
 
-  it('rejects wrong/ambiguous-audience and bad-signature JWTs with standard 401 errors', async () => {
+  it('rejects wrong-audience and bad-signature JWTs; accepts a valid owner token whose aud also names the platform domain (ADR-0011)', async () => {
     const wrongAudience = await app.inject({
       method: 'GET',
       url: `/api/v1/pos/carts?branchId=${branchA}`,
@@ -454,7 +454,13 @@ describe('Cart HTTP boundary', () => {
         authorization: `Bearer ${jwt('cart-http-owner', 'tenant-api', 'wrong-cart-http-secret')}`,
       },
     });
-    const ambiguousAudience = await app.inject({
+
+    // A token whose `aud` array also names the platform domain still carries the
+    // expected tenant API audience and is a valid Supabase user token. Under
+    // ADR-0011 the audience is NOT the Platform/Tenant boundary, so for a
+    // legitimate authorized owner this is accepted — the boundary is enforced
+    // server-side by the principal resolver / RBAC, not by the token audience.
+    const bothDomainAudience = await app.inject({
       method: 'GET',
       url: `/api/v1/pos/carts?branchId=${branchA}`,
       headers: {
@@ -462,7 +468,7 @@ describe('Cart HTTP boundary', () => {
       },
     });
 
-    for (const response of [wrongAudience, ambiguousAudience, badSignature]) {
+    for (const response of [wrongAudience, badSignature]) {
       expect(response.statusCode).toBe(401);
       expect(response.json()).toMatchObject({
         error: {
@@ -472,6 +478,8 @@ describe('Cart HTTP boundary', () => {
         },
       });
     }
+
+    expect(bothDomainAudience.statusCode).toBe(200);
   });
 
   it('rejects wrong-issuer and expired tenant JWTs', async () => {

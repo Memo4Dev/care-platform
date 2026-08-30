@@ -2,7 +2,7 @@
 
 Phase: M5 IN PROGRESS
 Milestone: M5 (Sales & POS Core)
-Active task: M5-006 Barcode, availability, and Pricing quote integration for Cart lines. Cart now imports PricingModule, exposes `POST /api/v1/pos/carts/{cartId}/quote`, `POST /api/v1/pos/carts/{cartId}/check-availability`, and `GET /api/v1/pos/products/barcode/{barcode}` (PosProductController), and adds a Pricing `getPriceQuote` effective-date pre-filter fix. All local gates pass (537 unit, cart+pricing PG integration 108 tests, build/lint/typecheck/format) and the work is awaiting independent review and commit.
+Active task: Auth architecture correction verification (ADR-0011) — Supabase JWT `aud` is the token's API audience only, not the Platform/Tenant authorization boundary; server-side principal resolvers + RBAC enforce Platform/Tenant separation after Supabase identity verification. Core change verified on disk (main.ts guard call removed, auth-config deleted, matchesAudience array membership); new `auth-boundary.security.spec.ts` (6 tests) proves the boundary at guard/resolver level; `supabase-jwt.service.spec.ts` gained tampered/unsigned/malformed negatives; ADR-0011 accepted. All local gates green; change uncommitted, awaiting orchestrator review and commit.
 CI: M4 main CI run 38 for merge `05d9292` passed; M5 changes are unpushed and have no remote CI run yet. Historical staging credential rotation remains required before push.
 Branch: feat/m5-sales-pos-core
 
@@ -32,10 +32,47 @@ All 10 M4 tasks complete (M4-001 through M4-010):
 | Prettier                 | ✅ full PASS           | pending              | —   |
 | Unit tests               | ✅ 603 PASS            | pending              | —   |
 | Integration tests        | ✅ 446 PASS, 2 skipped | Redis required in CI | —   |
-| POS Cart PostgreSQL/HTTP | ✅ 27 + 31 PASS        | pending              | — |
+| POS Cart PostgreSQL/HTTP | ✅ 27 + 31 PASS        | pending              | —   |
+| Auth unit/security       | ✅ 15 PASS (auth dir)  | pending              | —   |
 | Build                    | ✅ full PASS           | pending              | —   |
 | Reviewer                 | ✅ PASS                | pending              | —   |
 | Security review          | ✅ PASS                | pending              | —   |
+
+## Auth boundary correction (ADR-0011) current verification
+
+- Approved correction: authentication audience separation is no longer the
+  Platform-vs-Tenant authorization boundary. `aud` identifies the token's
+  intended API audience only; Platform/Tenant separation is enforced
+  server-side after Supabase identity verification by principal resolvers +
+  RBAC (references ADR-0004/ADR-0005, ADR-0011 accepted).
+- Core change verified intact on disk: `main.ts` no longer calls
+  `assertSeparatedBearerAudiences()`; `auth-config.ts`/`auth-config.spec.ts`
+  are deleted; `SupabaseJwtService.matchesAudience()` accepts a token whose
+  `aud` includes the expected audience (single string or array membership).
+  Zero references to `auth-config` or `assertSeparatedBearerAudiences` remain
+  outside the ADR (repo-wide grep).
+- New `auth-boundary.security.spec.ts` (6 tests, real SupabaseJwtService +
+  real guards + real DatabasePlatformPrincipalResolver with an in-memory
+  subject-aware fake DATABASE): valid-JWT verification to subject; valid JWT
+  without `platform.principals` row denied (PERMISSION_DENIED); ACTIVE row
+  allowed as PLATFORM_USER and non-ACTIVE row denied; organization user
+  without platform row denied on platform endpoints and platform user without
+  `identity.users` membership denied on tenant endpoints; caller-injected
+  role/capability/permission/organizationId claims ignored (verified subject +
+  DB only); tenant user with ACTIVE status and COMPLETED/ACTIVE tenant
+  resolves as ORGANIZATION_USER with server-derived organizationId.
+- `supabase-jwt.service.spec.ts` adds the missing negative coverage: unsigned
+  (2-part), malformed, empty, extra-segment, tampered-payload and
+  corrupted-signature tokens are all rejected with INVALID_CREDENTIALS.
+- Pre-existing coverage confirmed (not duplicated): tenant isolation item 6
+  (purchasing/catalog/pricing/api integration specs), wrong issuer/audience/
+  expired negatives (supabase-jwt spec), tenant lifecycle denials
+  (TENANT_SUSPENDED/TENANT_PROVISIONING_INCOMPLETE in api/cart HTTP specs).
+- Gates for this change: `apps/api/src/common/auth` unit run 15/15 green;
+  full `pnpm typecheck` green; `pnpm lint` green (ESLint + Prettier);
+  targeted tsc over auth dir + new spec green. Change is uncommitted on
+  `feat/m5-sales-pos-core` (opencode.json was already dirty and untouched);
+  no push/merge/deploy.
 
 ## M5-005 current verification
 
@@ -148,7 +185,11 @@ All 10 M4 tasks complete (M4-001 through M4-010):
   at API startup, rejects signed audience arrays spanning both trust domains,
   limits unexpected-error logging and persistence error details, and adds tenant
   lifecycle, suspended operator, foreign nested-reference, and
-  actor/organization idempotency-scope coverage.
+  actor/organization idempotency-scope coverage. [SUPERSEDED by ADR-0011: the
+  startup rejection of equal platform/tenant audiences and the rejection of
+  `aud` arrays spanning both domains were removed; the JWT `aud` is the token's
+  API audience only, and Platform/Tenant separation is enforced server-side by
+  the principal resolvers + RBAC after Supabase identity verification.]
 - The test harness emitted an existing `pg@9` deprecation warning about a
   concurrent `client.query()` call; it did not affect test results.
 - The earlier POS/admin route, `/save`, concurrency, and security findings are
