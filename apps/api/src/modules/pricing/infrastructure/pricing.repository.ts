@@ -546,7 +546,9 @@ export class PricingRepository {
         priceType: aggregate.priceType,
         channel: aggregate.channel,
         amount: aggregate.amount,
-        effectiveFrom: aggregate.effectiveFrom!.toISOString().slice(0, 10),
+        effectiveFrom: aggregate.effectiveFrom
+          ? aggregate.effectiveFrom.toISOString().slice(0, 10)
+          : new Date().toISOString().slice(0, 10),
         version: aggregate.version,
         ...(aggregate.branchId !== null ? { branchId: aggregate.branchId } : {}),
         ...(aggregate.effectiveTo !== null
