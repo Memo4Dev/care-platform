@@ -2,7 +2,7 @@
 
 Phase: M5 IN PROGRESS
 Milestone: M5 (Sales & POS Core)
-Active task: Auth architecture correction verification (ADR-0011) — Supabase JWT `aud` is the token's API audience only, not the Platform/Tenant authorization boundary; server-side principal resolvers + RBAC enforce Platform/Tenant separation after Supabase identity verification. Core change verified on disk (main.ts guard call removed, auth-config deleted, matchesAudience array membership); new `auth-boundary.security.spec.ts` (6 tests) proves the boundary at guard/resolver level; `supabase-jwt.service.spec.ts` gained tampered/unsigned/malformed negatives; ADR-0011 accepted. All local gates green; change uncommitted, awaiting orchestrator review and commit.
+Active task: M5-006 scope + ADR-0011 auth correction verified ONLINE on staging; full POS/cart/pricing matrix 21/21 green. Staging deployed at `68aa8b5` (activation endpoints) on top of `99f423f` (price-entry + compose network fix) on `feat/m5-sales-pos-core`. Remaining online verification (save/hold/resume + idempotency-replay) still pending; M5-007 not started.
 CI: M4 main CI run 38 for merge `05d9292` passed; M5 changes are unpushed and have no remote CI run yet. Historical staging credential rotation remains required before push.
 Branch: feat/m5-sales-pos-core
 
@@ -140,6 +140,47 @@ All 10 M4 tasks complete (M4-001 through M4-010):
   PostgreSQL/HTTP integration 108+ PASS. `git diff --check` clean. Independent
   correctness (PASS with findings) and security (PASS) reviews complete;
   correctness findings resolved. Pending commit.
+
+## Staging deployment & online verification — 2026-08-30
+
+- Objective: deploy + verify the M5-006 scope (plus ADR-0011 auth correction) to the
+  staging VPS from the committed local tree (git bundle + `git reset --hard <sha>` on
+  VPS, rebuilding images and recreating only the stateless api/worker/relay containers;
+  no push, no production, no M5-007).
+- Deployed SHAs on `feat/m5-sales-pos-core`:
+  - `99f423f` fix(pricing): default null `effectiveFrom` to today on price entry insert
+    (real bug — `null.toISOString()` TypeError was masked as a 403) + staging compose
+    api network fix (api joined `care-platform_default` so it can resolve postgres/redis/
+    worker/relay; fatal `EAI_AGAIN` → DB timeouts previously masked as 403).
+  - `68aa8b5` feat(catalog): add REST endpoints to activate product and variant
+    (`POST /api/v1/admin/catalog/products/:id/activate`,
+    `POST /api/v1/admin/catalog/variants/:id/activate`, both behind `catalog.edit`,
+    returning the updated snapshot). Real gap — without an activation endpoint every
+    created product/variant stayed DRAFT and POS `add item` returned
+    `VARIANT_NOT_SELLABLE`, blocking the whole cart-sale flow.
+- Online verification via `run_m5_matrix.py` against `https://api.care-systems.site`
+  using real Supabase sign-in JWTs (fresh refresh-token grant each run; identity access
+  tokens expire in ~1h): **21/21 PASS**.
+  - Seed: unit, product, variant, product/variant activation (→ ACTIVE), price book,
+    barcode row, price entry, stock receipt, customer.
+  - POS: barcode lookup 200; unauthenticated 401; restricted (no `sales.create`) 403
+    `PERMISSION_DENIED`; cross-tenant org-A branch denied 404 `RESOURCE_NOT_FOUND`;
+    create cart 201 (`version=1`); **add item 200**; quote 200; check-availability 200;
+    invalid cart id 404.
+- Verification-harness findings (test script only, not production code):
+  1. Body-less `POST` (e.g. activate) fails with 422 `VALIDATION_FAILED` if the client
+     sends `Content-Type: application/json` with an empty body — Fastify rejects an
+     empty JSON body (`FST_ERR_CTP_EMPTY_JSON_BODY`) and the platform error filter maps
+     the resulting HttpException to `VALIDATION_FAILED`. The matrix harness was fixed to
+     send the JSON content-type only when a body is present. Confirmed at runtime: same
+     activate call → 422 with CT, 201 without.
+  2. Activate endpoints return `201` (the newly persisted snapshot resource); the harness
+     asserted `== 200`, fixed to accept `200|201`.
+- The activation endpoints themselves are correct; no production code needed fixing for
+  these two items. `add item` now returns 200 with the item attached and the cart advanced.
+- Not yet covered online (deferred, not M5-007): cart `save`/`hold`/`resume` and an
+  idempotency-replay assertion (same key → no duplicate). Postman manual checklist is the
+  next step.
 
 ## M5-003 current verification
 
