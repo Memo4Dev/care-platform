@@ -196,7 +196,7 @@ const cartResponse = {
     organizationId: { type: 'string', format: 'uuid' },
     branchId: { type: 'string', format: 'uuid' },
     channel: { type: 'string', enum: ['ONLINE', 'POS', 'SALES'] },
-    status: { type: 'string', enum: ['DRAFT'] },
+    status: { type: 'string', enum: ['DRAFT', 'CHECKED_OUT'] },
     customerId: { type: 'string', format: 'uuid', nullable: true },
     createdAt: { type: 'string', format: 'date-time' },
     updatedAt: { type: 'string', format: 'date-time' },

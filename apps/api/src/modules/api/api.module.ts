@@ -19,6 +19,7 @@ import { ProvisioningModule } from '../provisioning/provisioning.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { CustomersModule } from '../customers/customers.module';
 import { CartModule } from '../cart/cart.module';
+import { SalesModule } from '../sales/sales.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { CartModule } from '../cart/cart.module';
     PurchasingModule,
     CustomersModule,
     CartModule,
+    SalesModule,
     IdentityModule,
   ],
   controllers: [

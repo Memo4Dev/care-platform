@@ -27,6 +27,16 @@ export function setupSwagger(app: NestFastifyApplication): void {
       },
       'tenant-bearer',
     )
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description:
+          'Internal signed service token for trusted sales completion boundaries in test/staging and future internal payment callers',
+      },
+      'internal-bearer',
+    )
     .addTag('Health', 'Liveness/readiness probes')
     .addTag('Platform Admin', 'Platform-wide tenant, plan, subscription management')
     .addTag('Tenant Admin', 'Organization-scoped administration')
@@ -39,6 +49,8 @@ export function setupSwagger(app: NestFastifyApplication): void {
     .addTag('Purchasing', 'Suppliers, purchase orders, goods receipts, purchasing costs')
     .addTag('Customers', 'Organization-scoped Individual and Business customers for POS sales')
     .addTag('POS Cart', 'Organization and branch-scoped editable POS Draft Carts')
+    .addTag('POS Sales', 'Organization and branch-scoped POS Sales checkout/read/cancel')
+    .addTag('Internal Sales', 'Trusted internal Sales completion boundary for future Payments')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

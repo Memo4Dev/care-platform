@@ -1,4 +1,5 @@
 import type { CursorPage } from '@commerce-platform/contracts';
+import type { DbExecutor } from './infrastructure/db-executor';
 
 import type { CartChannel, CartStatus } from './domain/types';
 
@@ -10,6 +11,7 @@ export type { CartChannel, CartStatus } from './domain/types';
  * workflow is implemented; no cross-context caller receives a repository.
  */
 export const CART_CONTRACTS = Symbol('CART_CONTRACTS');
+export const CART_CHECKOUT_CONTRACTS = Symbol('CART_CHECKOUT_CONTRACTS');
 
 export interface CartItemView {
   readonly id: string;
@@ -32,7 +34,8 @@ export interface CartHoldShortageView {
 
 export interface CartHoldView {
   readonly id: string;
-  readonly status: 'PENDING' | 'ACTIVE' | 'RELEASING' | 'RELEASED' | 'EXPIRED' | 'FAILED';
+  readonly status:
+    'PENDING' | 'ACTIVE' | 'RELEASING' | 'RELEASED' | 'EXPIRED' | 'FAILED' | 'CHECKED_OUT';
   readonly warehouseId: string;
   readonly cartVersion: number;
   readonly ttlMinutes: number;
@@ -100,6 +103,28 @@ export interface CartContracts {
   getCart(organizationId: string, cartId: string): Promise<CartView | null>;
 }
 
+/** Narrow internal Cart mutation contract used by Sales checkout only. */
+export interface CartCheckoutContracts {
+  getCart(organizationId: string, cartId: string): Promise<CartView | null>;
+  lockDraftCartForCheckout(
+    executor: DbExecutor,
+    organizationId: string,
+    cartId: string,
+  ): Promise<CartCheckoutView | null>;
+  markCartCheckedOut(
+    executor: DbExecutor,
+    input: { organizationId: string; cartId: string; expectedVersion: number; holdId?: string },
+  ): Promise<CartView>;
+}
+
+export interface CartCheckoutHoldView extends CartHoldView {
+  readonly inventoryReservationId: string | null;
+}
+
+export interface CartCheckoutView extends CartView {
+  readonly hold: CartCheckoutHoldView | null;
+}
+
 /** Runtime validation for JSON responses restored from the idempotency store. */
 export function isCartView(value: unknown): value is CartView {
   if (!isRecord(value)) return false;
@@ -108,7 +133,7 @@ export function isCartView(value: unknown): value is CartView {
     isString(value.organizationId) &&
     isString(value.branchId) &&
     isCartChannel(value.channel) &&
-    value.status === 'DRAFT' &&
+    (value.status === 'DRAFT' || value.status === 'CHECKED_OUT') &&
     (value.customerId === null || isString(value.customerId)) &&
     isString(value.createdAt) &&
     isString(value.updatedAt) &&
@@ -152,9 +177,12 @@ function isCartHoldView(value: unknown): value is CartHoldView {
   if (!isRecord(value)) return false;
   return (
     isString(value.id) &&
-    ['PENDING', 'ACTIVE', 'RELEASING', 'RELEASED', 'EXPIRED', 'FAILED'].includes(
+    (['PENDING', 'ACTIVE', 'RELEASING', 'RELEASED', 'EXPIRED', 'FAILED'].includes(
+      // `CHECKED_OUT` is terminal and therefore not surfaced as a current hold,
+      // but the DTO validator accepts it for replayed historical payloads.
       String(value.status),
-    ) &&
+    ) ||
+      value.status === 'CHECKED_OUT') &&
     isString(value.warehouseId) &&
     typeof value.cartVersion === 'number' &&
     typeof value.ttlMinutes === 'number' &&

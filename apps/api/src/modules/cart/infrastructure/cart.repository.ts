@@ -30,7 +30,7 @@ export type CurrentCartHoldStatus = 'PENDING' | 'ACTIVE' | 'RELEASING';
  * aggregate mutations are guarded by the Cart root version.
  */
 export class CartRepository {
-  async findCart(
+  async findCartAnyStatus(
     executor: DbExecutor,
     organizationId: string,
     cartId: string,
@@ -47,7 +47,6 @@ export class CartRepository {
           eq(carts.id, cartId),
           eq(carts.organizationId, organizationId),
           eq(carts.channel, 'POS'),
-          eq(carts.status, 'DRAFT'),
         ),
       )
       .orderBy(asc(carts.createdAt), asc(carts.id), asc(cartItems.createdAt), asc(cartItems.id));
@@ -58,6 +57,15 @@ export class CartRepository {
       cart: rows[0].cart,
       lines: rows.flatMap((row) => (row.line ? [row.line] : [])),
     };
+  }
+
+  async findCart(
+    executor: DbExecutor,
+    organizationId: string,
+    cartId: string,
+  ): Promise<CartRecord | null> {
+    const record = await this.findCartAnyStatus(executor, organizationId, cartId);
+    return record?.cart.status === 'DRAFT' ? record : null;
   }
 
   /**
@@ -82,6 +90,25 @@ export class CartRepository {
     if (locked.rows.length === 0) return null;
 
     return this.findCart(executor, organizationId, cartId);
+  }
+
+  async findDraftCartForCheckout(
+    executor: DbExecutor,
+    organizationId: string,
+    cartId: string,
+  ): Promise<CartRecord | null> {
+    const locked = await executor.execute<{ id: string }>(sql`
+      SELECT c.id
+        FROM cart.carts AS c
+       WHERE c.id = ${cartId}::uuid
+         AND c.organization_id = ${organizationId}::uuid
+         AND c.channel = 'POS'
+         AND c.status = 'DRAFT'
+       FOR UPDATE
+    `);
+    if (locked.rows.length === 0) return null;
+
+    return this.findCartAnyStatus(executor, organizationId, cartId);
   }
 
   async listCarts(
@@ -234,6 +261,46 @@ export class CartRepository {
           eq(carts.id, cartId),
           eq(carts.organizationId, organizationId),
           eq(carts.version, expectedVersion),
+        ),
+      )
+      .returning();
+    return updated[0] ?? null;
+  }
+
+  async markCheckedOut(
+    executor: DbExecutor,
+    organizationId: string,
+    cartId: string,
+    expectedVersion: number,
+  ): Promise<CartRow | null> {
+    const updated = await executor
+      .update(carts)
+      .set({ status: 'CHECKED_OUT', version: expectedVersion + 1, updatedAt: new Date() })
+      .where(
+        and(
+          eq(carts.id, cartId),
+          eq(carts.organizationId, organizationId),
+          eq(carts.version, expectedVersion),
+          eq(carts.status, 'DRAFT'),
+        ),
+      )
+      .returning();
+    return updated[0] ?? null;
+  }
+
+  async markHoldCheckedOut(
+    executor: DbExecutor,
+    organizationId: string,
+    holdId: string,
+  ): Promise<CartHoldRow | null> {
+    const updated = await executor
+      .update(cartHolds)
+      .set({ status: 'CHECKED_OUT', expiresAt: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(cartHolds.id, holdId),
+          eq(cartHolds.organizationId, organizationId),
+          sql`${cartHolds.status} IN ('PENDING', 'ACTIVE', 'RELEASING')`,
         ),
       )
       .returning();

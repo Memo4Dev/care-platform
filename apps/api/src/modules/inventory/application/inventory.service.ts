@@ -350,6 +350,7 @@ export class InventoryService {
   ): Promise<CreateCartReservationResult> {
     const demands = this.aggregateCartDemands(input.demands);
     const expiresAt = this.validateCartReservationInput(input);
+    const referenceType = input.referenceType ?? 'CART_HOLD';
 
     const idempotencyScope = `inventory:createCartReservation:${input.organizationId}:${input.actorId}`;
     return this.db.transaction(async (tx) => {
@@ -372,9 +373,10 @@ export class InventoryService {
       await this.assertWarehouseScope(input.organizationId, input.branchId, input.warehouseId);
 
       await this.repository.lockReservationReference(tx, input.organizationId, input.referenceId);
-      const prior = await this.repository.lockCartReservationByReference(
+      const prior = await this.repository.lockReservationByReference(
         tx,
         input.organizationId,
+        referenceType,
         input.referenceId,
       );
       if (prior) {
@@ -458,7 +460,7 @@ export class InventoryService {
         branchId: input.branchId,
         warehouseId: input.warehouseId,
         expiresAt,
-        referenceType: 'CART_HOLD',
+        referenceType,
         referenceId: input.referenceId,
         referenceVersion: input.cartVersion,
       });
@@ -496,7 +498,7 @@ export class InventoryService {
           input.causationId,
           input.actorId,
           {
-            referenceType: 'CART_HOLD',
+            referenceType,
             referenceId: input.referenceId,
             branchId: input.branchId,
             warehouseId: input.warehouseId,
@@ -575,6 +577,122 @@ export class InventoryService {
         transition.items,
         transition.positions,
       );
+    });
+  }
+
+  async rebindReservationToSale(input: {
+    organizationId: string;
+    reservationId: string;
+    saleReferenceId: string;
+    cartVersion: number;
+    warehouseId: string;
+    branchId: string;
+    idempotencyKey: string;
+    requestHash: string;
+    actorId: string;
+    correlationId: string;
+    causationId: string;
+  }): Promise<{
+    reservationId: string;
+    status: 'ACTIVE';
+    referenceType: 'PENDING_SALE';
+    referenceId: string;
+  }> {
+    const idempotencyScope = `inventory:rebindReservationToSale:${input.organizationId}:${input.actorId}`;
+    return this.db.transaction(async (tx) => {
+      const claim = await this.repository.claimIdempotencyKey(
+        tx,
+        input.idempotencyKey,
+        input.requestHash,
+        idempotencyScope,
+      );
+      if (claim.kind === 'existing') {
+        if (claim.status === 'COMPLETED' && claim.responseJson) {
+          return claim.responseJson as {
+            reservationId: string;
+            status: 'ACTIVE';
+            referenceType: 'PENDING_SALE';
+            referenceId: string;
+          };
+        }
+        throw PlatformError.idempotencyConflict('Request is being processed.', {
+          details: { idempotencyKey: input.idempotencyKey },
+        });
+      }
+
+      const reservation = await this.repository.findReservationById(
+        tx,
+        input.organizationId,
+        input.reservationId,
+      );
+      if (!reservation) {
+        throw PlatformError.notFound('Reservation was not found.', {
+          details: { reservationId: input.reservationId },
+        });
+      }
+      if (reservation.status !== 'ACTIVE') {
+        throw PlatformError.of(
+          ERROR_CODES.RESERVATION_NOT_AVAILABLE,
+          'Reservation is not active and cannot be rebound to Sale.',
+          { details: { reservationId: reservation.id, status: reservation.status } },
+        );
+      }
+      if (
+        reservation.branchId !== input.branchId ||
+        reservation.warehouseId !== input.warehouseId
+      ) {
+        throw PlatformError.notFound('Reservation was not found in the requested scope.', {
+          details: {
+            reservationId: reservation.id,
+            branchId: input.branchId,
+            warehouseId: input.warehouseId,
+          },
+        });
+      }
+      if (reservation.expiresAt !== null && reservation.expiresAt.getTime() <= Date.now()) {
+        const transition = await this.transitionReservation(
+          tx,
+          reservation,
+          'EXPIRED',
+          new Date(),
+          {
+            correlationId: input.correlationId,
+            causationId: input.causationId,
+            actorId: input.actorId,
+          },
+        );
+        throw PlatformError.of(
+          ERROR_CODES.RESERVATION_EXPIRED,
+          'Reservation expired before it could be rebound to the Sale.',
+          { details: { reservationId: transition.reservation.id } },
+        );
+      }
+
+      const rebound = await this.repository.rebindReservationToReference(tx, {
+        organizationId: input.organizationId,
+        reservationId: reservation.id,
+        version: reservation.version,
+        referenceType: 'PENDING_SALE',
+        referenceId: input.saleReferenceId,
+        referenceVersion: input.cartVersion,
+        expiresAt: null,
+      });
+      if (!rebound) {
+        throw PlatformError.of(
+          ERROR_CODES.RESOURCE_VERSION_CONFLICT,
+          `Reservation ${reservation.id} was modified concurrently.`,
+          { details: { reservationId: reservation.id, expectedVersion: reservation.version } },
+        );
+      }
+
+      const response = {
+        reservationId: rebound.id,
+        status: 'ACTIVE' as const,
+        referenceType: 'PENDING_SALE' as const,
+        referenceId: input.saleReferenceId,
+      };
+      await this.repository.recordIdempotencyOutcome(tx, claim.claimId, 'COMPLETED', response);
+      return response;
     });
   }
 
@@ -816,6 +934,358 @@ export class InventoryService {
     });
 
     return result;
+  }
+
+  async createCartReservationInTransaction(
+    tx: DbExecutor,
+    input: CreateCartReservationInput,
+  ): Promise<CreateCartReservationResult> {
+    const demands = this.aggregateCartDemands(input.demands);
+    const expiresAt = this.validateCartReservationInput(input);
+    const referenceType = input.referenceType ?? 'CART_HOLD';
+
+    this.assertFutureCartReservationExpiry(expiresAt);
+    await this.assertWarehouseScope(input.organizationId, input.branchId, input.warehouseId);
+    await this.repository.lockReservationReference(tx, input.organizationId, input.referenceId);
+    const prior = await this.repository.lockReservationByReference(
+      tx,
+      input.organizationId,
+      referenceType,
+      input.referenceId,
+    );
+    if (prior) {
+      this.assertCartReservationIdentity(prior, input);
+      if (prior.status !== 'ACTIVE') {
+        throw PlatformError.of(
+          ERROR_CODES.RESERVATION_NOT_AVAILABLE,
+          `Cart reservation is ${prior.status} and cannot be recreated.`,
+          { details: { referenceId: input.referenceId, status: prior.status } },
+        );
+      }
+      const current = await this.loadReservationState(tx, prior);
+      this.assertCartReservationReplay(prior, current.items, demands, expiresAt);
+      return {
+        kind: 'ACTIVE',
+        reservation: this.toCartReservationSnapshot(prior, current.items, current.positions),
+        shortages: [],
+      };
+    }
+
+    const positions = await this.repository.lockStockPositionsForVariants(
+      tx,
+      input.organizationId,
+      input.warehouseId,
+      demands.map((demand) => demand.variantId),
+    );
+    const positionsByVariant = new Map(positions.map((position) => [position.variantId, position]));
+    const demandsByVariant = new Map(demands.map((demand) => [demand.variantId, demand]));
+    const shortages = this.shortagesForDemands(demands, positionsByVariant);
+    if (shortages.length > 0) {
+      return {
+        kind: 'SHORTAGES',
+        reservation: null,
+        organizationId: input.organizationId,
+        branchId: input.branchId,
+        warehouseId: input.warehouseId,
+        referenceId: input.referenceId,
+        cartVersion: input.cartVersion,
+        expiresAt: expiresAt.toISOString(),
+        shortages,
+      };
+    }
+
+    const updatedPositions: StockPositionRow[] = [];
+    for (const position of positions) {
+      const demand = demandsByVariant.get(position.variantId);
+      if (!demand) continue;
+      const updated = await this.repository.updateStockPosition(
+        tx,
+        input.organizationId,
+        position.id,
+        { reserved: addInventoryQuantities(position.reserved, demand.quantity) },
+        position.version,
+      );
+      if (!updated) {
+        throw PlatformError.of(
+          ERROR_CODES.RESOURCE_VERSION_CONFLICT,
+          `Stock position ${position.id} was modified concurrently.`,
+          { details: { stockPositionId: position.id, expectedVersion: position.version } },
+        );
+      }
+      updatedPositions.push(updated);
+    }
+
+    const reservation = await this.repository.createReservation(tx, {
+      organizationId: input.organizationId,
+      stockPositionId: null,
+      branchId: input.branchId,
+      warehouseId: input.warehouseId,
+      expiresAt,
+      referenceType,
+      referenceId: input.referenceId,
+      referenceVersion: input.cartVersion,
+    });
+    const items: ReservationItemRow[] = [];
+    for (const position of positions) {
+      const demand = demandsByVariant.get(position.variantId);
+      if (!demand) continue;
+      const item = await this.repository.createReservationItem(tx, {
+        organizationId: input.organizationId,
+        reservationId: reservation.id,
+        stockPositionId: position.id,
+        variantId: position.variantId,
+        quantity: demand.quantity,
+      });
+      items.push(item);
+      await this.repository.createLedgerEntry(tx, {
+        organizationId: input.organizationId,
+        stockPositionId: position.id,
+        entryType: 'RESERVATION',
+        quantityChange: demand.quantity,
+        referenceType: 'RESERVATION',
+        referenceId: reservation.id,
+      });
+    }
+    await this.repository.createOutboxEvents(tx, [
+      inventoryEvent(
+        'inventory.stock-reserved',
+        input.organizationId,
+        'Reservation',
+        reservation.id,
+        reservation.version,
+        input.correlationId,
+        input.causationId,
+        input.actorId,
+        {
+          referenceType,
+          referenceId: input.referenceId,
+          branchId: input.branchId,
+          warehouseId: input.warehouseId,
+          expiresAt: expiresAt.toISOString(),
+        },
+      ),
+    ]);
+    return {
+      kind: 'ACTIVE',
+      reservation: this.toCartReservationSnapshot(reservation, items, updatedPositions),
+      shortages: [],
+    };
+  }
+
+  async rebindReservationToSaleInTransaction(
+    tx: DbExecutor,
+    input: {
+      organizationId: string;
+      reservationId: string;
+      saleReferenceId: string;
+      cartVersion: number;
+      warehouseId: string;
+      branchId: string;
+      actorId: string;
+      correlationId: string;
+      causationId: string;
+    },
+  ): Promise<{
+    reservationId: string;
+    status: 'ACTIVE';
+    referenceType: 'PENDING_SALE';
+    referenceId: string;
+  }> {
+    const reservation = await this.repository.lockReservationById(
+      tx,
+      input.organizationId,
+      input.reservationId,
+    );
+    if (!reservation) {
+      throw PlatformError.notFound('Reservation was not found.', {
+        details: { reservationId: input.reservationId },
+      });
+    }
+    if (reservation.status !== 'ACTIVE') {
+      throw PlatformError.of(
+        ERROR_CODES.RESERVATION_NOT_AVAILABLE,
+        'Reservation is not active and cannot be rebound to Sale.',
+        { details: { reservationId: reservation.id, status: reservation.status } },
+      );
+    }
+    if (reservation.branchId !== input.branchId || reservation.warehouseId !== input.warehouseId) {
+      throw PlatformError.notFound('Reservation was not found in the requested scope.', {
+        details: {
+          reservationId: reservation.id,
+          branchId: input.branchId,
+          warehouseId: input.warehouseId,
+        },
+      });
+    }
+    if (reservation.expiresAt !== null && reservation.expiresAt.getTime() <= Date.now()) {
+      const transition = await this.transitionReservation(tx, reservation, 'EXPIRED', new Date(), {
+        correlationId: input.correlationId,
+        causationId: input.causationId,
+        actorId: input.actorId,
+      });
+      throw PlatformError.of(
+        ERROR_CODES.RESERVATION_EXPIRED,
+        'Reservation expired before it could be rebound to the Sale.',
+        { details: { reservationId: transition.reservation.id } },
+      );
+    }
+    const rebound = await this.repository.rebindReservationToReference(tx, {
+      organizationId: input.organizationId,
+      reservationId: reservation.id,
+      version: reservation.version,
+      referenceType: 'PENDING_SALE',
+      referenceId: input.saleReferenceId,
+      referenceVersion: input.cartVersion,
+      expiresAt: null,
+    });
+    if (!rebound) {
+      throw PlatformError.of(
+        ERROR_CODES.RESOURCE_VERSION_CONFLICT,
+        `Reservation ${reservation.id} was modified concurrently.`,
+        { details: { reservationId: reservation.id, expectedVersion: reservation.version } },
+      );
+    }
+    return {
+      reservationId: rebound.id,
+      status: 'ACTIVE',
+      referenceType: 'PENDING_SALE',
+      referenceId: input.saleReferenceId,
+    };
+  }
+
+  async releaseReservationByIdInTransaction(
+    tx: DbExecutor,
+    params: {
+      organizationId: string;
+      reservationId: string;
+      actorId: string;
+      correlationId: string;
+    },
+  ): Promise<{ released: { id: string; status: string } }> {
+    const reservation = await this.repository.lockReservationById(
+      tx,
+      params.organizationId,
+      params.reservationId,
+    );
+    if (!reservation) {
+      throw PlatformError.notFound(`Reservation ${params.reservationId} not found.`, {
+        details: { reservationId: params.reservationId, organizationId: params.organizationId },
+      });
+    }
+    if (reservation.status !== 'ACTIVE') {
+      throw PlatformError.of(
+        ERROR_CODES.RESERVATION_NOT_AVAILABLE,
+        `Reservation ${params.reservationId} is ${reservation.status}, not ACTIVE.`,
+        { details: { reservationId: params.reservationId, status: reservation.status } },
+      );
+    }
+    const transition = await this.transitionReservation(tx, reservation, 'RELEASED', new Date(), {
+      correlationId: params.correlationId,
+      causationId: params.correlationId,
+      actorId: params.actorId,
+    });
+    return { released: { id: transition.reservation.id, status: transition.reservation.status } };
+  }
+
+  async consumeReservationByIdInTransaction(
+    tx: DbExecutor,
+    params: {
+      organizationId: string;
+      reservationId: string;
+      actorId: string;
+      correlationId: string;
+    },
+  ): Promise<{ consumed: { id: string; status: string } }> {
+    const reservation = await this.repository.lockReservationById(
+      tx,
+      params.organizationId,
+      params.reservationId,
+    );
+    if (!reservation) {
+      throw PlatformError.notFound(`Reservation ${params.reservationId} not found.`, {
+        details: { reservationId: params.reservationId, organizationId: params.organizationId },
+      });
+    }
+    if (reservation.status !== 'ACTIVE') {
+      throw PlatformError.of(
+        ERROR_CODES.RESERVATION_ALREADY_CONSUMED,
+        `Reservation ${params.reservationId} is ${reservation.status}, not ACTIVE.`,
+        { details: { reservationId: params.reservationId, status: reservation.status } },
+      );
+    }
+    const state = await this.loadReservationState(tx, reservation);
+    const quantityByPosition = new Map<string, string>();
+    for (const item of state.items) {
+      quantityByPosition.set(
+        item.stockPositionId,
+        quantityByPosition.has(item.stockPositionId)
+          ? addInventoryQuantities(quantityByPosition.get(item.stockPositionId)!, item.quantity)
+          : normalizeInventoryQuantity(item.quantity),
+      );
+    }
+    for (const position of state.positions) {
+      const quantity = quantityByPosition.get(position.id);
+      if (!quantity) continue;
+      await this.consumeFIFOLayers(tx, position.id, params.organizationId, quantity, {
+        referenceType: 'RESERVATION',
+        referenceId: reservation.id,
+        correlationId: params.correlationId,
+        actorId: params.actorId,
+      });
+      const updated = await this.repository.updateStockPosition(
+        tx,
+        params.organizationId,
+        position.id,
+        {
+          onHand: subtractInventoryQuantities(position.onHand, quantity),
+          reserved: subtractInventoryQuantities(position.reserved, quantity),
+        },
+        position.version,
+      );
+      if (!updated) {
+        throw PlatformError.of(
+          ERROR_CODES.RESOURCE_VERSION_CONFLICT,
+          `Stock position ${position.id} was modified concurrently.`,
+          { details: { stockPositionId: position.id, expectedVersion: position.version } },
+        );
+      }
+      await this.repository.createLedgerEntry(tx, {
+        organizationId: params.organizationId,
+        stockPositionId: position.id,
+        entryType: 'CONSUMPTION',
+        quantityChange: `-${quantity}`,
+        referenceType: 'RESERVATION',
+        referenceId: reservation.id,
+      });
+    }
+    const updatedReservation = await this.repository.updateReservationStatus(
+      tx,
+      params.organizationId,
+      reservation.id,
+      'CONSUMED',
+      reservation.version,
+    );
+    if (!updatedReservation) {
+      throw PlatformError.of(
+        ERROR_CODES.RESOURCE_VERSION_CONFLICT,
+        `Reservation ${reservation.id} was modified concurrently.`,
+        { details: { reservationId: reservation.id, expectedVersion: reservation.version } },
+      );
+    }
+    await this.repository.createOutboxEvents(tx, [
+      inventoryEvent(
+        'inventory.reservation-consumed',
+        params.organizationId,
+        'Reservation',
+        reservation.id,
+        updatedReservation.version,
+        params.correlationId,
+        params.correlationId,
+        params.actorId,
+        { stockPositionId: reservation.stockPositionId },
+      ),
+    ]);
+    return { consumed: { id: updatedReservation.id, status: updatedReservation.status } };
   }
 
   // ---------------------------------------------------------------------------
@@ -2463,7 +2933,11 @@ export class InventoryService {
 
   private validateCartReservationInput(input: CreateCartReservationInput): Date {
     this.assertCartReferenceVersion(input.cartVersion);
-    const expiresAt = new Date(input.expiresAt);
+    if (input.referenceType === 'PENDING_SALE' && !input.expiresAt) {
+      return new Date('2099-12-31T00:00:00.000Z');
+    }
+    const expiresAtInput = input.expiresAt;
+    const expiresAt = new Date(expiresAtInput ?? Number.NaN);
     if (Number.isNaN(expiresAt.getTime())) {
       throw PlatformError.validationFailed('Cart reservation expiry must be a valid instant.', {
         details: { field: 'expiresAt' },
@@ -2511,6 +2985,7 @@ export class InventoryService {
       branchId: string;
       warehouseId: string;
       referenceId: string;
+      referenceType?: 'CART_HOLD' | 'PENDING_SALE';
       cartVersion: number;
     },
   ): void {
@@ -2518,6 +2993,7 @@ export class InventoryService {
       reservation.organizationId !== input.organizationId ||
       reservation.branchId !== input.branchId ||
       reservation.warehouseId !== input.warehouseId ||
+      reservation.referenceType !== (input.referenceType ?? 'CART_HOLD') ||
       reservation.referenceId !== input.referenceId ||
       reservation.referenceVersion !== input.cartVersion
     ) {
@@ -2555,13 +3031,15 @@ export class InventoryService {
       branchId: string;
       warehouseId: string;
       referenceId: string;
+      referenceType?: 'CART_HOLD' | 'PENDING_SALE';
       cartVersion: number;
     },
   ): Promise<ReservationRow> {
     await this.repository.lockReservationReference(tx, input.organizationId, input.referenceId);
-    const reservation = await this.repository.lockCartReservationByReference(
+    const reservation = await this.repository.lockReservationByReference(
       tx,
       input.organizationId,
+      input.referenceType ?? 'CART_HOLD',
       input.referenceId,
     );
     if (!reservation) {
@@ -2754,10 +3232,17 @@ export class InventoryService {
     items: ReservationItemRow[],
     positions: StockPositionRow[],
   ): CartReservationSnapshot {
-    if (!reservation.referenceId || reservation.referenceType !== 'CART_HOLD') {
-      throw PlatformError.of(ERROR_CODES.OPERATION_NOT_ALLOWED, 'Reservation is not a Cart hold.', {
-        details: { reservationId: reservation.id },
-      });
+    if (
+      !reservation.referenceId ||
+      (reservation.referenceType !== 'CART_HOLD' && reservation.referenceType !== 'PENDING_SALE')
+    ) {
+      throw PlatformError.of(
+        ERROR_CODES.OPERATION_NOT_ALLOWED,
+        'Reservation reference is invalid.',
+        {
+          details: { reservationId: reservation.id },
+        },
+      );
     }
     if (!['ACTIVE', 'RELEASED', 'EXPIRED', 'CONSUMED'].includes(reservation.status)) {
       throw PlatformError.of(ERROR_CODES.OPERATION_NOT_ALLOWED, 'Reservation status is invalid.', {
@@ -2791,6 +3276,7 @@ export class InventoryService {
       organizationId: reservation.organizationId,
       branchId: reservation.branchId,
       warehouseId: reservation.warehouseId,
+      referenceType: reservation.referenceType as CartReservationSnapshot['referenceType'],
       referenceId: reservation.referenceId,
       cartVersion: reservation.referenceVersion,
       status: reservation.status as CartReservationSnapshot['status'],

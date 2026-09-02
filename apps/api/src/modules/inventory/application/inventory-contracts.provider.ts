@@ -9,10 +9,12 @@ import {
   type CreateCartReservationInput,
   type CreateCartReservationResult,
   type InventoryContracts,
+  type InventoryMutationContracts,
   type ReceiveStockInput,
   type ReleaseCartReservationInput,
 } from '../contracts';
 import { InventoryRepository } from '../infrastructure/inventory.repository';
+import type { DbExecutor } from '../infrastructure/db-executor';
 import { inventoryEvent } from '../infrastructure/event-envelope';
 import { InventoryService } from './inventory.service';
 import {
@@ -30,7 +32,7 @@ import {
  * guarantees. All access is organizationId-scoped.
  */
 @Injectable()
-export class InventoryContractProvider implements InventoryContracts {
+export class InventoryContractProvider implements InventoryContracts, InventoryMutationContracts {
   constructor(
     @Inject(DATABASE) private readonly db: DatabaseClient,
     @Inject(InventoryRepository) private readonly repository: InventoryRepository,
@@ -170,5 +172,113 @@ export class InventoryContractProvider implements InventoryContracts {
     input: CheckCartReservationInput,
   ): Promise<CartReservationStateResult> {
     return this.service.checkCartReservation(input);
+  }
+
+  async rebindReservationToSale(input: {
+    organizationId: string;
+    reservationId: string;
+    saleReferenceId: string;
+    cartVersion: number;
+    warehouseId: string;
+    branchId: string;
+    idempotencyKey: string;
+    requestHash: string;
+    actorId: string;
+    correlationId: string;
+    causationId: string;
+  }): Promise<{
+    reservationId: string;
+    status: 'ACTIVE';
+    referenceType: 'PENDING_SALE';
+    referenceId: string;
+  }> {
+    return this.service.rebindReservationToSale(input);
+  }
+
+  async releaseReservationById(input: {
+    organizationId: string;
+    reservationId: string;
+    idempotencyKey: string;
+    requestHash: string;
+    actorId: string;
+  }): Promise<{ released: { id: string; status: string } }> {
+    const result = await this.service.releaseReservation({
+      organizationId: input.organizationId,
+      reservationId: input.reservationId,
+      idempotencyKey: input.idempotencyKey,
+      requestHash: input.requestHash,
+      principal: { id: input.actorId },
+    });
+    return { released: { id: result.released.id, status: result.released.status } };
+  }
+
+  async consumeReservationById(input: {
+    organizationId: string;
+    reservationId: string;
+    idempotencyKey: string;
+    requestHash: string;
+    actorId: string;
+  }): Promise<{ consumed: { id: string; status: string } }> {
+    const result = await this.service.consumeReservation({
+      organizationId: input.organizationId,
+      reservationId: input.reservationId,
+      idempotencyKey: input.idempotencyKey,
+      requestHash: input.requestHash,
+      principal: { id: input.actorId },
+    });
+    return { consumed: { id: result.consumed.id, status: result.consumed.status } };
+  }
+
+  async createCartReservationInTransaction(
+    executor: DbExecutor,
+    input: CreateCartReservationInput,
+  ): Promise<CreateCartReservationResult> {
+    return this.service.createCartReservationInTransaction(executor, input);
+  }
+
+  async rebindReservationToSaleInTransaction(
+    executor: DbExecutor,
+    input: {
+      organizationId: string;
+      reservationId: string;
+      saleReferenceId: string;
+      cartVersion: number;
+      warehouseId: string;
+      branchId: string;
+      actorId: string;
+      correlationId: string;
+      causationId: string;
+    },
+  ): Promise<{
+    reservationId: string;
+    status: 'ACTIVE';
+    referenceType: 'PENDING_SALE';
+    referenceId: string;
+  }> {
+    return this.service.rebindReservationToSaleInTransaction(executor, input);
+  }
+
+  async releaseReservationByIdInTransaction(
+    executor: DbExecutor,
+    input: {
+      organizationId: string;
+      reservationId: string;
+      actorId: string;
+      correlationId: string;
+    },
+  ): Promise<{ released: { id: string; status: string } }> {
+    return this.service.releaseReservationByIdInTransaction(executor, input);
+  }
+
+  async consumeReservationByIdInTransaction(
+    executor: DbExecutor,
+    input: {
+      organizationId: string;
+      reservationId: string;
+      actorId: string;
+      correlationId: string;
+    },
+  ): Promise<{ consumed: { id: string; status: string } }> {
+    return this.service.consumeReservationByIdInTransaction(executor, input);
   }
 }

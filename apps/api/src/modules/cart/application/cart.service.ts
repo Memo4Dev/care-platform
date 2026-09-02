@@ -99,7 +99,7 @@ export class CartService {
   }
 
   async get(organizationId: string, cartId: string): Promise<CartView | null> {
-    const record = await this.repository.findCart(this.db, organizationId, cartId);
+    const record = await this.repository.findCartAnyStatus(this.db, organizationId, cartId);
     if (!record) return null;
     const hold = await this.repository.findCurrentHold(this.db, organizationId, cartId);
     return toCartView(record, hold);

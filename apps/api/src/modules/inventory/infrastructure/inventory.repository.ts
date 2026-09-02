@@ -366,6 +366,23 @@ export class InventoryRepository {
     return (row as unknown as ReservationRow | undefined) ?? null;
   }
 
+  async lockReservationById(
+    executor: DbExecutor,
+    organizationId: string,
+    reservationId: string,
+  ): Promise<ReservationRow | null> {
+    const [row] = await executor
+      .select()
+      .from(reservations)
+      .where(
+        and(eq(reservations.id, reservationId), eq(reservations.organizationId, organizationId)),
+      )
+      .limit(1)
+      .for('update');
+
+    return (row as unknown as ReservationRow | undefined) ?? null;
+  }
+
   /** Serialize commands for one stable logical reference, including no-row creates. */
   async lockReservationReference(
     executor: DbExecutor,
@@ -386,13 +403,22 @@ export class InventoryRepository {
     organizationId: string,
     referenceId: string,
   ): Promise<ReservationRow | null> {
+    return this.lockReservationByReference(executor, organizationId, 'CART_HOLD', referenceId);
+  }
+
+  async lockReservationByReference(
+    executor: DbExecutor,
+    organizationId: string,
+    referenceType: string,
+    referenceId: string,
+  ): Promise<ReservationRow | null> {
     const [row] = await executor
       .select()
       .from(reservations)
       .where(
         and(
           eq(reservations.organizationId, organizationId),
-          eq(reservations.referenceType, 'CART_HOLD'),
+          eq(reservations.referenceType, referenceType),
           eq(reservations.referenceId, referenceId),
         ),
       )
@@ -442,6 +468,41 @@ export class InventoryRepository {
           eq(reservations.id, reservationId),
           eq(reservations.organizationId, organizationId),
           eq(reservations.version, version),
+        ),
+      )
+      .returning();
+
+    return (updated[0] as unknown as ReservationRow | undefined) ?? null;
+  }
+
+  async rebindReservationToReference(
+    executor: DbExecutor,
+    input: {
+      organizationId: string;
+      reservationId: string;
+      version: number;
+      referenceType: string;
+      referenceId: string;
+      referenceVersion: number;
+      expiresAt: Date | null;
+    },
+  ): Promise<ReservationRow | null> {
+    const updated = await executor
+      .update(reservations)
+      .set({
+        referenceType: input.referenceType,
+        referenceId: input.referenceId,
+        referenceVersion: input.referenceVersion,
+        expiresAt: input.expiresAt,
+        updatedAt: new Date(),
+        version: input.version + 1,
+      })
+      .where(
+        and(
+          eq(reservations.id, input.reservationId),
+          eq(reservations.organizationId, input.organizationId),
+          eq(reservations.version, input.version),
+          eq(reservations.status, 'ACTIVE'),
         ),
       )
       .returning();

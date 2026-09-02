@@ -1,3 +1,5 @@
+import type { DbExecutor } from './infrastructure/db-executor';
+
 /**
  * Public module contract of the Inventory bounded context
  * (docs/architecture/60-module-contracts.md "Inventory").
@@ -10,6 +12,7 @@
 
 /** Nest injection token binding the Inventory context's contract provider. */
 export const INVENTORY_CONTRACTS = Symbol('INVENTORY_CONTRACTS');
+export const INVENTORY_MUTATION_CONTRACTS = Symbol('INVENTORY_MUTATION_CONTRACTS');
 
 /** Availability projection exposed to other contexts. */
 export interface AvailabilityView {
@@ -70,11 +73,13 @@ export interface CreateCartReservationInput extends CartReservationOperationMeta
   warehouseId: string;
   /** Stable Cart-owned hold workflow ID. */
   referenceId: string;
+  /** Defaults to CART_HOLD; pending Sales may use PENDING_SALE. */
+  referenceType?: 'CART_HOLD' | 'PENDING_SALE';
   /** Exact Cart aggregate version whose demands are being held. */
   cartVersion: number;
   demands: readonly CartReservationDemand[];
-  /** TTL result already resolved and snapshotted by the Cart workflow. */
-  expiresAt: string;
+  /** TTL result already resolved and snapshotted by the Cart workflow when applicable. */
+  expiresAt?: string;
 }
 
 /** Release a Cart hold without ever creating or extending a reservation. */
@@ -83,6 +88,7 @@ export interface ReleaseCartReservationInput extends CartReservationOperationMet
   branchId: string;
   warehouseId: string;
   referenceId: string;
+  referenceType?: 'CART_HOLD' | 'PENDING_SALE';
   cartVersion: number;
 }
 
@@ -92,6 +98,7 @@ export interface CheckCartReservationInput {
   branchId: string;
   warehouseId: string;
   referenceId: string;
+  referenceType?: 'CART_HOLD' | 'PENDING_SALE';
   cartVersion: number;
   correlationId: string;
   causationId: string;
@@ -126,6 +133,7 @@ export interface CartReservationSnapshot {
   organizationId: string;
   branchId: string;
   warehouseId: string;
+  referenceType: 'CART_HOLD' | 'PENDING_SALE';
   referenceId: string;
   cartVersion: number;
   status: CartReservationStatus;
@@ -193,4 +201,86 @@ export interface InventoryContracts {
 
   /** Check current state and lazily expire a due reservation. */
   checkCartReservation(input: CheckCartReservationInput): Promise<CartReservationStateResult>;
+
+  /** Rebind an active reservation from Cart hold ownership to a pending Sale. */
+  rebindReservationToSale(input: {
+    organizationId: string;
+    reservationId: string;
+    saleReferenceId: string;
+    cartVersion: number;
+    warehouseId: string;
+    branchId: string;
+    idempotencyKey: string;
+    requestHash: string;
+    actorId: string;
+    correlationId: string;
+    causationId: string;
+  }): Promise<{
+    reservationId: string;
+    status: 'ACTIVE';
+    referenceType: 'PENDING_SALE';
+    referenceId: string;
+  }>;
+
+  /** Release a reservation directly by ID for non-Cart owners such as Sales. */
+  releaseReservationById(input: {
+    organizationId: string;
+    reservationId: string;
+    idempotencyKey: string;
+    requestHash: string;
+    actorId: string;
+  }): Promise<{ released: { id: string; status: string } }>;
+
+  /** Consume a reservation directly by ID for trusted completion workflows. */
+  consumeReservationById(input: {
+    organizationId: string;
+    reservationId: string;
+    idempotencyKey: string;
+    requestHash: string;
+    actorId: string;
+  }): Promise<{ consumed: { id: string; status: string } }>;
+}
+
+export interface InventoryMutationContracts {
+  createCartReservationInTransaction(
+    executor: DbExecutor,
+    input: CreateCartReservationInput,
+  ): Promise<CreateCartReservationResult>;
+  rebindReservationToSaleInTransaction(
+    executor: DbExecutor,
+    input: {
+      organizationId: string;
+      reservationId: string;
+      saleReferenceId: string;
+      cartVersion: number;
+      warehouseId: string;
+      branchId: string;
+      actorId: string;
+      correlationId: string;
+      causationId: string;
+    },
+  ): Promise<{
+    reservationId: string;
+    status: 'ACTIVE';
+    referenceType: 'PENDING_SALE';
+    referenceId: string;
+  }>;
+  releaseReservationByIdInTransaction(
+    executor: DbExecutor,
+    input: {
+      organizationId: string;
+      reservationId: string;
+      actorId: string;
+      correlationId: string;
+    },
+  ): Promise<{ released: { id: string; status: string } }>;
+  consumeReservationByIdInTransaction(
+    executor: DbExecutor,
+    input: {
+      organizationId: string;
+      reservationId: string;
+      actorId: string;
+      correlationId: string;
+    },
+  ): Promise<{ consumed: { id: string; status: string } }>;
 }

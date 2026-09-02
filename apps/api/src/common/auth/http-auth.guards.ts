@@ -20,6 +20,7 @@ export interface AuthenticatedRequest {
   body?: unknown;
   principal?: AuthenticatedPrincipal;
   correlationId?: string;
+  internalOrganizationId?: string;
 }
 
 abstract class BearerGuard {
