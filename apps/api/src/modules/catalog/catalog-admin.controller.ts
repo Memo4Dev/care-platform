@@ -224,10 +224,7 @@ export class CatalogAdminController {
   @ApiResponse({ status: 200, description: 'Product activated' })
   @ApiResponse({ status: 404, description: 'Product not found' })
   @ApiResponse({ status: 409, description: 'Not a DRAFT product' })
-  async activateProduct(
-    @Req() request: AuthenticatedRequest,
-    @Param('id') productId: string,
-  ) {
+  async activateProduct(@Req() request: AuthenticatedRequest, @Param('id') productId: string) {
     const principal = this.principal(request);
     await this.require(principal, request, 'catalog.edit');
     const result = await this.catalogService.activateProduct({
@@ -325,10 +322,7 @@ export class CatalogAdminController {
   @ApiResponse({ status: 200, description: 'Variant activated' })
   @ApiResponse({ status: 404, description: 'Variant not found' })
   @ApiResponse({ status: 409, description: 'Not a DRAFT variant' })
-  async activateVariant(
-    @Req() request: AuthenticatedRequest,
-    @Param('id') variantId: string,
-  ) {
+  async activateVariant(@Req() request: AuthenticatedRequest, @Param('id') variantId: string) {
     const principal = this.principal(request);
     await this.require(principal, request, 'catalog.edit');
 
