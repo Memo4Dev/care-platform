@@ -24,8 +24,8 @@ export const cartSchema = pgSchema('cart');
 export const CART_CHANNELS = ['ONLINE', 'POS', 'SALES'] as const;
 export type CartChannel = (typeof CART_CHANNELS)[number];
 
-/** M5-004 persists only editable Draft carts; later lifecycle states are additive. */
-export const CART_STATUSES = ['DRAFT'] as const;
+/** M5-004 persisted Draft carts first; later terminal states remain additive. */
+export const CART_STATUSES = ['DRAFT', 'CHECKED_OUT'] as const;
 export type CartStatus = (typeof CART_STATUSES)[number];
 
 export const CART_HOLD_STATUSES = [
@@ -35,6 +35,7 @@ export const CART_HOLD_STATUSES = [
   'RELEASED',
   'EXPIRED',
   'FAILED',
+  'CHECKED_OUT',
 ] as const;
 export type CartHoldStatus = (typeof CART_HOLD_STATUSES)[number];
 
@@ -58,7 +59,7 @@ export const carts = cartSchema.table(
   },
   (table) => [
     check('carts_channel_check', sql`${table.channel} IN ('ONLINE', 'POS', 'SALES')`),
-    check('carts_status_check', sql`${table.status} = 'DRAFT'`),
+    check('carts_status_check', sql`${table.status} IN ('DRAFT', 'CHECKED_OUT')`),
     unique('carts_tenant_scope_unique').on(table.id, table.organizationId),
     unique('carts_tenant_branch_scope_unique').on(table.id, table.organizationId, table.branchId),
     index('carts_organization_id_idx').on(table.organizationId),
@@ -111,7 +112,7 @@ export const cartHolds = cartSchema.table(
     check('cart_holds_cart_version_positive_check', sql`${table.cartVersion} >= 1`),
     check(
       'cart_holds_status_check',
-      sql`${table.status} IN ('PENDING', 'ACTIVE', 'RELEASING', 'RELEASED', 'EXPIRED', 'FAILED')`,
+      sql`${table.status} IN ('PENDING', 'ACTIVE', 'RELEASING', 'RELEASED', 'EXPIRED', 'FAILED', 'CHECKED_OUT')`,
     ),
     check('cart_holds_ttl_minutes_check', sql`${table.ttlMinutes} BETWEEN 1 AND 1440`),
     check('cart_holds_policy_version_check', sql`${table.policyVersion} >= 0`),

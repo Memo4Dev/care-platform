@@ -218,6 +218,27 @@
       "when": 1787977400000,
       "tag": "0030_cart_hold_reservation",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1788051000000,
+      "tag": "0031_sales_checkout_pending_payment",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1788052000000,
+      "tag": "0032_add_sales_read_permission",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788053000000,
+      "tag": "0033_cart_hold_checked_out_status",
+      "breakpoints": true
     }
   ]
 }

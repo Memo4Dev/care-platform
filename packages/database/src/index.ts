@@ -15,6 +15,7 @@ export * from './schema/cart';
 export * from './schema/inventory';
 export * from './schema/purchasing';
 export * from './schema/pricing';
+export * from './schema/sales';
 export * from './schema/subscriptions';
 export * from './schema/platform';
 export * from './schema/provisioning';
