@@ -193,14 +193,23 @@ Cart arithmetic (line totals, availability, shortages) uses integer math at
 ```text
 POST /sales
 GET  /sales/{saleId}
-POST /sales/{saleId}/complete
 POST /sales/{saleId}/cancel
 ```
 
 Cart is the editable draft. Creating a Sale establishes `PENDING_PAYMENT` facts;
-it does not consume final Inventory. `POST /sales/{saleId}/complete` is an
-internal/future-Payments completion boundary, requires `Idempotency-Key`, and is
-not a public assertion that a payment succeeded.
+it does not consume final Inventory. Checkout from a plain `DRAFT` Cart requires
+an explicit `warehouseId`; checkout from a valid held Cart derives the
+authoritative warehouse from the held reservation and rebinds that reservation
+to the Sale so the old hold TTL no longer applies.
+
+The trusted completion boundary is internal/test/staging only:
+
+```text
+POST /internal/sales/{saleId}/complete
+```
+
+It requires `Idempotency-Key`, is protected by the repository's internal
+service boundary, and is not a public assertion that a payment succeeded.
 
 ## Payments
 

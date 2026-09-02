@@ -236,3 +236,37 @@ All migrations are additive-only. No destructive DDL. No production rollout perf
   to staging.
 - `/save` adds no Cart column or status: it persists only the existing durable
   HTTP idempotency outcome while leaving the Draft Cart row unchanged.
+
+## M5-007: Sales Checkout Persistence
+
+`0031_sales_checkout_pending_payment.sql` — Additive Sales bounded-context migration.
+
+- Expands `cart.carts.status` from `DRAFT`-only to `DRAFT | CHECKED_OUT` so the
+  source Cart remains persisted and traceable after successful checkout.
+- Creates logical schema `sales` with `sales.sales`, `sales.sale_items`, and
+  `sales.sale_number_counters`.
+- `sales.sales` persists tenant/branch scope, optional warehouse/customer,
+  operator, nullable device extension point, Cart traceability, organization-
+  unique `sale_number`, immutable pricing totals, reservation references,
+  trusted completion reference fields, audit/correlation metadata, and
+  optimistic version.
+- `sales.sale_items` snapshots immutable historical variant/product/unit,
+  quantity/base-quantity, label/SKU/barcode, unit price, totals, currency, and
+  pricing-source facts without querying mutable Catalog/Pricing state later.
+- Composite tenant FKs and partial unique indexes protect one Sale per Cart,
+  one completion reference per tenant, and same-tenant SaleItem references.
+
+`0032_add_sales_read_permission.sql` — Additive permission seed.
+
+- Seeds `sales.read` into `identity.permissions` with `ON CONFLICT DO NOTHING`.
+- Keeps permission expansion additive and aligned with the new POS Sales read
+  route / authorization matrix update.
+
+`0033_cart_hold_checked_out_status.sql` — Additive Cart hold terminal status.
+
+- Extends the `cart.cart_holds.status` CHECK constraint to also allow
+  `CHECKED_OUT` (supersedes the `cart_holds_status_check` constraint).
+- Held-cart checkout terminalizes the Cart hold row to `CHECKED_OUT` and clears
+  its old TTL (`expires_at`), keeping the hold traceable while excluding it from
+  current-hold reads (the current-hold partial unique index and read filters
+  only match `PENDING | ACTIVE | RELEASING`).

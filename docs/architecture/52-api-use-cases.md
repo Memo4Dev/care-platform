@@ -123,10 +123,9 @@ GET    /orders/{id}
 
 ```text
 POST   /pos/sales
-POST   /pos/sales/{id}/confirm
-POST   /pos/sales/{id}/complete
 GET    /pos/sales/{id}
-GET    /pos/drafts
+POST   /pos/sales/{id}/cancel
+POST   /internal/sales/{id}/complete
 ```
 
 ## Fulfillment

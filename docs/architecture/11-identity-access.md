@@ -38,6 +38,7 @@ approvedBy  = manager
 ```
 
 ## Important permissions
+sales.read
 sales.create
 sales.edit
 sales.cancel

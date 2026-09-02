@@ -124,6 +124,12 @@ GetSaleForReturn
 IssueInvoice
 ```
 
+`CreateSale` performs checkout from Cart to immutable `PENDING_PAYMENT` Sale,
+using authoritative Pricing and Inventory contracts. It requires Cart version,
+uses an explicit warehouse for non-held checkout, may rebind a valid held
+reservation to the Sale, and must not consume Inventory/FIFO until
+`CompleteSaleAfterPayment`.
+
 ## Fulfillment
 
 Provides:
