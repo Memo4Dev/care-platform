@@ -6,6 +6,17 @@ None
 
 ## In Progress
 
+> **Approved reference inputs (NOT to implement in M5).** ADR-0013
+> (Batch/Lot Expiry + FEFO, preserving FIFO costing) and
+> `docs/architecture/97a-resource-isolation-roadmap.md` (additive
+> resource-isolation roadmap) are APPROVED architectural decisions/reference
+> roadmaps for future milestones. They do not authorize any implementation
+> during M5. M5 remains strictly scoped to its existing Sales/POS completion
+> work. ADR-0013 implementation is scheduled after M5 completes, in the M6
+> workstream (break into explicit tasks per `M6-recommendation-batch-expiry-fefo.md`);
+> the resource-isolation roadmap is sequenced M6→M9 + post-launch and does not
+> change current M5 scope.
+
 - M5 — Sales & POS Core
   - [x] M5-003 Customer baseline: additive persistence, domain, transactional outbox/idempotency, tenant-admin HTTP boundary, narrow Customers contract, Swagger/Postman, and local review/gates complete. Previously committed staging credentials were removed from the collection; credential rotation remains a pre-push security follow-up.
   - [x] M5-004 Persisted POS Cart aggregate and canonical POS APIs (implementation, additive migration 0029, trusted transitional POS operator boundary, `/api/v1/pos/carts`, `/items`, idempotent `/save`, Swagger/Postman, and final local gates are green: 597 unit plus 420 native PostgreSQL tests, with 2 Redis/BullMQ tests still CI-required; independent correctness/security re-reviews pass; not deployed or pushed).
