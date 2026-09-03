@@ -10,10 +10,102 @@ Before editing:
 
 Do not load all architecture files by default.
 
-## Session Reconciliation
-At the start of every session (new or resumed), reconcile repository
-state before planning or editing. See the orchestrator manifest for
-the full reconciliation procedure and source-of-truth priority.
+## Persistent Milestone Todo & Session Recovery
+
+### Authoritative state model
+Use these sources in this precedence order (never the reverse):
+1. Actual committed implementation and tests
+2. Git history
+3. `docs/state/TASKS.md` (persistent milestone/task ledger)
+4. `docs/state/STATE.md` (milestone-level state)
+5. Current runtime/OpenCode Todo state
+
+The runtime Todo list is NOT authoritative by itself. It is a projection
+reconstructed from the repository, never a source of truth.
+
+### Persistent Todo source
+`docs/state/TASKS.md` is the persistent milestone/task ledger. Every
+actionable milestone task carries a stable ID (e.g. `M6-001`, `M6-002`,
+`M5-SEC-001`). Never create a replacement anonymous Todo list when stable
+task IDs already exist. New work is ADDED as a new stable ID, never as an
+unnamed replacement list.
+
+### Status model
+Use only: `TODO`, `IN_PROGRESS`, `BLOCKED`, `DONE`.
+Optional metadata: owner, milestone, dependencies, blocker reason, commit
+SHA, verification status.
+
+### Reconciliation rule (run at every new prompt / session / context reset)
+DO NOT:
+- clear the Todo list
+- recreate all tasks
+- mark everything pending
+- restart milestone planning
+- infer completion from memory alone
+
+INSTEAD:
+1. Read `docs/state/TASKS.md`.
+2. Read `docs/state/STATE.md`.
+3. Inspect `git status`/`git log` for the current branch.
+4. Inspect implementation/tests for ambiguous tasks.
+5. Compare repository state with the runtime Todo.
+6. Reconstruct the runtime Todo from persistent task IDs.
+7. Preserve `DONE` tasks.
+8. Preserve `BLOCKED` tasks unless the blocker is actually resolved.
+9. Preserve an `IN_PROGRESS` task if work is partially implemented.
+10. Add only genuinely new tasks (with stable new IDs).
+11. Remove/merge duplicate runtime Todos.
+12. Resume the first unfinished task.
+
+### Merge, never replace
+A new prompt may add requirements, change priority, resolve a blocker,
+add a task, or explicitly cancel a task. It must NOT implicitly replace
+the existing Todo list. Interpret every new prompt as a PATCH against the
+persistent Todo state. Existing tasks (and their IDs/statuses) are
+preserved; new prompts only add/merge/cancel.
+
+### Completion rule
+A task may be marked `DONE` only when its acceptance criteria are
+satisfied. If code is committed but remote/staging verification is still
+required, record the appropriate verification state instead of pretending
+the task is fully accepted. Do not reopen a `DONE` task merely because a
+new prompt mentions the same area. If evidence shows a `DONE` task is
+actually incomplete, reopen that exact task and record the reason.
+
+### Atomic state update
+Whenever a task status changes:
+1. Update the runtime Todo.
+2. Update `docs/state/TASKS.md`.
+3. Update `docs/state/STATE.md` when milestone-level state changes.
+4. Include the state update in the appropriate focused commit.
+Do not allow runtime Todo and repository state to intentionally diverge.
+
+### Session recovery
+If context/token/session is reset, start with "Reconcile milestone state",
+then reconstruct from the repository. Do not ask "where were we?" when the
+repository can answer it.
+
+### Milestone transition
+When a milestone becomes COMPLETE: keep its tasks in `TASKS.md` as `DONE`
+(do not delete them), mark the milestone COMPLETE in `STATE.md`, and
+initialize the next milestone's tasks separately. Historical completed
+tasks remain available for audit but should not clutter the active runtime
+Todo. The runtime Todo normally shows: current-milestone unfinished tasks,
+active cross-milestone follow-ons, and genuine blockers — not every
+historical `DONE` item.
+
+### Prompt interruption
+If a new prompt arrives while a task is `IN_PROGRESS`, incorporate the new
+instruction, reconcile whether it changes the active task, and continue
+from the current implementation state — do not discard the existing task.
+
+### Autonomous execution
+After reconciliation, drive `TODO → IN_PROGRESS → implement → test →
+review → fix → re-test → update docs/state → commit → DONE` and immediately
+move to the next Todo. Do not stop after every subtask. STOP only for:
+genuine business/architecture/security decisions, destructive
+infrastructure/data actions, push approval, merge approval, deploy
+approval, or a milestone-completion checkpoint that is explicitly required.
 
 ## Architecture governance
 `docs/architecture/` is authoritative for bounded contexts, ownership, domain rules, persistence, APIs, security, testing and rollout.
@@ -97,11 +189,17 @@ Tests must declare environment requirements (LOCAL/CI).
 Skipped-required tests are CI obligations, not acceptance.
 
 ## State
-After each completed loop update:
-- `docs/state/STATE.md`
-- `docs/state/TASKS.md`
-- `docs/state/DECISIONS.md`
-- `docs/state/MIGRATION_STATUS.md` if relevant
+State is repository-backed and updated atomically with each accepted loop. Do
+not let the runtime Todo diverge from repository state.
+- `docs/state/TASKS.md` is the persistent milestone/task ledger with stable
+  IDs (e.g. `M6-001`, `M5-SEC-001`) and the status model `TODO`/`IN_PROGRESS`/
+  `BLOCKED`/`DONE`. It is the source of truth for the active runtime Todo.
+- `docs/state/STATE.md` — milestone-level state (updated when a milestone
+  transitions or its phase changes).
+- `docs/state/DECISIONS.md` — decisions and follow-on observations.
+- `docs/state/MIGRATION_STATUS.md` — migration ledger, when relevant.
+See "Persistent Milestone Todo & Session Recovery" above for the full
+reconciliation and update procedure.
 
 ## Language
 Code, comments, commits, ADRs and technical docs are English.

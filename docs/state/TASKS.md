@@ -1,21 +1,26 @@
 # Tasks
 
-## Ready
+Persistent milestone/task ledger. Status model: `TODO` / `IN_PROGRESS` /
+`BLOCKED` / `DONE`. Every actionable task carries a stable ID (e.g.
+`M6-001`, `M5-SEC-001`). The active runtime Todo is reconstructed from this
+ledger (see `AGENTS.md` → "Persistent Milestone Todo & Session Recovery").
 
-None
+## Next milestone — M6 (awaiting kickoff; NOT started)
 
-## In Progress
+> Do not begin M6 implementation until the human explicitly approves the M6
+> kickoff. The tasks below are the SCHEDULED starting set for M6, initialized
+> here so the next milestone can begin without destroying M5 history. They are
+> recorded with stable IDs, owner and milestone.
 
-> **Approved reference inputs (NOT to implement in M5).** ADR-0013
-> (Batch/Lot Expiry + FEFO, preserving FIFO costing) and
-> `docs/architecture/97a-resource-isolation-roadmap.md` (additive
-> resource-isolation roadmap) are APPROVED architectural decisions/reference
-> roadmaps for future milestones. They do not authorize any implementation
-> during M5. M5 remains strictly scoped to its existing Sales/POS completion
-> work. ADR-0013 implementation is scheduled after M5 completes, in the M6
-> workstream (break into explicit tasks per `M6-recommendation-batch-expiry-fefo.md`);
-> the resource-isolation roadmap is sequenced M6→M9 + post-launch and does not
-> change current M5 scope.
+- [ ] M6-001 — ADR-0013 implementation: Batch/Lot Expiry + FEFO, preserving FIFO costing. Break into explicit sub-tasks per `docs/adr/M6-recommendation-batch-expiry-fefo.md`; sequencing also considers `docs/architecture/97a-resource-isolation-roadmap.md`. Owner: inventory. Milestone: M6.
+- [ ] M5-SEC-001 — Idempotency-claim TTL cleanup (record below carried into M6; recommended early). Owner: backend/identity. Milestone: M6.
+- [ ] M5-SEC-002 — Inventory `consumeFIFOLayers` `parseFloat` → BigInt-at-8-decimal (record below carried into M6; recommended early). Owner: inventory. Milestone: M6.
+
+## Milestone COMPLETE — M5 (Sales & POS Core)
+
+M5 is COMPLETE and MERGED into `main` (merge commit `e7149d8`; M5 RELEASE GATE: PASS).
+All M5 tasks are DONE and preserved below for audit. Detailed records remain
+under `## Done`.
 
 - M5 — Sales & POS Core
   - [x] M5-003 Customer baseline: additive persistence, domain, transactional outbox/idempotency, tenant-admin HTTP boundary, narrow Customers contract, Swagger/Postman, and local review/gates complete. Previously committed staging credentials were removed from the collection; credential rotation remains a pre-push security follow-up.
@@ -29,10 +34,14 @@ None
   - [x] M5-010 Sales HTTP/OpenAPI/Postman, integration, security, and final quality gates. Enriched Sales POS + Internal controllers with full Swagger response schemas (error envelope + sale schema + 200/201/401/403/404/409/422) and headers; added an OpenAPI contract test asserting the four Sales routes, `tenant-bearer` vs `internal-bearer` security, and required `Idempotency-Key`/`If-Match`/`saleId` parameters. Added a "11 — Sales Checkout" folder (5 requests: checkout, get, cancel, internal complete, complete-on-cancelled) to the M5 staging Postman collection + `saleId`/`inventoryReservationId`/`salesInternalToken` env vars. Independent security review: CONDITIONAL PASS (no blockers; two pre-existing MEDIUM observations — stale idempotency-claim TTL cleanup and Inventory `consumeFIFOLayers` parseFloat — recorded as post-M5 follow-ons, not M5 scope). Correctness/architecture review: PASS (all M5 exit criteria met). Final gates green: typecheck PASS, lint+prettier PASS, 614 unit, 466 native-PG integration (2 Redis/BullMQ CI-required skipped) incl. Sales HTTP (7) + concurrency (4).
   - [x] M5 final state reconciliation and await explicit push approval.
 
-### M5 post-release tech-debt follow-ons (NOT M5 scope; owner + milestone recorded)
+### M5 post-release tech-debt follow-ons (recorded; SCHEDULED into M6 — see "Next milestone — M6" above, NOT in progress)
 
 - [ ] M5-SEC-001 — Idempotency-claim TTL cleanup: `idempotency_outcomes` (and the claim tables) have no TTL/purge. A crash after claim but before complete can leave a `status='IN_PROGRESS'` claim that a later retry with the same key sees as `idempotencyConflict('already in progress')`. Add a scheduled cleanup (pg_cron or BullMQ) with a configurable TTL, preserving durable outcomes for the retention window. Owner: backend/identity. Milestone: M6 (recommended early; low-risk correctness/availability hardening).
 - [ ] M5-SEC-002 — Inventory `consumeFIFOLayers` uses `parseFloat` for quantity arithmetic instead of the BigInt-at-8-decimal pattern used elsewhere. Migrate it for a unified financial-precision guarantee. Practically safe today (theoretical precision edge case at very large quantities), but correctness-critical quantity/cost math must not rely on JS floating point, so schedule the fix early. Owner: inventory. Milestone: M6 (recommended early).
+
+### ORCH-001 — Persistent Milestone Todo & Session Recovery (orchestration/state fix, 2026-09-03)
+
+- [x] ORCH-001 — Hardened the orchestration/state workflow so the runtime/OpenCode Todo is a projection of repository truth, never authoritative. Added the permanent "Persistent Milestone Todo & Session Recovery" rule to `AGENTS.md` (authoritative precedence; persistent ledger = `docs/state/TASKS.md` with stable IDs; status model `TODO`/`IN_PROGRESS`/`BLOCKED`/`DONE`; reconcile-at-every-prompt; merge-never-replace; completion rule; atomic state update; session recovery; milestone transition; prompt interruption; autonomous execution). Expanded the orchestrator manifest (`Session Reconciliation`) with the persistent-Todo reconciliation steps. Reconciliated post-M5 state: M5 preserved as a COMPLETE milestone (tasks DONE, not deleted), M5-SEC-001/002 recorded and SCHEDULED into M6 (not in progress), and the next milestone (M6) initialized as a scheduled, awaiting-kickoff starting set (M6-001 + M5-SEC-001/002) without destroying M5 history and WITHOUT starting M6 implementation. Commit includes the pending post-merge `docs/state/STATE.md` update (M5 COMPLETE — merged into main, merge commit `e7149d8`; M5 RELEASE GATE: PASS; await M6 kickoff). Owner: orchestration. Milestone: cross (governance). Commit: pending.
 
 ## Done
 
