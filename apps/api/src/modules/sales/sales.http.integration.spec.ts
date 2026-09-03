@@ -488,6 +488,77 @@ describe('Sales HTTP boundary', () => {
     expect(decimalDelta(beforeStock!.reserved, stock!.reserved)).toBe('1.00000000');
   });
 
+  it('documents the Sales routes with tenant-bearer and internal-bearer authentication', async () => {
+    const response = await app.inject({ method: 'GET', url: '/docs-json' });
+    expect(response.statusCode).toBe(200);
+    const document = response.json() as {
+      paths: Record<
+        string,
+        Record<
+          string,
+          {
+            tags?: string[];
+            security?: Array<Record<string, unknown>>;
+            parameters?: Array<{ name?: string; required?: boolean }>;
+            requestBody?: unknown;
+            responses?: Record<string, unknown>;
+          }
+        >
+      >;
+      components?: { securitySchemes?: Record<string, unknown> };
+    };
+    const salesPaths = Object.keys(document.paths)
+      .filter((path) => path.includes('/sales'))
+      .sort();
+    expect(salesPaths).toEqual(
+      [
+        '/api/v1/internal/sales/{saleId}/complete',
+        '/api/v1/pos/sales',
+        '/api/v1/pos/sales/{saleId}',
+        '/api/v1/pos/sales/{saleId}/cancel',
+      ].sort(),
+    );
+    expect(document.components?.securitySchemes).toHaveProperty('tenant-bearer');
+    expect(document.components?.securitySchemes).toHaveProperty('internal-bearer');
+
+    for (const path of [
+      '/api/v1/pos/sales',
+      '/api/v1/pos/sales/{saleId}',
+      '/api/v1/pos/sales/{saleId}/cancel',
+    ]) {
+      for (const [method, operation] of Object.entries(document.paths[path])) {
+        if (!['get', 'post', 'patch', 'delete'].includes(method)) continue;
+        expect(operation.tags).toEqual(['POS Sales']);
+        expect(operation.security).toEqual([{ 'tenant-bearer': [] }]);
+      }
+    }
+
+    const internal = document.paths['/api/v1/internal/sales/{saleId}/complete'].post;
+    expect(internal.tags).toEqual(['Internal Sales']);
+    expect(internal.security).toEqual([{ 'internal-bearer': [] }]);
+    expect(internal.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'saleId', required: true }),
+        expect.objectContaining({ name: 'Idempotency-Key', required: true }),
+      ]),
+    );
+    expect(Object.keys(internal.responses ?? {}).sort()).toEqual(
+      ['201', '401', '404', '409', '422'].sort(),
+    );
+
+    const create = document.paths['/api/v1/pos/sales'].post;
+    expect(create.requestBody).toBeDefined();
+    expect(create.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Idempotency-Key', required: true }),
+        expect.objectContaining({ name: 'If-Match', required: true }),
+      ]),
+    );
+    expect(Object.keys(create.responses ?? {}).sort()).toEqual(
+      ['201', '401', '403', '404', '409', '422'].sort(),
+    );
+  });
+
   async function createDraftCart(input?: {
     customerId?: string | null;
     quantity?: string;

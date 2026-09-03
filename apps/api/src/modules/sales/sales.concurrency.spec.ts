@@ -13,6 +13,7 @@ import {
   priceEntries,
   productVariants,
   products,
+  reservations,
   sales,
   stockPositions,
   subscriptions,
@@ -41,6 +42,7 @@ describe('Sales checkout concurrency', () => {
   let warehouseId: string;
   let unitId: string;
   let variantId: string;
+  let stockPositionId: string;
 
   beforeAll(async () => {
     testdb = await createTestDatabase();
@@ -49,6 +51,7 @@ describe('Sales checkout concurrency', () => {
     process.env.SUPABASE_JWT_ISSUER = 'https://auth.example.test';
     process.env.SUPABASE_PLATFORM_AUDIENCE = 'platform-api';
     process.env.SUPABASE_TENANT_AUDIENCE = 'tenant-api';
+    process.env.SALES_INTERNAL_BEARER_TOKEN = 'sales-internal-secret';
 
     const organizations = new OrganizationService(testdb.db, new OrganizationRepository());
     const identityProvisioning = new IdentityProvisioningService(
@@ -83,7 +86,7 @@ describe('Sales checkout concurrency', () => {
     const productId = newId();
     variantId = newId();
     warehouseId = newId();
-    const stockPositionId = newId();
+    stockPositionId = newId();
     await testdb.db.insert(unitDefinitions).values({
       id: unitId,
       organizationId,
@@ -205,6 +208,180 @@ describe('Sales checkout concurrency', () => {
       .where(and(eq(sales.organizationId, organizationId), eq(sales.cartId, cartId)));
     expect(stored).toHaveLength(1);
   });
+
+  it('consumes FIFO stock exactly once when complete is replayed concurrently', async () => {
+    const { saleId, reservationId } = await createPendingSale('2.00000000');
+    const readStock = async () => {
+      const [row] = await testdb.db
+        .select({ onHand: stockPositions.onHand, reserved: stockPositions.reserved })
+        .from(stockPositions)
+        .where(eq(stockPositions.id, stockPositionId));
+      return row!;
+    };
+    const before = await readStock();
+
+    const complete = (key: string) =>
+      app.inject({
+        method: 'POST',
+        url: `/api/v1/internal/sales/${saleId}/complete`,
+        headers: {
+          authorization: `Bearer ${internalJwt('sales-internal-secret', organizationId)}`,
+          'idempotency-key': key,
+        },
+        payload: { completionReferenceType: 'PAYMENT', completionReferenceId: 'pay-conc-1' },
+      });
+
+    const [a, b] = await Promise.allSettled([complete(newId()), complete(newId())]);
+    const responses = [a, b].map((result) =>
+      result.status === 'fulfilled' ? result.value : result.reason,
+    );
+    for (const response of responses) {
+      expect(response.statusCode).toBe(201);
+      expect(response.json().data).toMatchObject({ id: saleId, status: 'COMPLETED' });
+    }
+
+    const [reservation] = await testdb.db
+      .select({ status: reservations.status })
+      .from(reservations)
+      .where(eq(reservations.id, reservationId));
+    expect(reservation?.status).toBe('CONSUMED');
+
+    const after = await readStock();
+    expect(after.onHand).toBe(subDecimal(before.onHand, '2.00000000'));
+    expect(after.reserved).toBe(subDecimal(before.reserved, '2.00000000'));
+  });
+
+  it('releases a reservation exactly once when cancel is replayed concurrently', async () => {
+    const { saleId, reservationId } = await createPendingSale('1.00000000');
+    const readStock = async () => {
+      const [row] = await testdb.db
+        .select({ onHand: stockPositions.onHand, reserved: stockPositions.reserved })
+        .from(stockPositions)
+        .where(eq(stockPositions.id, stockPositionId));
+      return row!;
+    };
+    const before = await readStock();
+
+    const cancel = (key: string) =>
+      app.inject({
+        method: 'POST',
+        url: `/api/v1/pos/sales/${saleId}/cancel`,
+        headers: { authorization: `Bearer ${bearer}`, 'idempotency-key': key },
+        payload: { reason: 'double-cancel race' },
+      });
+
+    const [a, b] = await Promise.allSettled([cancel(newId()), cancel(newId())]);
+    const responses = [a, b].map((result) =>
+      result.status === 'fulfilled' ? result.value : result.reason,
+    );
+    for (const response of responses) {
+      expect(response.statusCode).toBe(201);
+      expect(response.json().data).toMatchObject({ id: saleId, status: 'CANCELLED' });
+    }
+
+    const [reservation] = await testdb.db
+      .select({ status: reservations.status })
+      .from(reservations)
+      .where(eq(reservations.id, reservationId));
+    expect(reservation?.status).toBe('RELEASED');
+
+    const after = await readStock();
+    expect(after.onHand).toBe(before.onHand);
+    expect(after.reserved).toBe(subDecimal(before.reserved, '1.00000000'));
+  });
+
+  it('cancel vs complete race yields exactly one terminal state and no double stock effect', async () => {
+    const { saleId, reservationId } = await createPendingSale('1.00000000');
+    const readStock = async () => {
+      const [row] = await testdb.db
+        .select({ onHand: stockPositions.onHand, reserved: stockPositions.reserved })
+        .from(stockPositions)
+        .where(eq(stockPositions.id, stockPositionId));
+      return row!;
+    };
+    const before = await readStock();
+
+    const cancel = () =>
+      app.inject({
+        method: 'POST',
+        url: `/api/v1/pos/sales/${saleId}/cancel`,
+        headers: { authorization: `Bearer ${bearer}`, 'idempotency-key': newId() },
+        payload: { reason: 'cancel-vs-complete race' },
+      });
+    const complete = () =>
+      app.inject({
+        method: 'POST',
+        url: `/api/v1/internal/sales/${saleId}/complete`,
+        headers: {
+          authorization: `Bearer ${internalJwt('sales-internal-secret', organizationId)}`,
+          'idempotency-key': newId(),
+        },
+        payload: { completionReferenceType: 'PAYMENT', completionReferenceId: 'pay-conc-2' },
+      });
+
+    const [a, b] = await Promise.allSettled([cancel(), complete()]);
+    const responses = [a, b].map((result) =>
+      result.status === 'fulfilled' ? result.value : result.reason,
+    );
+    const statusCodes = responses.map((response) => response.statusCode).sort();
+    // One operation wins; the loser sees the mutually-exclusive terminal state (SALE_INVALID_STATE).
+    expect(statusCodes).toEqual([201, 409]);
+
+    const winner = responses.find((response) => response.statusCode === 201).json().data;
+    expect(['CANCELLED', 'COMPLETED']).toContain(winner.status);
+
+    const [reservation] = await testdb.db
+      .select({ status: reservations.status })
+      .from(reservations)
+      .where(eq(reservations.id, reservationId));
+    const after = await readStock();
+
+    if (winner.status === 'CANCELLED') {
+      expect(reservation?.status).toBe('RELEASED');
+      expect(after.onHand).toBe(before.onHand);
+      expect(after.reserved).toBe(subDecimal(before.reserved, '1.00000000'));
+    } else {
+      expect(reservation?.status).toBe('CONSUMED');
+      expect(after.onHand).toBe(subDecimal(before.onHand, '1.00000000'));
+      expect(after.reserved).toBe(subDecimal(before.reserved, '1.00000000'));
+    }
+  });
+
+  async function createPendingSale(quantity: string): Promise<{
+    saleId: string;
+    reservationId: string;
+  }> {
+    const cartId = newId();
+    await testdb.db.insert(carts).values({
+      id: cartId,
+      organizationId,
+      branchId,
+      channel: 'POS',
+      status: 'DRAFT',
+      customerId: null,
+    });
+    await testdb.db.insert(cartItems).values({
+      id: newId(),
+      organizationId,
+      cartId,
+      variantId,
+      unitId,
+      quantity,
+    });
+    const checkout = await app.inject({
+      method: 'POST',
+      url: '/api/v1/pos/sales',
+      headers: {
+        authorization: `Bearer ${bearer}`,
+        'idempotency-key': newId(),
+        'if-match': '1',
+      },
+      payload: { cartId, warehouseId, priceType: 'CASH' },
+    });
+    expect(checkout.statusCode).toBe(201);
+    const data = checkout.json().data;
+    return { saleId: data.id as string, reservationId: data.inventoryReservationId as string };
+  }
 });
 
 async function activateTenant(
@@ -251,4 +428,34 @@ function jwt(subject: string, audience: string | string[] = 'tenant-api'): strin
   ).toString('base64url');
   const input = `${header}.${payload}`;
   return `${input}.${createHmac('sha256', process.env.SUPABASE_JWT_SECRET!).update(input).digest('base64url')}`;
+}
+
+function internalJwt(
+  secret: string,
+  organizationId: string,
+  subject = 'SYSTEM:sales-internal-completion',
+): string {
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(
+    JSON.stringify({
+      sub: subject,
+      org: organizationId,
+      exp: Math.floor(Date.now() / 1000) + 60,
+    }),
+  ).toString('base64url');
+  const input = `${header}.${payload}`;
+  return `${input}.${createHmac('sha256', secret).update(input).digest('base64url')}`;
+}
+
+function subDecimal(minuend: string, subtrahend: string): string {
+  const scale = 100000000n;
+  const m = toScaled(minuend);
+  const s = toScaled(subtrahend);
+  const diff = m - s;
+  return `${diff / scale}.${(diff % scale).toString().padStart(8, '0')}`;
+}
+
+function toScaled(value: string): bigint {
+  const [whole, fraction = ''] = value.split('.');
+  return BigInt(whole || '0') * 100000000n + BigInt(fraction.padEnd(8, '0').slice(0, 8));
 }

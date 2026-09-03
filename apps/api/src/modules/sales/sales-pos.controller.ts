@@ -29,6 +29,61 @@ const createSale = z
   })
   .strict();
 const cancelSale = z.object({ reason: z.string().trim().min(1).max(500) }).strict();
+
+const errorEnvelope = {
+  type: 'object',
+  required: ['error'],
+  properties: {
+    error: {
+      type: 'object',
+      required: ['code', 'message', 'correlationId'],
+      properties: {
+        code: { type: 'string' },
+        message: { type: 'string' },
+        details: { type: 'object', additionalProperties: true },
+        correlationId: { type: 'string' },
+      },
+    },
+  },
+};
+
+const saleSuccess = {
+  type: 'object',
+  required: ['data'],
+  properties: {
+    data: {
+      type: 'object',
+      required: ['id', 'saleNumber', 'status', 'branchId', 'total', 'currency', 'items'],
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        organizationId: { type: 'string', format: 'uuid' },
+        branchId: { type: 'string', format: 'uuid' },
+        warehouseId: { type: 'string', format: 'uuid', nullable: true },
+        cartId: { type: 'string', format: 'uuid' },
+        cartVersion: { type: 'number' },
+        saleNumber: { type: 'string' },
+        status: { type: 'string', enum: ['PENDING_PAYMENT', 'COMPLETED', 'CANCELLED'] },
+        customerId: { type: 'string', format: 'uuid', nullable: true },
+        operatorId: { type: 'string', format: 'uuid' },
+        priceType: { type: 'string', enum: ['CASH', 'WHOLESALE', 'CREDIT', 'ONLINE'] },
+        currency: { type: 'string' },
+        subtotal: { type: 'string' },
+        discountTotal: { type: 'string' },
+        taxTotal: { type: 'string' },
+        total: { type: 'string' },
+        inventoryReservationId: { type: 'string', format: 'uuid' },
+        completedAt: { type: 'string', nullable: true },
+        cancelledAt: { type: 'string', nullable: true },
+        cancellationReason: { type: 'string', nullable: true },
+        createdAt: { type: 'string' },
+        updatedAt: { type: 'string' },
+        version: { type: 'number' },
+        items: { type: 'array', items: { type: 'object' } },
+      },
+    },
+  },
+};
+
 @ApiTags('POS Sales')
 @ApiBearerAuth('tenant-bearer')
 @Controller('/api/v1/pos/sales')
@@ -55,7 +110,24 @@ export class SalesPosController {
       },
     },
   })
-  @ApiResponse({ status: 201, description: 'Sale created' })
+  @ApiResponse({ status: 201, description: 'Sale created', schema: saleSuccess })
+  @ApiResponse({ status: 401, description: 'Authentication required', schema: errorEnvelope })
+  @ApiResponse({
+    status: 403,
+    description: 'Permission sales.create denied',
+    schema: errorEnvelope,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cart, variant or product not found',
+    schema: errorEnvelope,
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Cart already checked out or version conflict',
+    schema: errorEnvelope,
+  })
+  @ApiResponse({ status: 422, description: 'Invalid body or headers', schema: errorEnvelope })
   async create(@Req() request: AuthenticatedRequest, @Body() body: unknown) {
     const principal = this.principal(request);
     const input = createSale.parse(body);
@@ -87,6 +159,10 @@ export class SalesPosController {
   @UseGuards(PosOperatorGuard)
   @ApiOperation({ summary: 'Get Sale snapshot' })
   @ApiParam({ name: 'saleId', type: 'string', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Sale snapshot', schema: saleSuccess })
+  @ApiResponse({ status: 401, description: 'Authentication required', schema: errorEnvelope })
+  @ApiResponse({ status: 403, description: 'Permission sales.read denied', schema: errorEnvelope })
+  @ApiResponse({ status: 404, description: 'Sale not found', schema: errorEnvelope })
   async get(@Req() request: AuthenticatedRequest, @Param('saleId') saleId: string) {
     const principal = this.principal(request);
     const sale = await this.sales.getSale(principal.organizationId, saleId);
@@ -105,6 +181,20 @@ export class SalesPosController {
   @UseGuards(PosOperatorGuard)
   @ApiOperation({ summary: 'Cancel pending Sale' })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
+  @ApiResponse({ status: 201, description: 'Sale cancelled', schema: saleSuccess })
+  @ApiResponse({ status: 401, description: 'Authentication required', schema: errorEnvelope })
+  @ApiResponse({
+    status: 403,
+    description: 'Permission sales.cancel denied',
+    schema: errorEnvelope,
+  })
+  @ApiResponse({ status: 404, description: 'Sale not found', schema: errorEnvelope })
+  @ApiResponse({
+    status: 409,
+    description: 'Completed Sale cannot be cancelled',
+    schema: errorEnvelope,
+  })
+  @ApiResponse({ status: 422, description: 'Invalid body or headers', schema: errorEnvelope })
   async cancel(
     @Req() request: AuthenticatedRequest,
     @Param('saleId') saleId: string,
