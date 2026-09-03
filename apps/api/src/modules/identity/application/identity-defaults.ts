@@ -34,6 +34,7 @@ export const DEFAULT_ROLE_TEMPLATES: readonly RoleTemplate[] = [
     code: 'MANAGER',
     name: 'Manager',
     permissionCodes: [
+      'sales.read',
       'sales.create',
       'sales.cancel',
       'order.approve',
@@ -50,12 +51,12 @@ export const DEFAULT_ROLE_TEMPLATES: readonly RoleTemplate[] = [
   {
     code: 'SALES',
     name: 'Sales',
-    permissionCodes: ['sales.create', 'catalog.view', 'pricing.view'],
+    permissionCodes: ['sales.read', 'sales.create', 'catalog.view', 'pricing.view'],
   },
   {
     code: 'CASHIER',
     name: 'Cashier',
-    permissionCodes: ['sales.create', 'catalog.view', 'pricing.view'],
+    permissionCodes: ['sales.read', 'sales.create', 'catalog.view', 'pricing.view'],
   },
   {
     code: 'WAREHOUSE',

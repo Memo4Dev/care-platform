@@ -197,6 +197,48 @@
       "when": 1787804000000,
       "tag": "0027_add_purchasing_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1787890000000,
+      "tag": "0028_customers_baseline",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1787891000000,
+      "tag": "0029_cart_core",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1787977400000,
+      "tag": "0030_cart_hold_reservation",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1788051000000,
+      "tag": "0031_sales_checkout_pending_payment",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1788052000000,
+      "tag": "0032_add_sales_read_permission",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788053000000,
+      "tag": "0033_cart_hold_checked_out_status",
+      "breakpoints": true
     }
   ]
 }

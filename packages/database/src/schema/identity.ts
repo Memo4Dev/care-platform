@@ -48,6 +48,7 @@ export const identitySchema = pgSchema('identity');
  * renaming/removing is breaking.
  */
 export const PERMISSION_CODES = [
+  'sales.read',
   'sales.create',
   'sales.edit',
   'sales.cancel',
@@ -90,6 +91,7 @@ export type PermissionCode = (typeof PERMISSION_CODES)[number];
 
 /** Human-readable description for every catalog entry, keyed by code. */
 export const PERMISSION_DESCRIPTIONS: Record<PermissionCode, string> = {
+  'sales.read': 'Read sale snapshots and sale history within authorized scope.',
   'sales.create': 'Create POS and counter sales.',
   'sales.edit': 'Edit a sale before completion.',
   'sales.cancel': 'Cancel a sale.',

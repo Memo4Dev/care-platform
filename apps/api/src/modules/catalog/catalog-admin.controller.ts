@@ -219,6 +219,21 @@ export class CatalogAdminController {
     return result.product;
   }
 
+  @Post('products/:id/activate')
+  @ApiOperation({ summary: 'Activate a product (DRAFT -> ACTIVE) so its variants become sellable' })
+  @ApiResponse({ status: 200, description: 'Product activated' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
+  @ApiResponse({ status: 409, description: 'Not a DRAFT product' })
+  async activateProduct(@Req() request: AuthenticatedRequest, @Param('id') productId: string) {
+    const principal = this.principal(request);
+    await this.require(principal, request, 'catalog.edit');
+    const result = await this.catalogService.activateProduct({
+      organizationId: principal.organizationId,
+      productId,
+    });
+    return result.product;
+  }
+
   @Post('products/:id/variants')
   @ApiOperation({ summary: 'Add a sellable variant to a product' })
   @ApiResponse({ status: 201, description: 'Variant added' })
@@ -298,6 +313,36 @@ export class CatalogAdminController {
       sku: input.sku,
       barcode: input.barcode,
       categoryId: input.categoryId,
+    });
+    return result.product;
+  }
+
+  @Post('variants/:id/activate')
+  @ApiOperation({ summary: 'Activate a variant (DRAFT -> ACTIVE) so it becomes sellable' })
+  @ApiResponse({ status: 200, description: 'Variant activated' })
+  @ApiResponse({ status: 404, description: 'Variant not found' })
+  @ApiResponse({ status: 409, description: 'Not a DRAFT variant' })
+  async activateVariant(@Req() request: AuthenticatedRequest, @Param('id') variantId: string) {
+    const principal = this.principal(request);
+    await this.require(principal, request, 'catalog.edit');
+
+    // Resolve productId from the variant row (activation runs through the Product aggregate)
+    const [variantRow] = await this.db
+      .select({ productId: productVariants.productId })
+      .from(productVariants)
+      .where(eq(productVariants.id, variantId))
+      .limit(1);
+
+    if (!variantRow) {
+      throw PlatformError.notFound(`Variant ${variantId} was not found.`, {
+        details: { variantId },
+      });
+    }
+
+    const result = await this.catalogService.activateVariant({
+      organizationId: principal.organizationId,
+      productId: variantRow.productId,
+      variantId,
     });
     return result.product;
   }

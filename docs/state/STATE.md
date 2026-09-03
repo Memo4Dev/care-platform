@@ -1,10 +1,22 @@
 # Project State
 
-Phase: M4 COMPLETE — READY FOR REVIEW
-Milestone: M4 (Purchasing) — COMPLETE
-Active task: M4 staged and fully verified. Awaiting human merge approval.
-CI: ✅ PASS — `57bff5c` (`feat/m4-purchasing`)
-Branch: feat/m4-purchasing
+Phase: M5 COMPLETE — remote CI GREEN (M5 RELEASE GATE: PASS) — awaiting merge approval
+Milestone: M5 (Sales & POS Core)
+Active task: M5 final state reconciliation complete; all M5 tasks (M5-003…M5-010) DONE and committed on `feat/m5-sales-pos-core`. M5-009 gained concurrency coverage proving exactly-once Reserve/PENDING Sale→Consume/Release under real PostgreSQL races: concurrent double-complete (reservation CONSUMED + FIFO/stock consumed exactly once), concurrent double-cancel (reservation RELEASED exactly once), and cancel-vs-complete race (exactly one terminal state, loser 409 `SALE_INVALID_STATE`, reservation + stock reflect the single winner). M5-010 enriched the Sales POS + Internal controllers with full Swagger response schemas and added an OpenAPI contract test asserting the four Sales routes with `tenant-bearer` vs `internal-bearer` security and required `Idempotency-Key`/`If-Match`/`saleId`; added a "11 — Sales Checkout" folder (5 requests) to the M5 staging Postman collection plus `saleId`/`inventoryReservationId`/`salesInternalToken` env vars. The internal trusted completion route stays on the internal surface only — `InternalSalesCompletionGuard` verifies a signed `SALES_INTERNAL_BEARER_TOKEN`, installs a trusted `SYSTEM_SERVICE` principal, and derives authoritative organization scope from the token payload (never a caller-supplied header). Independent security review: CONDITIONAL PASS (no blockers); correctness/architecture review: PASS (all M5 exit criteria met). Final gates green: typecheck PASS, lint+prettier PASS, `pnpm test` **614 passed**, native-PG integration **466 passed / 2 Redis CI-required skipped** incl. Sales HTTP (7) + concurrency (4). Two pre-existing (non-M5) MEDIUM security observations — stale idempotency-claim TTL cleanup and Inventory `consumeFIFOLayers` parseFloat arithmetic — are recorded in TASKS.md/DECISIONS.md as post-M5 follow-ons, not M5 blockers. Pending: human push/merge approval.
+CI: M4 main CI run 38 for merge `05d9292` passed; M5 push to `feat/m5-sales-pos-core` triggered CI run `33753480107` on head `7c7324a` — **GREEN (success)** including the 2 Redis/BullMQ integration tests with authenticated Redis (not skipped). Historical staging credential rotation remains required before push — `METRICS_BEARER_TOKEN` must be rotated at next staging deploy.
+Branch: feat/m5-sales-pos-core
+
+## M5 release gates (2026-09-03)
+
+| Gate | Requirement                                                                                                                                                                                                                                                                                                                                     | Status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1a   | 2 Redis/BullMQ integration tests are executed by CI: `.github/workflows/ci.yml` provisions authenticated Redis (ACL user `ci` + `ci-redis-password`, `default` disabled) and runs `pnpm test:integration` with `REDIS_INTEGRATION=true` + `REDIS_USERNAME`/`REDIS_PASSWORD`; `bullmq.integration.spec.ts` (2 tests) therefore NOT skipped in CI | ✅ verified (config wired)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 1b   | Execute the 2 Redis/BullMQ tests to a green result                                                                                                                                                                                                                                                                                              | ✅ PASS — remote CI run `33753480107` (event: push) / job `quality` `100642225581` concluded **success**. `REDIS_INTEGRATION=true` forces `integration = describe` (not `describe.skip`) in `bullmq.integration.spec.ts`, so both tests executed against the authenticated Redis ACL (`ci` user, `default` disabled) and passed: `keeps one queue job for repeated EventId publication` and `relays through Redis, retries the worker handoff, and completes one Inbox delivery`. Only annotation is a non-blocking Node.js 20 runner-action deprecation warning. |
+| 2    | Staging credential-rotation review                                                                                                                                                                                                                                                                                                              | ✅ DONE — see DECISIONS.md. Only `METRICS_BEARER_TOKEN` is actually exposed (single static value in remote history); must be rotated at next staging deploy (ops action, owner: staging secret owner). Seeded JWTs already expired (2026-08-27) — no rotation needed.                                                                                                                                                                                                                                                                                             |
+| 3    | Record two security follow-ons as explicit tech-debt tasks + owner + milestone                                                                                                                                                                                                                                                                  | ✅ DONE — M5-SEC-001 (idempotency-claim TTL) and M5-SEC-002 (`consumeFIFOLayers` parseFloat) added to TASKS.md with owner (backend/identity, inventory) and milestone (M6, recommended early).                                                                                                                                                                                                                                                                                                                                                                    |
+| 4    | Release verification (clean tree, HEAD SHA, state/TASKS COMPLETE)                                                                                                                                                                                                                                                                               | ✅ DONE — pushed HEAD `7c7324ae9a5d8331fe0d982e43c8cc4b50346522`; remote CI green; state/TASKS COMPLETE; only `opencode.json` remains dirty (unstaged, pre-existing). No merge/deploy.                                                                                                                                                                                                                                                                                                                                                                            |
+
+**Overall M5 RELEASE GATE: PASS.** Remote GitHub Actions CI (run `33753480107`, push event, branch `feat/m5-sales-pos-core`, head `7c7324a`) is **green (success)** after the human-authorized push. The 2 Redis/BullMQ integration tests **executed** (not skipped) against the authenticated Redis ACL and **passed**. Awaiting explicit merge approval (no merge/deploy performed). Remaining non-blocking items: `METRICS_BEARER_TOKEN` rotation at next staging deploy, M5-SEC-001, M5-SEC-002.
 
 ## M4 milestone summary
 
@@ -25,17 +37,221 @@ All 10 M4 tasks complete (M4-001 through M4-010):
 
 ## Quality gates
 
-| Gate                          | Local               | CI      | VPS     |
-| ----------------------------- | ------------------- | ------- | ------- |
-| TypeScript                    | ✅ PASS             | ✅ PASS | ✅ PASS |
-| ESLint                        | ✅ PASS             | ✅ PASS | ✅ PASS |
-| Prettier                      | ✅ PASS             | ✅ PASS | ✅ PASS |
-| Unit tests (560)              | ✅ PASS             | ✅ PASS | ✅ PASS |
-| Integration tests (365)       | 363 PASS, 2 skipped | ✅ PASS | ✅ PASS |
-| Purchasing HTTP boundary (37) | ✅ PASS             | ✅ PASS | ✅ PASS |
-| Build                         | —                   | ✅ PASS | ✅ PASS |
-| Reviewer                      | ✅ PASS             | —       | —       |
-| Security review               | ✅ PASS             | —       | —       |
+| Gate                     | Local                  | CI                   | VPS |
+| ------------------------ | ---------------------- | -------------------- | --- |
+| TypeScript               | ✅ full PASS           | pending              | —   |
+| ESLint                   | ✅ full PASS           | pending              | —   |
+| Prettier                 | ✅ full PASS           | pending              | —   |
+| Unit tests               | ✅ 614 PASS            | pending              | —   |
+| Integration tests        | ✅ 466 PASS, 2 skipped | Redis required in CI | —   |
+| POS Cart PostgreSQL/HTTP | ✅ 27 + 31 PASS        | pending              | —   |
+| Sales HTTP + concurrency | ✅ 7 + 4 PASS          | pending              | —   |
+| Auth unit/security       | ✅ 15 PASS (auth dir)  | pending              | —   |
+| Build                    | ✅ full PASS           | pending              | —   |
+| Reviewer                 | ✅ PASS                | pending              | —   |
+| Security review          | ✅ CONDITIONAL PASS    | pending              | —   |
+
+## Auth boundary correction (ADR-0011) current verification
+
+- Approved correction: authentication audience separation is no longer the
+  Platform-vs-Tenant authorization boundary. `aud` identifies the token's
+  intended API audience only; Platform/Tenant separation is enforced
+  server-side after Supabase identity verification by principal resolvers +
+  RBAC (references ADR-0004/ADR-0005, ADR-0011 accepted).
+- Core change verified intact on disk: `main.ts` no longer calls
+  `assertSeparatedBearerAudiences()`; `auth-config.ts`/`auth-config.spec.ts`
+  are deleted; `SupabaseJwtService.matchesAudience()` accepts a token whose
+  `aud` includes the expected audience (single string or array membership).
+  Zero references to `auth-config` or `assertSeparatedBearerAudiences` remain
+  outside the ADR (repo-wide grep).
+- New `auth-boundary.security.spec.ts` (6 tests, real SupabaseJwtService +
+  real guards + real DatabasePlatformPrincipalResolver with an in-memory
+  subject-aware fake DATABASE): valid-JWT verification to subject; valid JWT
+  without `platform.principals` row denied (PERMISSION_DENIED); ACTIVE row
+  allowed as PLATFORM_USER and non-ACTIVE row denied; organization user
+  without platform row denied on platform endpoints and platform user without
+  `identity.users` membership denied on tenant endpoints; caller-injected
+  role/capability/permission/organizationId claims ignored (verified subject +
+  DB only); tenant user with ACTIVE status and COMPLETED/ACTIVE tenant
+  resolves as ORGANIZATION_USER with server-derived organizationId.
+- `supabase-jwt.service.spec.ts` adds the missing negative coverage: unsigned
+  (2-part), malformed, empty, extra-segment, tampered-payload and
+  corrupted-signature tokens are all rejected with INVALID_CREDENTIALS.
+- Pre-existing coverage confirmed (not duplicated): tenant isolation item 6
+  (purchasing/catalog/pricing/api integration specs), wrong issuer/audience/
+  expired negatives (supabase-jwt spec), tenant lifecycle denials
+  (TENANT_SUSPENDED/TENANT_PROVISIONING_INCOMPLETE in api/cart HTTP specs).
+- Gates for this change: `apps/api/src/common/auth` unit run 15/15 green;
+  full `pnpm typecheck` green; `pnpm lint` green (ESLint + Prettier);
+  targeted tsc over auth dir + new spec green. Change is uncommitted on
+  `feat/m5-sales-pos-core` (opencode.json was already dirty and untouched);
+  no push/merge/deploy.
+
+## M5-005 current verification
+
+- ADR-0010 accepted: one explicit same-branch warehouse per Cart hold, one
+  atomic logical Inventory reservation, no warehouse auto-split, empty-hold
+  rejection, held Cart non-editable until resume, and `CART` policy default TTL
+  15 minutes with 1–1440-minute bounds.
+- Additive persistence migration `0030_cart_hold_reservation.sql` adds Cart hold
+  workflow state, expands Inventory reservation precision/grouping support, and
+  extends Organization policy type for `CART`.
+- Cart exposes `POST /api/v1/pos/carts/{cartId}/hold` and bodyless
+  `POST /api/v1/pos/carts/{cartId}/resume` through the transitional
+  `PosOperatorGuard`, `sales.create`, Organization/branch access, `If-Match`, and
+  `Idempotency-Key`.
+- Cart calls Inventory only through `INVENTORY_CONTRACTS`; Inventory owns
+  all-or-nothing reservation creation, exact eight-decimal quantities,
+  deterministic locking, idempotent release/lazy expiration, and due-reservation
+  worker wiring.
+- Targeted local verification so far: API typecheck passed; focused unit tests 22
+  passed; Cart PostgreSQL/HTTP tests 49 passed; Inventory Cart reservation,
+  migration, concurrency, persistence, and HTTP regressions 127 passed. Full
+  format/lint/unit/integration/build gates and independent reviews passed for
+  M5-005 acceptance.
+- M5-005 final local verification: full format, lint, typecheck, build, and diff
+  checks pass; 603 unit tests and 446 native PostgreSQL integration tests pass
+  (2 Redis/BullMQ tests remain CI-required). Independent correctness review PASS
+  and security review PASS. Crash/retry recoverability for the Cart hold
+  workflow is covered: a retried in-progress PENDING hold converges to ACTIVE
+  (never lands as a poisoned PENDING Cart), and a stale PENDING hold with no
+  Inventory reservation is terminalized by resume to unblock edits. The CART
+  hold TTL policy is validated with 1–1440 integer bounds in the Organization
+  domain. M5-005 is committed as `feat(m5): cart hold/resume reservation` on
+  `feat/m5-sales-pos-core`; not pushed or deployed.
+
+## M5-006 current verification
+
+- Cart imports `PricingModule` and depends on `PRICING_CONTRACTS` +
+  `InventoryContracts`; cross-context reads only, no Pricing/Inventory table
+  access from Cart.
+- New POS surface: `POST /api/v1/pos/carts/{cartId}/quote` (optional `priceType`,
+  default `CASH`), `POST /api/v1/pos/carts/{cartId}/check-availability`
+  (`{ warehouseId }`), and `GET /api/v1/pos/products/barcode/{barcode}?branchId=`
+  via new `PosProductController`. All enforce `PosOperatorGuard`, `sales.create`,
+  Organization, and branch access.
+- `CartService.quote()` resolves live prices per line and computes 8-decimal
+  `lineTotal`/`total` via integer math; `checkAvailability()` validates the
+  warehouse belongs to the Cart's branch, converts each line's requested
+  quantity to the variant's base unit, and returns exact 8-decimal
+  available/shortage (including `unitId`) with no reservation.
+- Barcode scan `GET /api/v1/pos/products/barcode/{barcode}` resolves a variant
+  through Catalog and sets `sellable` only when both variant and product are
+  ACTIVE (non-ACTIVE variants return `sellable: false`).
+- Fixed a Pricing `getPriceQuote` effective-date pre-filter bug: the SQL
+  `effectiveFrom`/`effectiveTo` range is now `effectiveFrom <= date < effectiveTo`
+  (previously an inverted `effectiveFrom >= date` condition made normally-dated
+  entries unresolvable), matching the `resolvePriceQuote` domain contract.
+- Decimal helpers are integer-based at 8-decimal scale; the sign-parsing path
+  was hardened so negative inputs clamp to zero instead of corrupting to a
+  positive value (money-integrity safety for validated non-negative inputs).
+- New tests: 3 Cart service integration tests (quote, availability + shortage,
+  foreign-warehouse rejection) and 5 HTTP tests (quote, availability, foreign
+  warehouse/branch 403/404, barcode resolve + not-found, DRAFT barcode
+  `sellable:false`). Cart service now 27, Cart HTTP now 32.
+- Local gates: typecheck, lint, prettier, build PASS; 537 unit; cart+pricing
+  PostgreSQL/HTTP integration 108+ PASS. `git diff --check` clean. Independent
+  correctness (PASS with findings) and security (PASS) reviews complete;
+  correctness findings resolved. Pending commit.
+
+## Staging deployment & online verification — 2026-08-30
+
+- Objective: deploy + verify the M5-006 scope (plus ADR-0011 auth correction) to the
+  staging VPS from the committed local tree (git bundle + `git reset --hard <sha>` on
+  VPS, rebuilding images and recreating only the stateless api/worker/relay containers;
+  no push, no production, no M5-007).
+- Deployed SHAs on `feat/m5-sales-pos-core`:
+  - `99f423f` fix(pricing): default null `effectiveFrom` to today on price entry insert
+    (real bug — `null.toISOString()` TypeError was masked as a 403) + staging compose
+    api network fix (api joined `care-platform_default` so it can resolve postgres/redis/
+    worker/relay; fatal `EAI_AGAIN` → DB timeouts previously masked as 403).
+  - `68aa8b5` feat(catalog): add REST endpoints to activate product and variant
+    (`POST /api/v1/admin/catalog/products/:id/activate`,
+    `POST /api/v1/admin/catalog/variants/:id/activate`, both behind `catalog.edit`,
+    returning the updated snapshot). Real gap — without an activation endpoint every
+    created product/variant stayed DRAFT and POS `add item` returned
+    `VARIANT_NOT_SELLABLE`, blocking the whole cart-sale flow.
+- Online verification via `run_m5_matrix.py` against `https://api.care-systems.site`
+  using real Supabase sign-in JWTs (fresh refresh-token grant each run; identity access
+  tokens expire in ~1h): **25/25 PASS**.
+  - Seed: unit, product, variant, product/variant activation (→ ACTIVE), price book,
+    barcode row, price entry, stock receipt, customer.
+  - POS: barcode lookup 200; unauthenticated 401; restricted (no `sales.create`) 403
+    `PERMISSION_DENIED`; cross-tenant org-A branch denied 404 `RESOURCE_NOT_FOUND`;
+    create cart 201 (`version=1`); **add item 200**; **add-item idempotent replay 200**
+    (same key + `If-Match` → no duplicate line, no version bump); **cart save 200**
+    (bodyless `LOCAL_ATOMIC`, no version bump); **cart hold 200** (warehouse reservation);
+    **cart resume 200** (hold released / editable restored); quote 200; check-availability
+    200; invalid cart id 404.
+- Verification-harness findings (test script only, not production code):
+  1. Body-less `POST` (e.g. activate) fails with 422 `VALIDATION_FAILED` if the client
+     sends `Content-Type: application/json` with an empty body — Fastify rejects an
+     empty JSON body (`FST_ERR_CTP_EMPTY_JSON_BODY`) and the platform error filter maps
+     the resulting HttpException to `VALIDATION_FAILED`. The matrix harness was fixed to
+     send the JSON content-type only when a body is present. Confirmed at runtime: same
+     activate call → 422 with CT, 201 without.
+  2. Activate endpoints return `201` (the newly persisted snapshot resource); the harness
+     asserted `== 200`, fixed to accept `200|201`.
+- The activation endpoints themselves are correct; no production code needed fixing for
+  these two items. `add item` now returns 200 with the item attached and the cart advanced,
+  and save/hold/resume + idempotency-replay are verified online.
+- Not yet covered online: none of the M5 cart contract surface remains unexercised online
+  here; a manual Postman checklist is the next step. M5-007 not started.
+
+## M5-003 current verification
+
+- Customers persistence and HTTP boundary use real PostgreSQL with the full
+  NestJS/Fastify `app.inject` pipeline.
+- Focused domain/application unit tests: 7 passed.
+- Focused PostgreSQL persistence and HTTP tests: 13 passed (3 persistence,
+  10 HTTP), including concurrent duplicate-code handling, tenant IDOR masking,
+  malformed-ID validation, and idempotency replay/conflict behavior.
+- Full native PostgreSQL regression passed: 376 passed, 2 Redis-only tests
+  skipped. Redis/BullMQ execution remains a CI-required gate.
+- The current M5 implementation is not deployed to staging.
+
+## M5-004 current verification
+
+- Cart persistence now includes `cart.carts` and `cart.cart_items` through the
+  reviewed additive migration `0029_cart_core.sql`.
+- The framework-independent Cart aggregate supports only editable POS Draft
+  carts, decimal-string quantities, repeated-line merging, line updates/removal,
+  optimistic versions, tenant-scoped outbox envelopes, and durable idempotent
+  HTTP outcomes.
+- The only Cart HTTP contract is now `/api/v1/pos/carts`, with canonical
+  `/items` resources and `POST /:cartId/save`; obsolete tenant-admin and
+  `/lines` routes return 404 and are absent from Swagger/Postman.
+- `PosOperatorGuard` uses the verified tenant JWT only as an explicit M5 online
+  transition. It resolves a trusted active `ORGANIZATION_USER` server-side and
+  still enforces `sales.create`, Organization scope, and branch access. It does
+  not claim POS Device, Employee Card/Barcode + PIN, Cash Session, or offline
+  identity support.
+- Save is a version-bound `LOCAL_ATOMIC` durable acknowledgement. It locks the
+  tenant Cart root, stores replayable HTTP outcome state, and changes no Cart
+  field/item or `updatedAt`; it emits no event and calls no Pricing, Inventory,
+  or Sales contract.
+- Final local verification passes: 597 unit tests and 420 native PostgreSQL
+  integration tests, with 2 Redis/BullMQ tests skipped locally and still
+  required in CI. Cart contributes 19 persistence and 25 full `app.inject`
+  HTTP tests (44 total). Full lint, format, typecheck, build, Drizzle schema
+  validation, and `git diff --check` pass.
+- Reviewer remediation serializes normalized no-op item updates by locking the
+  tenant-scoped Cart root before version validation and durable replay outcome
+  persistence; a real-PostgreSQL lock-contention test proves the behavior.
+- Security remediation rejects missing/equal platform and tenant JWT audiences
+  at API startup, rejects signed audience arrays spanning both trust domains,
+  limits unexpected-error logging and persistence error details, and adds tenant
+  lifecycle, suspended operator, foreign nested-reference, and
+  actor/organization idempotency-scope coverage. [SUPERSEDED by ADR-0011: the
+  startup rejection of equal platform/tenant audiences and the rejection of
+  `aud` arrays spanning both domains were removed; the JWT `aud` is the token's
+  API audience only, and Platform/Tenant separation is enforced server-side by
+  the principal resolvers + RBAC after Supabase identity verification.]
+- The test harness emitted an existing `pg@9` deprecation warning about a
+  concurrent `client.query()` call; it did not affect test results.
+- The earlier POS/admin route, `/save`, concurrency, and security findings are
+  implemented and locally verified. Independent correctness and security
+  re-reviews pass. M5-004 is not deployed or pushed.
 
 ## Staging deployment — 2026-08-27
 

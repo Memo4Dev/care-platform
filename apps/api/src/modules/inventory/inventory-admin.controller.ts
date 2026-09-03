@@ -19,6 +19,7 @@ import { TenantBearerGuard, type AuthenticatedRequest } from '../../common/auth/
 import type { OrganizationUserPrincipal } from '../../common/auth/authenticated-principal';
 import { correlationIdFor } from '../../common/http/correlation';
 import { IDENTITY_CONTRACTS, type IdentityContracts } from '../identity/contracts';
+import { normalizeInventoryQuantity } from './application/inventory-quantity';
 import { InventoryService } from './application/inventory.service';
 
 // ---------------------------------------------------------------------------
@@ -459,7 +460,7 @@ export class InventoryAdminController {
       requestHash: computeRequestHash(body),
       principal: { id: principal.organizationUserId },
     });
-    return result.received;
+    return toStockPositionJson(result.received);
   }
 
   @Post('stock/consume')
@@ -485,7 +486,7 @@ export class InventoryAdminController {
       requestHash: computeRequestHash(body),
       principal: { id: principal.organizationUserId },
     });
-    return result.consumed;
+    return toStockPositionJson(result.consumed);
   }
 
   // -------------------------------------------------------------------------
@@ -717,9 +718,9 @@ function toStockPositionJson(row: {
     organizationId: row.organizationId,
     warehouseId: row.warehouseId,
     variantId: row.variantId,
-    onHand: row.onHand,
-    reserved: row.reserved,
-    allocated: row.allocated,
+    onHand: normalizeInventoryQuantity(row.onHand, { allowZero: true }),
+    reserved: normalizeInventoryQuantity(row.reserved, { allowZero: true }),
+    allocated: normalizeInventoryQuantity(row.allocated, { allowZero: true }),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     version: row.version,
@@ -777,7 +778,7 @@ function toLedgerEntryJson(row: {
 function toReservationJson(row: {
   id: string;
   organizationId: string;
-  stockPositionId: string;
+  stockPositionId: string | null;
   status: string;
   expiresAt: Date | null;
   referenceType: string | null;

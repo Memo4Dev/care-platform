@@ -59,6 +59,15 @@ describeIfDb('Purchasing Integration', () => {
       inventoryReceipts.push(input);
       return { stockPositionId: `mock-sp-${crypto.randomUUID()}` };
     },
+    async createCartReservation() {
+      throw new Error('Cart reservations are outside Purchasing tests.');
+    },
+    async releaseCartReservation() {
+      throw new Error('Cart reservations are outside Purchasing tests.');
+    },
+    async checkCartReservation() {
+      throw new Error('Cart reservations are outside Purchasing tests.');
+    },
   };
 
   const actor = { id: '0198b000-0000-7000-8000-000000000001' };
@@ -656,6 +665,15 @@ describeIfDb('Purchasing Integration', () => {
             principal: { id: 'purchasing-system' },
           });
           return { stockPositionId: result.received.id };
+        },
+        async createCartReservation() {
+          throw new Error('Cart reservations are outside Purchasing tests.');
+        },
+        async releaseCartReservation() {
+          throw new Error('Cart reservations are outside Purchasing tests.');
+        },
+        async checkCartReservation() {
+          throw new Error('Cart reservations are outside Purchasing tests.');
         },
       };
     }

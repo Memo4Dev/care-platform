@@ -22,12 +22,12 @@ Cart
 ```text
 POS Cart
 → Pricing
-→ Allocation/Availability
-→ Sale
-→ Payment
-→ Inventory consumption
+→ Availability / Hold Reservation
+→ Sale (PENDING_PAYMENT snapshot)
+→ Payment completion contract
+→ Inventory consumption / FIFO
 → Cash movement if CASH
-→ Invoice
+→ Completed Sale / Invoice
 ```
 
 ## POS Offline Sale

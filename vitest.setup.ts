@@ -8,3 +8,5 @@
  * URL in the environment to override.
  */
 process.env.DATABASE_URL ??= 'postgresql://unit-test:unit-test@127.0.0.1:5/unit_test';
+process.env.SUPABASE_PLATFORM_AUDIENCE ??= 'platform-api';
+process.env.SUPABASE_TENANT_AUDIENCE ??= 'tenant-api';

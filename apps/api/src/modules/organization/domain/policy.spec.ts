@@ -93,6 +93,29 @@ describe('Organization policies', () => {
       expect(pending[1]).toMatchObject({ policyType: 'OFFLINE', version: 2 });
     });
 
+    it('accepts only bounded whole-minute CART hold TTL policy values', () => {
+      const org = organization();
+
+      org.setPolicy({ policyType: 'CART', value: { holdReservationTtlMinutes: 30 } });
+
+      expect(org.latestPolicy('CART')).toEqual({
+        value: { holdReservationTtlMinutes: 30 },
+        version: 1,
+      });
+      for (const value of [
+        {},
+        { holdReservationTtlMinutes: 0 },
+        { holdReservationTtlMinutes: 1441 },
+        { holdReservationTtlMinutes: 1.5 },
+        { holdReservationTtlMinutes: '15' },
+        { holdReservationTtlMinutes: 15, enabled: true },
+      ]) {
+        expect(() => org.setPolicy({ policyType: 'CART', value })).toThrowError(
+          expect.objectContaining({ code: ERROR_CODES.VALIDATION_FAILED }),
+        );
+      }
+    });
+
     it('given an unknown policy type when setting then VALIDATION_FAILED', () => {
       const org = organization();
       org.pullDomainEvents(); // discard the OrganizationCreated event

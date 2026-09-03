@@ -67,7 +67,9 @@ export class SupabaseJwtService {
     return claims.sub;
   }
   private matchesAudience(actual: JwtClaims['aud'], expected: string) {
-    return typeof actual === 'string' ? actual === expected : actual?.includes(expected) === true;
+    if (!expected) return false;
+    const audiences = typeof actual === 'string' ? [actual] : actual;
+    return Array.isArray(audiences) && audiences.includes(expected);
   }
   private async jwk(kid?: string): Promise<Jwk> {
     const url = process.env.SUPABASE_JWKS_URL;

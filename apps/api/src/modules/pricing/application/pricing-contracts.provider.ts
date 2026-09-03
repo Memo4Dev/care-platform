@@ -79,8 +79,8 @@ export class PricingContractProvider implements PricingContracts {
           eq(priceEntries.unitId, input.unitId),
           eq(priceEntries.priceType, input.priceType),
           eq(priceEntries.channel, input.channel),
-          or(isNull(priceEntries.effectiveTo), sql`${priceEntries.effectiveFrom} <= ${dateStr}`),
-          or(isNull(priceEntries.effectiveFrom), sql`${priceEntries.effectiveFrom} >= ${dateStr}`),
+          or(isNull(priceEntries.effectiveFrom), sql`${priceEntries.effectiveFrom} <= ${dateStr}`),
+          or(isNull(priceEntries.effectiveTo), sql`${priceEntries.effectiveTo} > ${dateStr}`),
         ),
       );
 

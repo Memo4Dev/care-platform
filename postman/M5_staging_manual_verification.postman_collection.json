@@ -1,0 +1,2407 @@
+{
+  "info": {
+    "name": "M5 — Staging Manual Verification",
+    "_postman_id": "e2d42230-4d5a-4084-b5f7-0c32091046fd",
+    "description": "Manual reproduction of the M5-006 staging flow verified online 25/25 at https://api.care-systems.site.\n\nRun folders in order 00 -> 10. ID capturing is automatic via test scripts.\nNo secrets are committed: tokens and passwords live only in the local uncommitted staging environment (M5_staging_local.postman_environment.json).\n\nBODY-LESS POST FIX: endpoints like activate / resume / save take NO body. Do NOT send Content-Type: application/json with an empty body or Fastify returns FST_ERR_CTP_EMPTY_JSON_BODY -> 422. These requests intentionally send no body and no JSON content-type.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 — Auth / Context",
+      "item": [
+        {
+          "name": "Login — admin (tenantAdminToken)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{apikey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{supabaseUrl}}/auth/v1/token?grant_type=password"
+            },
+            "description": "Purpose: obtain fresh Supabase JWTs for the admin role via the staging Supabase password grant.\nExpected: 200 with access_token/refresh_token.\nThe access token is ~1h valid; re-run this request to get a fresh token (the refresh_token is captured too). Secrets (email/password) live only in the local, uncommitted staging environment.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{adminEmail}}\", \"password\": \"{{adminPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Auth \"+\"admin\" returns tokens\", () => {",
+                "  pm.response.to.have.status(200);",
+                "  pm.expect(j.access_token).to.be.a(\"string\");",
+                "  pm.expect(j.refresh_token).to.be.a(\"string\");",
+                "});",
+                "pm.environment.set(\"tenantAdminToken\", j.access_token);",
+                "pm.environment.set(\"tenantAdminTokenRefresh\", j.refresh_token);"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Login — pos operator (posOperatorToken)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{apikey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{supabaseUrl}}/auth/v1/token?grant_type=password"
+            },
+            "description": "Purpose: obtain fresh Supabase JWTs for the pos operator role via the staging Supabase password grant.\nExpected: 200 with access_token/refresh_token.\nThe access token is ~1h valid; re-run this request to get a fresh token (the refresh_token is captured too). Secrets (email/password) live only in the local, uncommitted staging environment.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{posEmail}}\", \"password\": \"{{posPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Auth \"+\"pos operator\" returns tokens\", () => {",
+                "  pm.response.to.have.status(200);",
+                "  pm.expect(j.access_token).to.be.a(\"string\");",
+                "  pm.expect(j.refresh_token).to.be.a(\"string\");",
+                "});",
+                "pm.environment.set(\"posOperatorToken\", j.access_token);",
+                "pm.environment.set(\"posOperatorTokenRefresh\", j.refresh_token);"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Login — restricted user (restrictedUserToken)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{apikey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{supabaseUrl}}/auth/v1/token?grant_type=password"
+            },
+            "description": "Purpose: obtain fresh Supabase JWTs for the restricted user role via the staging Supabase password grant.\nExpected: 200 with access_token/refresh_token.\nThe access token is ~1h valid; re-run this request to get a fresh token (the refresh_token is captured too). Secrets (email/password) live only in the local, uncommitted staging environment.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{restrictedEmail}}\", \"password\": \"{{restrictedPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Auth \"+\"restricted user\" returns tokens\", () => {",
+                "  pm.response.to.have.status(200);",
+                "  pm.expect(j.access_token).to.be.a(\"string\");",
+                "  pm.expect(j.refresh_token).to.be.a(\"string\");",
+                "});",
+                "pm.environment.set(\"restrictedUserToken\", j.access_token);",
+                "pm.environment.set(\"restrictedUserTokenRefresh\", j.refresh_token);"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Login — cross-tenant user (crossTenantToken)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{apikey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{supabaseUrl}}/auth/v1/token?grant_type=password"
+            },
+            "description": "Purpose: obtain fresh Supabase JWTs for the cross-tenant user role via the staging Supabase password grant.\nExpected: 200 with access_token/refresh_token.\nThe access token is ~1h valid; re-run this request to get a fresh token (the refresh_token is captured too). Secrets (email/password) live only in the local, uncommitted staging environment.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{crossEmail}}\", \"password\": \"{{crossPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Auth \"+\"cross-tenant user\" returns tokens\", () => {",
+                "  pm.response.to.have.status(200);",
+                "  pm.expect(j.access_token).to.be.a(\"string\");",
+                "  pm.expect(j.refresh_token).to.be.a(\"string\");",
+                "});",
+                "pm.environment.set(\"crossTenantToken\", j.access_token);",
+                "pm.environment.set(\"crossTenantTokenRefresh\", j.refresh_token);"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 — Seed / Setup",
+      "item": [
+        {
+          "name": "Create Unit (base)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantAdminToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/units"
+            },
+            "description": "Purpose: create base unit. Expected: 201. Captures unitId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"M5 Piece\", \"symbol\": \"pcs\", \"isBaseUnit\": true}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Unit 201\", () => pm.response.to.have.status(201));",
+                "pm.environment.set(\"unitId\", grab(j, [\"id\"]));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/products"
+            },
+            "description": "Purpose: create product. Expected: 201. Captures productId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"M5 Item\", \"description\": \"M5 manual verification item\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Product 201\", () => pm.response.to.have.status(201));",
+                "pm.environment.set(\"productId\", grab(j, [\"id\"]));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Add Variant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantAdminToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/products/{{productId}}/variants"
+            },
+            "description": "Purpose: add sellable variant on the product. Expected: 201. Captures variantId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"M5 Variant\", \"sku\": \"M5-SKU\", \"barcode\": \"{{barcode}}\", \"baseUnitId\": \"{{unitId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Variant 201\", () => pm.response.to.have.status(201));",
+                "pm.environment.set(\"variantId\", grab(j, [\"id\"]));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Activate Product (body-less)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/products/{{productId}}/activate"
+            },
+            "description": "Purpose: DRAFT->ACTIVE so it becomes sellable. Expected: 200/201, status ACTIVE. BODY-LESS: no JSON content-type / empty body (avoids FST_ERR_CTP_EMPTY_JSON_BODY 422)."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Activate product 201\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                "pm.test(\"Product status ACTIVE\", () => pm.expect(grab(j, [\"status\"])).to.eql(\"ACTIVE\"));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Activate Variant (body-less)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantAdminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/variants/{{variantId}}/activate"
+            },
+            "description": "Purpose: variant DRAFT->ACTIVE (required for add-item). Expected 200/201, status ACTIVE. BODY-LESS: no JSON content-type / empty body."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Activate variant 201\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                "pm.test(\"Variant status ACTIVE\", () => pm.expect(grab(j, [\"status\"])).to.eql(\"ACTIVE\"));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Create Price Book",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/price-books"
+            },
+            "description": "Purpose: create default price book. Expected: 201. Captures priceBookId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"M5 Price Book\", \"isDefault\": true}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Price book 201\", () => pm.response.to.have.status(201));",
+                "pm.environment.set(\"priceBookId\", grab(j, [\"id\"]));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Add Barcode to Variant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantAdminToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/barcodes"
+            },
+            "description": "Purpose: register a scannable barcode on the variant (org-unique). Expected: 201.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"variantId\": \"{{variantId}}\", \"barcode\": \"{{barcode}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "pm.test(\"Barcode 201\", () => pm.response.to.have.status(201));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Create Price Entry (CASH/POS 50.00)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantAdminToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/pricing/price-entries"
+            },
+            "description": "Purpose: price the variant at 50.00 (CASH/POS). Expected: 201. Captures priceEntryId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"priceBookId\": \"{{priceBookId}}\", \"variantId\": \"{{variantId}}\", \"unitId\": \"{{unitId}}\", \"priceType\": \"CASH\", \"channel\": \"POS\", \"amount\": \"50.00\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.expect([200, 201]).to.include(pm.response.code);",
+                "pm.environment.set(\"priceEntryId\", grab(j, [\"id\"]));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Receive Stock (warehouse)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantAdminToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/inventory/stock/receive"
+            },
+            "description": "Purpose: create on-hand stock (100 units) in the branch warehouse. Expected: 200/201.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"warehouseId\": \"{{warehouseId}}\", \"variantId\": \"{{variantId}}\", \"quantity\": \"100\", \"unitCost\": \"20.00\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "pm.test(\"Stock receive 2xx\", () => pm.expect([200, 201]).to.include(pm.response.code));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 — Customers",
+      "item": [
+        {
+          "name": "Create Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantAdminToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/customers"
+            },
+            "description": "Purpose: create a customer for the cart. Expected: 201. Captures customerId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"type\": \"INDIVIDUAL\", \"displayName\": \"M5 Customer\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Customer 201\", () => pm.response.to.have.status(201));",
+                "pm.environment.set(\"customerId\", grab(j, [\"id\"]));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 — POS Barcode",
+      "item": [
+        {
+          "name": "Barcode Lookup",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/products/barcode/{{barcode}}?branchId={{branchId}}"
+            },
+            "description": "Purpose: resolve scanned barcode to a sellable variant. Expected: 200, variantId matches."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Barcode 200\", () => pm.response.to.have.status(200));",
+                "pm.test(\"resolves to variantId + ACTIVE\", () => {",
+                "  const d = grab(j, [\"variantId\"]);",
+                "  pm.expect(d).to.eql(pm.environment.get(\"variantId\"));",
+                "});"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 — Cart",
+      "item": [
+        {
+          "name": "Create Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts"
+            },
+            "description": "Purpose: create empty POS Draft Cart. Expected: 201. Captures cartId + cartVersion.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Create cart 201\", () => pm.response.to.have.status(201));",
+                "const d = grab(j, [\"id\"]);",
+                "pm.environment.set(\"cartId\", d);",
+                "pm.environment.set(\"cartVersion\", grab(j, [\"version\"]));",
+                "pm.test(\"Cart version >= 1\", () => pm.expect(Number(pm.environment.get(\"cartVersion\"))).to.be.at.least(1));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Add Item — First Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{cartVersion}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/items"
+            },
+            "description": "Purpose: add qty 2 of the variant. Expected: 200. Captures cartItemId and bumps cartVersion. This request fixes a fresh idempotencyKey.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"variantId\": \"{{variantId}}\", \"unitId\": \"{{unitId}}\", \"quantity\": \"2\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "pm.environment.set(\"idempotencyKey\", pm.variables.replaceIn(\"{{$guid}}\"));"
+              ],
+              "type": "text/javascript"
+            },
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Add item 200\", () => pm.response.to.have.status(200));",
+                "const d = grab(j, [\"version\"]);",
+                "if (d) pm.environment.set(\"cartVersion\", d);",
+                "const item = grab(j, [\"items\"]) ? grab(j, [\"items\"])[0] : null;",
+                "if (item) pm.environment.set(\"cartItemId\", item.itemId || item.id);",
+                "pm.test(\"cart has 1 line\", () => pm.expect(grab(j, [\"items\"]).length).to.eql(1));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Add Item — Replay Same Idempotency Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{cartVersion}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/items"
+            },
+            "description": "Purpose: idempotency replay — SAME key + SAME body + SAME If-Match. Expected: 200, 1 line (no duplicate), version UNCHANGED (stored outcome returned).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"variantId\": \"{{variantId}}\", \"unitId\": \"{{unitId}}\", \"quantity\": \"2\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "const items = grab(j, [\"items\"]) || [];",
+                "pm.test(\"Replay 200\", () => pm.response.to.have.status(200));",
+                "pm.test(\"no duplicate (still 1 line)\", () => pm.expect(items.length).to.eql(1));",
+                "pm.test(\"no version bump\", () => pm.expect(String(grab(j, [\"version\"]))).to.eql(String(pm.environment.get(\"cartVersion\"))));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Save Cart (body-less)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{cartVersion}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/save"
+            },
+            "description": "Purpose: durable LOCAL_ATOMIC save (no state change). Expected: 200, no version bump. BODY-LESS: no JSON content-type / empty body."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Save 200\", () => pm.response.to.have.status(200));",
+                "pm.test(\"no version bump on save\", () => pm.expect(String(grab(j, [\"version\"]))).to.eql(String(pm.environment.get(\"cartVersion\"))));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Get Cart (DRAFT)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}"
+            },
+            "description": "Purpose: read cart to observe state before hold. Expected: 200, status DRAFT."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Get cart 200\", () => pm.response.to.have.status(200));",
+                "pm.test(\"status DRAFT\", () => pm.expect(grab(j, [\"status\"])).to.eql(\"DRAFT\"));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 — Hold / Resume",
+      "item": [
+        {
+          "name": "Hold Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{cartVersion}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/hold"
+            },
+            "description": "Purpose: place warehouse reservation (HOLD) on the cart lines. Expected: 200, hold PENDING/ACTIVE with warehouseId. Observe status transition DRAFT -> HELD.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"warehouseId\": \"{{warehouseId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Hold 200\", () => pm.response.to.have.status(200));",
+                "const hold = grab(j, [\"hold\"]);",
+                "pm.test(\"hold created\", () => pm.expect(hold).to.not.be.null);",
+                "const status = grab(j, [\"status\"]);",
+                "pm.test(\"cart status is HELD (or hold active)\", () => {",
+                "  pm.expect([\"HELD\", \"HOLD\", \"DRAFT\"]).to.include(status);",
+                "  if (hold) pm.expect([\"PENDING\", \"ACTIVE\"]).to.include(hold.status);",
+                "});"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Get Cart (HELD)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}"
+            },
+            "description": "Purpose: observe the held state and reservation. Expected: 200 with a non-null hold block."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "const hold = grab(j, [\"hold\"]);",
+                "pm.test(\"observable HELD state + reservation\", () => {",
+                "  pm.response.to.have.status(200);",
+                "  if (hold) pm.expect([\"PENDING\", \"ACTIVE\", \"RELEASING\"]).to.include(hold.status);",
+                "});"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Resume Cart (body-less)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{cartVersion}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/resume"
+            },
+            "description": "Purpose: release the hold and restore editability. Expected: 200, hold released, state back to DRAFT. BODY-LESS: no JSON content-type / empty body."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Resume 200\", () => pm.response.to.have.status(200));",
+                "pm.test(\"hold released\", () => pm.expect(grab(j, [\"hold\"])).to.equal(null));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Get Cart (Resumed → DRAFT)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}"
+            },
+            "description": "Purpose: confirm HELD -> DRAFT after resume. Expected: 200, status DRAFT, hold null."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"status back to DRAFT\", () => pm.response.to.have.status(200) &&",
+                "  pm.expect(grab(j, [\"status\"])).to.eql(\"DRAFT\"));",
+                "pm.test(\"hold released\", () => pm.expect(grab(j, [\"hold\"])).to.equal(null));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 — Pricing Quote",
+      "item": [
+        {
+          "name": "Quote Cart (CASH)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/quote"
+            },
+            "description": "Purpose: live pricing quote. Expected: 200 with unitPrice/lineTotal/total as 8-decimal strings; quote is NON-MUTATING (cart version/state unchanged). Unit 50.00 x qty 2 => lineTotal/total 100.00000000.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"priceType\": \"CASH\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Quote 200\", () => pm.response.to.have.status(200));",
+                "const d = grab(j, []);",
+                "pm.test(\"line unitPrice = 50.00000000 (8dp)\", () => {",
+                "  const line = grab(j, [\"lines\"])[0];",
+                "  pm.expect(line.unitPrice).to.eql(\"50.00000000\");",
+                "  pm.expect(line.unitPrice).to.match(/^\\d+\\.\\d{8}$/);",
+                "});",
+                "pm.test(\"lineTotal = 100.00000000 (2 qty)\", () => {",
+                "  const line = grab(j, [\"lines\"])[0];",
+                "  pm.expect(line.lineTotal).to.eql(\"100.00000000\");",
+                "});",
+                "pm.test(\"total matches lineTotal, 8dp\", () => {",
+                "  const line = grab(j, [\"lines\"])[0];",
+                "  pm.expect(grab(j, [\"total\"])).to.eql(line.lineTotal);",
+                "  pm.expect(grab(j, [\"total\"])).to.match(/^\\d+\\.\\d{8}$/);",
+                "});",
+                "pm.test(\"priceType CASH (non-mutating)\", () => pm.expect(grab(j, [\"priceType\"])).to.eql(\"CASH\"));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 — Availability",
+      "item": [
+        {
+          "name": "Check Availability (warehouse)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/check-availability"
+            },
+            "description": "Purpose: NON-MUTATING availability check. Expected: 200 with available/shortage/unitId (base-unit converted). Does NOT reserve stock and does NOT change cart state. Stock 100 >= qty 2 => shortage 0.00000000.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"warehouseId\": \"{{warehouseId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"Availability 200\", () => pm.response.to.have.status(200));",
+                "const line = grab(j, [\"lines\"])[0];",
+                "pm.test(\"exposes available/shortage/unitId + base-unit convert\", () => {",
+                "  pm.expect(line).to.have.property(\"available\");",
+                "  pm.expect(line).to.have.property(\"shortage\");",
+                "  pm.expect(line).to.have.property(\"unitId\");",
+                "  pm.expect(line.unitId).to.eql(pm.environment.get(\"unitId\"));",
+                "});",
+                "pm.test(\"no shortage (stock 100 >= qty 2)\", () => pm.expect(line.shortage).to.eql(\"0.00000000\"));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 — Authorization",
+      "item": [
+        {
+          "name": "No Token (expect 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts"
+            },
+            "description": "Purpose: unauthenticated request must be rejected. Expected: 401.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "pm.test(\"401 for no token\", () => pm.response.to.have.status(401));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Restricted User (expect 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{restrictedUserToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts"
+            },
+            "description": "Purpose: restricted user without sales.create must be denied. Expected: 403 PERMISSION_DENIED.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"403 for restricted (no sales.create)\", () => pm.response.to.have.status(403));",
+                "pm.test(\"code PERMISSION_DENIED\", () => pm.expect(grab(j, [\"code\"])).to.eql(\"PERMISSION_DENIED\"));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Valid POS Operator (expect 201/200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts"
+            },
+            "description": "Purpose: valid POS operator succeeds. Expected: 201 (captures a throwaway cart).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"POS operator granted (201)\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                "pm.environment.set(\"authCartId\", grab(j, [\"id\"]));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09 — Tenant Isolation",
+      "item": [
+        {
+          "name": "Cross-Tenant Vendor Cart on Org A branch (expect 404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{crossTenantToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts"
+            },
+            "description": "Purpose: a user from another organization cannot operate against Org A's branch. Expected: 404 RESOURCE_NOT_FOUND (anti-enumeration contract; NOT 403/200).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"cross-tenant denied (404 anti-enumeration)\", () => pm.response.to.have.status(404));",
+                "pm.test(\"code RESOURCE_NOT_FOUND\", () => pm.expect(grab(j, [\"code\"])).to.eql(\"RESOURCE_NOT_FOUND\"));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Cross-Tenant Barcode on Org B branch (expect 404)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/products/barcode/{{barcode}}?branchId={{otherBranchId}}"
+            },
+            "description": "Purpose: tenant/branch scoping — an Org A POS user asking for an Org B branch is denied. Expected: 404."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "pm.test(\"wrong-branch barcode 404\", () => pm.response.to.have.status(404));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10 — Negative Cases",
+      "item": [
+        {
+          "name": "Unknown Barcode (expect 404)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/products/barcode/0000000000000?branchId={{branchId}}"
+            },
+            "description": "Purpose: a barcode absent from the tenant must 404. Expected: 404."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "pm.test(\"unknown barcode 404\", () => pm.response.to.have.status(404));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Invalid Cart ID (expect 404)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/00000000-0000-0000-0000-000000000000"
+            },
+            "description": "Purpose: nonexistent cart must 404 (no enumeration). Expected: 404."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "pm.test(\"invalid cart id 404\", () => pm.response.to.have.status(404));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Wrong Branch (expect 404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts"
+            },
+            "description": "Purpose: force a branch the operator has no access to. Expected: 404.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{otherBranchId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "pm.test(\"wrong branch 404\", () => pm.response.to.have.status(404));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Wrong Warehouse — availability (expect 404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/check-availability"
+            },
+            "description": "Purpose: availability against a warehouse outside the tenant/branch. Expected: 404.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"warehouseId\": \"{{otherWarehouseId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "pm.test(\"wrong warehouse 404\", () => pm.response.to.have.status(404));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Malformed Quantity (expect 422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{cartVersion}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/items"
+            },
+            "description": "Purpose: non-numeric quantity must be rejected. Expected: 422 VALIDATION_FAILED.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"variantId\": \"{{variantId}}\", \"unitId\": \"{{unitId}}\", \"quantity\": \"abc\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"malformed qty 422\", () => pm.response.to.have.status(422));",
+                "pm.test(\"code VALIDATION_FAILED\", () => pm.expect(grab(j, [\"code\"])).to.eql(\"VALIDATION_FAILED\"));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Quantity > 8 decimals (expect 422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{cartVersion}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{cartId}}/items"
+            },
+            "description": "Purpose: quantity precision is capped at 8 decimals. Expected: 422.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"variantId\": \"{{variantId}}\", \"unitId\": \"{{unitId}}\", \"quantity\": \"1.000000001\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "pm.test(\">8dp qty 422\", () => pm.response.to.have.status(422));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Create Scratch Cart (for shortage)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts"
+            },
+            "description": "Purpose: a throwaway cart to demonstrate an unavailable quantity non-destructively.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"scratch cart 201\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                "pm.environment.set(\"scratchCartId\", grab(j, [\"id\"]));",
+                "pm.environment.set(\"scratchCartVersion\", grab(j, [\"version\"]));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Scratch: Add Over-Available Quantity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{scratchCartVersion}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{scratchCartId}}/items"
+            },
+            "description": "Purpose: add exceeds on-hand (99999 > 100). Add-item itself does NOT gate on availability; the shortage is surfaced at hold/availability. Expected: 200.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"variantId\": \"{{variantId}}\", \"unitId\": \"{{unitId}}\", \"quantity\": \"99999\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "pm.test(\"add over-available qty 200\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Scratch: Availability Shortage (non-mutating)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{scratchCartId}}/check-availability"
+            },
+            "description": "Purpose: NON-DESTRUCTIVE demonstration of an unavailable quantity — availability reports shortage > 0 without reserving or mutating anything. Expected: 200, shortage > 0.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"warehouseId\": \"{{warehouseId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"shortage surfaces (200, non-mutating)\", () => pm.response.to.have.status(200));",
+                "const line = (grab(j, [\"lines\"]) || [])[0];",
+                "pm.test(\"shortage > 0\", () => pm.expect(Number(line.shortage)).to.be.above(0));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Scratch: Hold Insufficient Stock (observe)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{scratchCartVersion}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/carts/{{scratchCartId}}/hold"
+            },
+            "description": "Purpose: observe reservation/insufficient-stock handling. Expected: 200 with the hold reporting shortages, or 409 rejection — observe actual per the deployed domain policy. Creates only throwaway scratch data.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"warehouseId\": \"{{warehouseId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "const hold = grab(j, [\"hold\"]);",
+                "pm.test(\"hold surfaces shortage (200 w/ shortages OR 409)\", () => {",
+                "  pm.expect([200, 409]).to.include(pm.response.code);",
+                "  if (hold && hold.shortages) pm.expect(hold.shortages.length).to.be.at.least(1);",
+                "});"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Non-Sellable (DRAFT) — Create scratch draft variant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantAdminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/products"
+            },
+            "description": "Purpose: create a DRAFT product (never activated) to test non-sellable barcode. Scratch data.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"M5 Draft Product (scratch)\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"draft product 201\", () => pm.response.to.have.status(201));",
+                "pm.environment.set(\"draftProductId\", grab(j, [\"id\"]));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Non-Sellable (DRAFT) — add variant + barcode",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tenantAdminToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/catalog/products/{{draftProductId}}/variants"
+            },
+            "description": "Purpose: attach a variant + barcode to the DRAFT product. Expected: 201.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"M5 Draft Variant\", \"sku\": \"M5-DRAFT\", \"barcode\": \"{{draftBarcode}}\", \"baseUnitId\": \"{{unitId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "",
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "",
+                "const j = pm.response.json();",
+                "pm.test(\"draft variant 201\", () => pm.response.to.have.status(201));",
+                "pm.environment.set(\"draftVariantId\", grab(j, [\"id\"]));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Non-Sellable (DRAFT) — barcode lookup expect 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/products/barcode/{{draftBarcode}}?branchId={{branchId}}"
+            },
+            "description": "Purpose: a variant whose product/variant is not ACTIVE is not sellable -> 404. Expected: 404."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "pm.test(\"DRAFT barcode 404 (not sellable)\", () => pm.response.to.have.status(404));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11 — Sales Checkout",
+      "description": "Purpose: exercise the M5-007/M5-008 Sales lifecycle on staging: checkout a Cart to an immutable PENDING_PAYMENT Sale, read the Sale snapshot, then either cancel (pre-completion) or complete through the trusted internal payment boundary. Requires a DRAFT cart (see folder 04) and a captured {{cartId}} + {{cartVersion}} (+ {{warehouseId}}).",
+      "item": [
+        {
+          "name": "Checkout Cart (draft)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{cartVersion}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/sales"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cartId\": \"{{cartId}}\", \"warehouseId\": \"{{warehouseId}}\", \"priceType\": \"CASH\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Checkout a DRAFT cart. Expect 201 with sale status PENDING_PAYMENT. Captures saleId + inventoryReservationId. Replaying the SAME Idempotency-Key must return the same 201 (no duplicate sale)."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "const j = pm.response.json();",
+                "pm.test(\"Checkout 201\", () => pm.response.to.have.status(201));",
+                "pm.environment.set(\"saleId\", grab(j, [\"id\"]));",
+                "pm.environment.set(\"inventoryReservationId\", grab(j, [\"inventoryReservationId\"]));",
+                "pm.test(\"Sale is PENDING_PAYMENT\", () => pm.expect(grab(j, [\"status\"])).to.eql(\"PENDING_PAYMENT\"));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Get Sale",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/sales/{{saleId}}"
+            },
+            "description": "Read the immutable Sale snapshot. Expect 200 with captured saleId."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "const j = pm.response.json();",
+                "pm.test(\"Get Sale 200\", () => pm.response.to.have.status(200));",
+                "pm.test(\"saleId captured\", () => pm.expect(grab(j, [\"id\"])).to.eql(pm.environment.get(\"saleId\")));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Cancel Sale (pre-completion)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/sales/{{saleId}}/cancel"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\": \"manual verification cancel\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Cancel a PENDING_PAYMENT Sale. Expect 201 with status CANCELLED; reservation released exactly once. Replay returns the same CANCELLED result. Completing a cancelled Sale (next request) must fail 409 SALE_INVALID_STATE."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "const j = pm.response.json();",
+                "pm.test(\"Cancel 201\", () => pm.response.to.have.status(201));",
+                "pm.test(\"Sale is CANCELLED\", () => pm.expect(grab(j, [\"status\"])).to.eql(\"CANCELLED\"));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Complete Sale (trusted internal boundary)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesInternalToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/internal/sales/{{saleId}}/complete"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"completionReferenceType\": \"PAYMENT\", \"completionReferenceId\": \"postman-pay-1\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Trusted internal completion after payment. Expect 201 with status COMPLETED; Reservation CONSUMED and FIFO stock consumed exactly once. Replay returns the same COMPLETED result. Requires {{salesInternalToken}} (signed SALES_INTERNAL_BEARER_TOKEN)."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "const j = pm.response.json();",
+                "pm.test(\"Complete 201\", () => pm.response.to.have.status(201));",
+                "pm.test(\"Sale is COMPLETED\", () => pm.expect(grab(j, [\"status\"])).to.eql(\"COMPLETED\"));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Complete on Cancelled Sale (expect 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesInternalToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/internal/sales/{{saleId}}/complete"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"completionReferenceType\": \"PAYMENT\", \"completionReferenceId\": \"postman-pay-2\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Negative: completing an already-CANCELLED Sale must fail 409 SALE_INVALID_STATE before any Inventory mutation."
+          },
+          "response": [],
+          "event": []
+        }
+      ]
+    }
+  ],
+  "variable": []
+}

@@ -9,6 +9,11 @@ export interface RedisConfig {
   db: number;
 }
 
+export interface InventoryExpirationConfig {
+  intervalMs: number;
+  batchSize: number;
+}
+
 export function readRuntimeRole(env: NodeJS.ProcessEnv = process.env): RuntimeRole {
   const role = env.RUNTIME_ROLE ?? 'api';
   if (role === 'api' || role === 'relay' || role === 'worker') return role;
@@ -41,6 +46,21 @@ export function readRedisConfig(env: NodeJS.ProcessEnv = process.env): RedisConf
     ...(env.REDIS_TLS === 'true' ? { tls: {} } : {}),
     db,
   };
+}
+
+/** Bounded Inventory reservation expiration settings for the worker runtime. */
+export function readInventoryExpirationConfig(
+  env: NodeJS.ProcessEnv = process.env,
+): InventoryExpirationConfig {
+  const intervalMs = Number(env.INVENTORY_EXPIRATION_INTERVAL_MS ?? 30_000);
+  const batchSize = Number(env.INVENTORY_EXPIRATION_BATCH_SIZE ?? 100);
+  if (!Number.isInteger(intervalMs) || intervalMs < 1_000 || intervalMs > 3_600_000) {
+    throw new Error('INVENTORY_EXPIRATION_INTERVAL_MS must be between 1000 and 3600000.');
+  }
+  if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 1_000) {
+    throw new Error('INVENTORY_EXPIRATION_BATCH_SIZE must be between 1 and 1000.');
+  }
+  return { intervalMs, batchSize };
 }
 
 function requiredCredential(value: string | undefined, name: string, allowTestException: boolean) {

@@ -198,6 +198,30 @@ describe('Pricing context persistence', () => {
       expect(entry!.channel).toBe('POS');
     });
 
+    it('given no effectiveFrom when an entry is created then it persists defaulted to today (regression: null.toISOString TypeError)', async () => {
+      const orgId = await createTestOrg();
+      const { unitId, variantId } = await createCatalogPrereqs(orgId);
+      const book = await service.createPriceBook({
+        organizationId: orgId,
+        name: 'Open-book',
+      });
+
+      const result = await service.createPriceEntry({
+        organizationId: orgId,
+        priceBookId: book.resourceId,
+        variantId,
+        unitId,
+        priceType: 'CASH',
+        channel: 'POS',
+        amount: '75.00',
+        effectiveFrom: null,
+      });
+
+      const entry = await repository.findPriceEntry(testdb.db, orgId, result.resourceId);
+      expect(entry).not.toBeNull();
+      expect(entry!.effectiveFrom).not.toBeNull();
+    });
+
     it('given a price entry with branch scope when created then branchId is persisted', async () => {
       const orgId = await createTestOrg();
       const { unitId, variantId } = await createCatalogPrereqs(orgId);

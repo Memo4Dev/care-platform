@@ -20,6 +20,15 @@ const MATRIX: ReadonlyArray<{
   purchasing: 'Y' | 'C' | 'N';
 }> = [
   {
+    code: 'sales.read',
+    owner: 'Y',
+    manager: 'Y',
+    sales: 'Y',
+    cashier: 'Y',
+    warehouse: 'N',
+    purchasing: 'N',
+  },
+  {
     code: 'sales.create',
     owner: 'Y',
     manager: 'Y',

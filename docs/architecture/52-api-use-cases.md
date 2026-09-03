@@ -82,13 +82,29 @@ POST   /purchasing/goods-receipts/{id}/confirm
 ## Cart
 
 ```text
-POST   /carts
-POST   /carts/{id}/items
-PATCH  /carts/{id}/items/{itemId}
-DELETE /carts/{id}/items/{itemId}
-POST   /carts/{id}/save
-POST   /carts/{id}/checkout
+POST   /api/v1/pos/carts
+GET    /api/v1/pos/carts
+GET    /api/v1/pos/carts/{cartId}
+POST   /api/v1/pos/carts/{cartId}/items
+PATCH  /api/v1/pos/carts/{cartId}/items/{itemId}
+DELETE /api/v1/pos/carts/{cartId}/items/{itemId}
+POST   /api/v1/pos/carts/{cartId}/save
 ```
+
+M5-004 uses the tenant bearer JWT as a transitional online POS operator
+credential through `PosOperatorGuard`; it is not POS Device or Card/PIN identity.
+The trusted server-resolved `ORGANIZATION_USER` requires `sales.create`, matching
+Organization scope, and branch access. Caller-supplied authority fields are not
+accepted.
+
+Save has no body and requires `Idempotency-Key` plus `If-Match`. It is a
+tenant/actor/canonical-route-scoped `LOCAL_ATOMIC` durable outcome. The Cart root
+is locked before version validation and snapshot loading; save changes no Cart
+field/item, emits no event, performs no Pricing/Inventory/Sales call, permits an
+empty Draft, and creates no reservation, allocation, Sale, or price snapshot.
+Matching replay returns the stored Cart; a changed expected version under the
+same key is `IDEMPOTENCY_CONFLICT`, while a stale distinct-key save is
+`RESOURCE_VERSION_CONFLICT`.
 
 ## Orders
 
@@ -107,10 +123,9 @@ GET    /orders/{id}
 
 ```text
 POST   /pos/sales
-POST   /pos/sales/{id}/confirm
-POST   /pos/sales/{id}/complete
 GET    /pos/sales/{id}
-GET    /pos/drafts
+POST   /pos/sales/{id}/cancel
+POST   /internal/sales/{id}/complete
 ```
 
 ## Fulfillment

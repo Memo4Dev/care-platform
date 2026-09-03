@@ -33,6 +33,7 @@ These are templates, not hard-coded authorization.
 
 | Capability | Owner | Manager | Sales | Cashier | Warehouse | Purchasing |
 |---|---:|---:|---:|---:|---:|---:|
+| sales.read | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | sales.create | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | sales.cancel | ✅ | ✅ | configurable | configurable | ❌ | ❌ |
 | price.override | ✅ | configurable | configurable | ❌ | ❌ | ❌ |
