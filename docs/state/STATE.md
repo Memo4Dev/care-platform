@@ -1,9 +1,9 @@
 # Project State
 
-Phase: M5 IN PROGRESS
+Phase: M5 COMPLETE (awaiting push approval)
 Milestone: M5 (Sales & POS Core)
-Active task: M5-007 implementation complete and through independent correctness + security re-review (both PASS). ADR-0012 accepted with the approved draft-checkout warehouse rule and held-reservation→Sale rebind rule. Sales has additive persistence (`sales.sales`, `sales.sale_items`, `sales.sale_number_counters`), Cart terminal state `CHECKED_OUT`, a new `sales.read` permission seed, POS Sales HTTP routes (`POST /api/v1/pos/sales`, `GET /api/v1/pos/sales/{saleId}`, `POST /api/v1/pos/sales/{saleId}/cancel`) plus an internal trusted completion route on the internal surface only (`POST /api/v1/internal/sales/{saleId}/complete`). The internal route no longer trusts a caller-supplied tenant header: `InternalSalesCompletionGuard` verifies a signed internal token using `SALES_INTERNAL_BEARER_TOKEN`, installs a trusted `SYSTEM_SERVICE` principal, and derives the authoritative organization scope from the token payload. Held-cart checkout now terminalizes the Cart hold to `CHECKED_OUT` (migration `0033`) so checked-out Carts no longer surface a stale `ACTIVE` hold; the hold workflow remains traceable while excluded from current-hold reads. Sales never mutates Pricing/Inventory/Customers tables; it uses module contracts including tx-aware `INVENTORY_MUTATION_CONTRACTS`. Checkout uses fresh Pricing, atomic Inventory reservation/rebind, immutable `PENDING_PAYMENT` snapshotting, server-generated sale numbers, and branch-scoped idempotency; cancellation and completion are convergent for duplicate/new-key retries and release/consume reservations exactly once. Swagger aligned (`internal-bearer` scheme added; POS Sales / Internal Sales tags); `52-api-use-cases.md` lists only the internal completion route. Local gates green: `pnpm lint`, `pnpm typecheck`, `pnpm test` (**614 passed**), and the full native PostgreSQL integration suite (`TEST_DATABASE_URL=postgresql://localhost:5433/postgres`) **462 passed / 2 Redis CI-required**, including the Sales HTTP suite (**6 passed**) and Sales double-checkout concurrency spec (**1 passed**). Next: focused commits (no push/merge/deploy).
-CI: M4 main CI run 38 for merge `05d9292` passed; M5 changes are unpushed and have no remote CI run yet. Historical staging credential rotation remains required before push.
+Active task: M5 final state reconciliation complete; all M5 tasks (M5-003…M5-010) DONE and committed on `feat/m5-sales-pos-core`. M5-009 gained concurrency coverage proving exactly-once Reserve/PENDING Sale→Consume/Release under real PostgreSQL races: concurrent double-complete (reservation CONSUMED + FIFO/stock consumed exactly once), concurrent double-cancel (reservation RELEASED exactly once), and cancel-vs-complete race (exactly one terminal state, loser 409 `SALE_INVALID_STATE`, reservation + stock reflect the single winner). M5-010 enriched the Sales POS + Internal controllers with full Swagger response schemas and added an OpenAPI contract test asserting the four Sales routes with `tenant-bearer` vs `internal-bearer` security and required `Idempotency-Key`/`If-Match`/`saleId`; added a "11 — Sales Checkout" folder (5 requests) to the M5 staging Postman collection plus `saleId`/`inventoryReservationId`/`salesInternalToken` env vars. The internal trusted completion route stays on the internal surface only — `InternalSalesCompletionGuard` verifies a signed `SALES_INTERNAL_BEARER_TOKEN`, installs a trusted `SYSTEM_SERVICE` principal, and derives authoritative organization scope from the token payload (never a caller-supplied header). Independent security review: CONDITIONAL PASS (no blockers); correctness/architecture review: PASS (all M5 exit criteria met). Final gates green: typecheck PASS, lint+prettier PASS, `pnpm test` **614 passed**, native-PG integration **466 passed / 2 Redis CI-required skipped** incl. Sales HTTP (7) + concurrency (4). Two pre-existing (non-M5) MEDIUM security observations — stale idempotency-claim TTL cleanup and Inventory `consumeFIFOLayers` parseFloat arithmetic — are recorded in TASKS.md/DECISIONS.md as post-M5 follow-ons, not M5 blockers. Pending: human push/merge approval.
+CI: M4 main CI run 38 for merge `05d9292` passed; M5 changes are unpushed and have no remote CI run yet (the 2 Redis/BullMQ integration tests must run with authenticated Redis in CI before push acceptance). Historical staging credential rotation remains required before push.
 Branch: feat/m5-sales-pos-core
 
 ## M4 milestone summary
@@ -30,13 +30,14 @@ All 10 M4 tasks complete (M4-001 through M4-010):
 | TypeScript               | ✅ full PASS           | pending              | —   |
 | ESLint                   | ✅ full PASS           | pending              | —   |
 | Prettier                 | ✅ full PASS           | pending              | —   |
-| Unit tests               | ✅ 603 PASS            | pending              | —   |
-| Integration tests        | ✅ 446 PASS, 2 skipped | Redis required in CI | —   |
+| Unit tests               | ✅ 614 PASS            | pending              | —   |
+| Integration tests        | ✅ 466 PASS, 2 skipped | Redis required in CI | —   |
 | POS Cart PostgreSQL/HTTP | ✅ 27 + 31 PASS        | pending              | —   |
+| Sales HTTP + concurrency | ✅ 7 + 4 PASS          | pending              | —   |
 | Auth unit/security       | ✅ 15 PASS (auth dir)  | pending              | —   |
 | Build                    | ✅ full PASS           | pending              | —   |
 | Reviewer                 | ✅ PASS                | pending              | —   |
-| Security review          | ✅ PASS                | pending              | —   |
+| Security review          | ✅ CONDITIONAL PASS    | pending              | —   |
 
 ## Auth boundary correction (ADR-0011) current verification
 
