@@ -2163,6 +2163,244 @@
           ]
         }
       ]
+    },
+    {
+      "name": "11 — Sales Checkout",
+      "description": "Purpose: exercise the M5-007/M5-008 Sales lifecycle on staging: checkout a Cart to an immutable PENDING_PAYMENT Sale, read the Sale snapshot, then either cancel (pre-completion) or complete through the trusted internal payment boundary. Requires a DRAFT cart (see folder 04) and a captured {{cartId}} + {{cartVersion}} (+ {{warehouseId}}).",
+      "item": [
+        {
+          "name": "Checkout Cart (draft)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "{{cartVersion}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/sales"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cartId\": \"{{cartId}}\", \"warehouseId\": \"{{warehouseId}}\", \"priceType\": \"CASH\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Checkout a DRAFT cart. Expect 201 with sale status PENDING_PAYMENT. Captures saleId + inventoryReservationId. Replaying the SAME Idempotency-Key must return the same 201 (no duplicate sale)."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "const j = pm.response.json();",
+                "pm.test(\"Checkout 201\", () => pm.response.to.have.status(201));",
+                "pm.environment.set(\"saleId\", grab(j, [\"id\"]));",
+                "pm.environment.set(\"inventoryReservationId\", grab(j, [\"inventoryReservationId\"]));",
+                "pm.test(\"Sale is PENDING_PAYMENT\", () => pm.expect(grab(j, [\"status\"])).to.eql(\"PENDING_PAYMENT\"));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Get Sale",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/sales/{{saleId}}"
+            },
+            "description": "Read the immutable Sale snapshot. Expect 200 with captured saleId."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "const j = pm.response.json();",
+                "pm.test(\"Get Sale 200\", () => pm.response.to.have.status(200));",
+                "pm.test(\"saleId captured\", () => pm.expect(grab(j, [\"id\"])).to.eql(pm.environment.get(\"saleId\")));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Cancel Sale (pre-completion)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{posOperatorToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pos/sales/{{saleId}}/cancel"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\": \"manual verification cancel\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Cancel a PENDING_PAYMENT Sale. Expect 201 with status CANCELLED; reservation released exactly once. Replay returns the same CANCELLED result. Completing a cancelled Sale (next request) must fail 409 SALE_INVALID_STATE."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "const j = pm.response.json();",
+                "pm.test(\"Cancel 201\", () => pm.response.to.have.status(201));",
+                "pm.test(\"Sale is CANCELLED\", () => pm.expect(grab(j, [\"status\"])).to.eql(\"CANCELLED\"));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Complete Sale (trusted internal boundary)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesInternalToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/internal/sales/{{saleId}}/complete"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"completionReferenceType\": \"PAYMENT\", \"completionReferenceId\": \"postman-pay-1\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Trusted internal completion after payment. Expect 201 with status COMPLETED; Reservation CONSUMED and FIFO stock consumed exactly once. Replay returns the same COMPLETED result. Requires {{salesInternalToken}} (signed SALES_INTERNAL_BEARER_TOKEN)."
+          },
+          "response": [],
+          "event": [
+            {
+              "exec": [
+                "function grab(obj, props) {",
+                "  if (!obj) return null;",
+                "  let root = obj.data !== undefined && obj.data !== null ? obj.data : obj;",
+                "  for (const p of props) {",
+                "    if (root[p] !== undefined && root[p] !== null) return root[p];",
+                "  }",
+                "  return null;",
+                "}",
+                "const j = pm.response.json();",
+                "pm.test(\"Complete 201\", () => pm.response.to.have.status(201));",
+                "pm.test(\"Sale is COMPLETED\", () => pm.expect(grab(j, [\"status\"])).to.eql(\"COMPLETED\"));"
+              ],
+              "type": "text/javascript"
+            }
+          ]
+        },
+        {
+          "name": "Complete on Cancelled Sale (expect 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesInternalToken}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/internal/sales/{{saleId}}/complete"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"completionReferenceType\": \"PAYMENT\", \"completionReferenceId\": \"postman-pay-2\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Negative: completing an already-CANCELLED Sale must fail 409 SALE_INVALID_STATE before any Inventory mutation."
+          },
+          "response": [],
+          "event": []
+        }
+      ]
     }
   ],
   "variable": []
